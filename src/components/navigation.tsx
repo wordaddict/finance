@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SessionUser } from '@/lib/auth'
 import { LogOut, User, Settings, Menu, X } from 'lucide-react'
+import Image from 'next/image'
 
 interface NavigationProps {
   user: SessionUser
@@ -43,10 +44,19 @@ export function Navigation({ user }: NavigationProps) {
       <div className="container mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 sm:space-x-8">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">
-              <span className="hidden sm:inline">CCI America Expense App</span>
-              <span className="sm:hidden">CCI Expense</span>
-            </h1>
+            <div className="flex items-center space-x-3">
+              <Image
+                src="/logo.svg"
+                alt="Celebration Church America"
+                width={40}
+                height={40}
+                className="h-8 w-auto sm:h-10"
+              />
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900">
+                <span className="hidden sm:inline">Expense Management</span>
+                <span className="sm:hidden">Expenses</span>
+              </h1>
+            </div>
             <div className="hidden md:flex space-x-6">
               <a
                 href="/"
