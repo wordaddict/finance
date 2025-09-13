@@ -51,3 +51,23 @@ export const CAMPUS_VALUES = Object.values(CAMPUSES)
 
 // Type for campus values
 export type CampusValue = typeof CAMPUSES[keyof typeof CAMPUSES]
+
+// Urgency constants
+export const URGENCY_OPTIONS = {
+  1: 'Not Urgent (Few months)',
+  2: 'Urgent (This Month)', 
+  3: 'Very Urgent (This week)',
+} as const
+
+// Urgency display names for UI
+export const URGENCY_DISPLAY_NAMES = {
+  [1]: 'Not Urgent (Few months)',
+  [2]: 'Urgent (This Month)',
+  [3]: 'Very Urgent (This week)',
+} as const
+
+// Array of urgency values for easy iteration
+export const URGENCY_VALUES = Object.keys(URGENCY_OPTIONS).map(Number)
+
+// Type for urgency values
+export type UrgencyValue = keyof typeof URGENCY_OPTIONS

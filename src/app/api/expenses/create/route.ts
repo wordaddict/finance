@@ -12,7 +12,7 @@ const createExpenseSchema = z.object({
   team: z.enum(TEAM_VALUES as [string, ...string[]]),
   campus: z.enum(CAMPUS_VALUES as [string, ...string[]]),
   description: z.string().optional(),
-  urgency: z.number().min(1).max(5).default(3),
+  urgency: z.number().min(1).max(3).default(2),
   attachments: z.array(z.object({
     publicId: z.string(),
     secureUrl: z.string(),

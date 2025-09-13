@@ -71,7 +71,7 @@ async function main() {
       title: 'Youth Ministry Supplies',
       amountCents: 15000, // $150.00
       status: 'SUBMITTED',
-      urgency: 3,
+      urgency: 2,
       campus: 'DALLAS',
       description: 'Purchase of craft supplies for youth group activities',
       requesterId: leader.id,
@@ -87,7 +87,7 @@ async function main() {
       title: 'Worship Team Equipment',
       amountCents: 25000, // $250.00
       status: 'SUBMITTED',
-      urgency: 4,
+      urgency: 3,
       campus: 'BOSTON',
       description: 'New microphone and audio cables for worship team',
       requesterId: pastor.id,

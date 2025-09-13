@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { SessionUser } from '@/lib/auth'
 import { X, Upload, FileText } from 'lucide-react'
-import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
+import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES } from '@/lib/constants'
 
 // Teams are now defined as constants
 
@@ -21,7 +21,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
   const [team, setTeam] = useState('ADMIN')
   const [campus, setCampus] = useState('DMV')
   const [description, setDescription] = useState('')
-  const [urgency, setUrgency] = useState(3)
+  const [urgency, setUrgency] = useState(2)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
@@ -234,7 +234,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
 
             <div>
               <label htmlFor="urgency" className="block text-sm font-medium mb-1">
-                Urgency (1-5)
+                Urgency
               </label>
               <select
                 id="urgency"
@@ -242,11 +242,9 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
                 onChange={(e) => setUrgency(parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value={1}>1 - Low</option>
-                <option value={2}>2 - Below Average</option>
-                <option value={3}>3 - Average</option>
-                <option value={4}>4 - High</option>
-                <option value={5}>5 - Critical</option>
+                <option value={1}>Not Urgent (Few months)</option>
+                <option value={2}>Urgent (This Month)</option>
+                <option value={3}>Very Urgent (This week)</option>
               </select>
             </div>
 

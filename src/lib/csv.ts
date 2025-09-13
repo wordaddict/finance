@@ -1,3 +1,5 @@
+import { URGENCY_DISPLAY_NAMES } from './constants'
+
 export interface ExpenseWithDetails {
   id: string
   title: string
@@ -41,7 +43,7 @@ export function generateCSV(expenses: ExpenseWithDetails[]): string {
     `"${expense.team.replace(/"/g, '""')}"`,
     `"${expense.requester.name || expense.requester.email}"`,
     `"${(expense.description || '').replace(/"/g, '""')}"`,
-    expense.urgency.toString(),
+    URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || expense.urgency.toString(),
     expense.status,
     expense.createdAt.toISOString(),
     expense.updatedAt.toISOString(),
@@ -80,7 +82,7 @@ export function streamCSV(
       `"${expense.team.replace(/"/g, '""')}"`,
       `"${expense.requester.name || expense.requester.email}"`,
       `"${(expense.description || '').replace(/"/g, '""')}"`,
-      expense.urgency.toString(),
+      URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || expense.urgency.toString(),
       expense.status,
       expense.createdAt.toISOString(),
       expense.updatedAt.toISOString(),

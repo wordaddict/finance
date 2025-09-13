@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { SessionUser } from '@/lib/auth'
 import { ExpenseForm } from './expense-form'
 import { DenialModal } from './denial-modal'
-import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
+import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES } from '@/lib/constants'
 import { 
   Plus,
   Filter,
@@ -186,9 +186,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }
 
   const getUrgencyColor = (urgency: number) => {
-    if (urgency >= 4) return 'text-red-600'
-    if (urgency >= 3) return 'text-yellow-600'
-    return 'text-green-600'
+    if (urgency === 3) return 'text-red-600' // Very Urgent
+    if (urgency === 2) return 'text-yellow-600' // Urgent
+    return 'text-green-600' // Not Urgent
   }
 
   if (loading) {
@@ -303,7 +303,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         {expense.status}
                       </span>
                       <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
-                        Urgency: {expense.urgency}/5
+                        {URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${expense.urgency}`}
                       </span>
                     </div>
                   </div>
@@ -426,7 +426,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Urgency</label>
                   <p className={`font-medium ${getUrgencyColor(viewModal.expense.urgency)}`}>
-                    {viewModal.expense.urgency}/5
+                    {URGENCY_DISPLAY_NAMES[viewModal.expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${viewModal.expense.urgency}`}
                   </p>
                 </div>
                 <div>
