@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  password        String?
+  name            String?
+  role            Role             @default(LEADER)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  approvals       Approval[]
+  requests        ExpenseRequest[] @relation("RequestUser")
+  sessions        Session[]
+  statusEvents    StatusEvent[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  email     String
+  token     String    @unique
+  purpose   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model ExpenseRequest {
+  id            String        @id @default(uuid())
+  title         String
+  amountCents   Int
+  team          String
+  requesterId   String
+  description   String?
+  urgency       Int
+  notes         String?
+  status        Status        @default(SUBMITTED)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  campus        Campus
+  approvals     Approval[]
+  attachments   Attachment[]
+  requester     User          @relation("RequestUser", fields: [requesterId], references: [id])
+  statusHistory StatusEvent[]
+}
+
+model StatusEvent {
+  id        String         @id @default(uuid())
+  expenseId String
+  from      Status?
+  to        Status
+  actorId   String?
+  reason    String?
+  createdAt DateTime       @default(now())
+  actor     User?          @relation(fields: [actorId], references: [id])
+  expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
+}
+
+model Approval {
+  id         String         @id @default(uuid())
+  expenseId  String
+  stage      Int
+  approverId String
+  decision   String?
+  comment    String?
+  decidedAt  DateTime?
+  approver   User           @relation(fields: [approverId], references: [id])
+  expense    ExpenseRequest @relation(fields: [expenseId], references: [id])
+
+  @@unique([expenseId, stage])
+}
+
+model Attachment {
+  id        String         @id @default(uuid())
+  expenseId String
+  publicId  String
+  secureUrl String
+  mimeType  String
+  createdAt DateTime       @default(now())
+  expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  expenseId String?
+  userId    String
+  kind      String
+  channel   String
+  payload   Json
+  sentAt    DateTime?
+  status    String
+  error     String?
+  createdAt DateTime  @default(now())
+}
+
+model Setting {
+  id              Int     @id @default(1)
+  requireTwoStage Boolean @default(false)
+  reminderHours   Int     @default(48)
+}
+
+enum Role {
+  ADMIN
+  CAMPUS_PASTOR
+  LEADER
+}
+
+enum Status {
+  SUBMITTED
+  APPROVED
+  DENIED
+  PAID
+}
+
+enum Campus {
+  DMV
+  DALLAS
+  BOSTON
+  AUSTIN
+}
