@@ -66,9 +66,7 @@ A production-ready expense management system for church operations built with Ne
    # Database
    DATABASE_URL="postgresql://username:password@localhost:5432/church_expense_mvp"
    
-   # Auth
-   NEXTAUTH_SECRET="your-secret-key-here"
-   NEXTAUTH_URL="http://localhost:3000"
+   # Auth (Custom implementation - no NextAuth needed)
    
    # Cloudinary
    CLOUDINARY_CLOUD_NAME="your-cloud-name"
@@ -85,7 +83,7 @@ A production-ready expense management system for church operations built with Ne
    TWILIO_PHONE_NUMBER="+1234567890"
    
    # App Settings
-   NEXT_PUBLIC_APP_URL="http://localhost:3000"
+   NEXT_PUBLIC_APP_URL="https://your-domain.com"
    ```
 
 4. **Set up the database**
@@ -181,7 +179,11 @@ src/
 3. **Set environment variables**
    ```bash
    heroku config:set DATABASE_URL="your-postgres-url"
-   heroku config:set NEXTAUTH_SECRET="your-secret"
+   heroku config:set NEXT_PUBLIC_APP_URL="https://your-app.herokuapp.com"
+   heroku config:set RESEND_API_KEY="your-resend-api-key"
+   heroku config:set CLOUDINARY_CLOUD_NAME="your-cloud-name"
+   heroku config:set CLOUDINARY_API_KEY="your-api-key"
+   heroku config:set CLOUDINARY_API_SECRET="your-api-secret"
    # ... set other environment variables
    ```
 
