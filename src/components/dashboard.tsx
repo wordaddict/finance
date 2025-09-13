@@ -91,29 +91,31 @@ export function Dashboard({ user }: DashboardProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-500">
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+          <p className="text-gray-500 text-sm sm:text-base">
             Welcome back, {user.name || user.email}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleExportCSV} variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={handleExportCSV} variant="outline" className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
-          <Button onClick={() => setShowExpenseForm(true)}>
+          <Button onClick={() => setShowExpenseForm(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
-            New Expense
+            <span className="hidden sm:inline">New Expense</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -122,7 +124,7 @@ export function Dashboard({ user }: DashboardProps) {
             <DollarSign className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {formatCurrency(stats?.totalApproved || 0)}
             </div>
             <p className="text-xs text-gray-500">
@@ -139,7 +141,7 @@ export function Dashboard({ user }: DashboardProps) {
             <Clock className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {stats?.pendingCount || 0}
             </div>
             <p className="text-xs text-gray-500">
@@ -156,7 +158,7 @@ export function Dashboard({ user }: DashboardProps) {
             <TrendingUp className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {formatCurrency(stats?.monthlySpend || 0)}
             </div>
             <p className="text-xs text-gray-500">
@@ -173,7 +175,7 @@ export function Dashboard({ user }: DashboardProps) {
             <FileText className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl sm:text-2xl font-bold">
               {stats?.teamBreakdown.length || 0}
             </div>
             <p className="text-xs text-gray-500">
@@ -195,15 +197,15 @@ export function Dashboard({ user }: DashboardProps) {
           <CardContent>
             <div className="space-y-4">
               {stats.teamBreakdown.map((team) => (
-                <div key={team.teamName} className="flex items-center justify-between">
+                <div key={team.teamName} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <p className="font-medium">{team.teamName}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-sm sm:text-base">{team.teamName}</p>
+                    <p className="text-xs sm:text-sm text-gray-500">
                       {team.count} request{team.count !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(team.total)}</p>
+                  <div className="text-left sm:text-right">
+                    <p className="font-medium text-sm sm:text-base">{formatCurrency(team.total)}</p>
                   </div>
                 </div>
               ))}
@@ -224,16 +226,16 @@ export function Dashboard({ user }: DashboardProps) {
           <CardContent>
             <div className="space-y-4">
               {stats.recentExpenses.map((expense) => (
-                <div key={expense.id} className="flex items-center justify-between">
+                <div key={expense.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <p className="font-medium">{expense.title}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-sm sm:text-base">{expense.title}</p>
+                    <p className="text-xs sm:text-sm text-gray-500">
                       {expense.teamName} • {formatDate(expense.createdAt)}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(expense.amountCents)}</p>
-                    <p className={`text-sm ${
+                  <div className="text-left sm:text-right">
+                    <p className="font-medium text-sm sm:text-base">{formatCurrency(expense.amountCents)}</p>
+                    <p className={`text-xs sm:text-sm ${
                       expense.status === 'APPROVED' ? 'text-green-600' :
                       expense.status === 'DENIED' ? 'text-red-600' :
                       expense.status === 'PAID' ? 'text-blue-600' :

@@ -202,18 +202,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Expense Requests</h1>
-          <p className="text-gray-500">
+          <h1 className="text-2xl sm:text-3xl font-bold">Expense Requests</h1>
+          <p className="text-gray-500 text-sm sm:text-base">
             Manage and track expense requests
           </p>
         </div>
-        <Button onClick={() => setShowExpenseForm(true)}>
+        <Button onClick={() => setShowExpenseForm(true)} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          New Expense
+          <span className="hidden sm:inline">New Expense</span>
+          <span className="sm:hidden">New</span>
         </Button>
       </div>
 
@@ -226,7 +227,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
@@ -292,37 +293,40 @@ export function ExpensesList({ user }: ExpensesListProps) {
       <div className="space-y-4">
         {expenses.map((expense) => (
           <Card key={expense.id}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-semibold">{expense.title}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(expense.status)}`}>
-                      {expense.status}
-                    </span>
-                    <span className={`text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
-                      Urgency: {expense.urgency}/5
-                    </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <h3 className="text-base sm:text-lg font-semibold">{expense.title}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(expense.status)}`}>
+                        {expense.status}
+                      </span>
+                      <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
+                        Urgency: {expense.urgency}/5
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-gray-500 mt-1">
+                  <p className="text-gray-500 mt-1 text-sm">
                     {TEAM_DISPLAY_NAMES[expense.team as keyof typeof TEAM_DISPLAY_NAMES] || expense.team} • {CAMPUS_DISPLAY_NAMES[expense.campus as keyof typeof CAMPUS_DISPLAY_NAMES] || expense.campus} • {expense.requester.name || expense.requester.email}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
                     Created: {formatDate(expense.createdAt)}
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <div className="text-left sm:text-right">
+                    <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => openViewModal(expense)}
+                      className="flex-1 sm:flex-none"
                     >
                       <Eye className="w-4 h-4 mr-1" />
-                      View
+                      <span className="hidden sm:inline">View</span>
                     </Button>
                     {expense.status === 'SUBMITTED' && (user.role === 'ADMIN' || user.role === 'CAMPUS_PASTOR') && (
                       <>
@@ -330,17 +334,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           variant="outline" 
                           size="sm"
                           onClick={() => handleApprove(expense.id)}
+                          className="flex-1 sm:flex-none"
                         >
                           <Check className="w-4 h-4 mr-1" />
-                          Approve
+                          <span className="hidden sm:inline">Approve</span>
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => openDenialModal(expense.id, expense.title)}
+                          className="flex-1 sm:flex-none"
                         >
                           <X className="w-4 h-4 mr-1" />
-                          Deny
+                          <span className="hidden sm:inline">Deny</span>
                         </Button>
                       </>
                     )}
@@ -349,9 +355,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         variant="outline" 
                         size="sm"
                         onClick={() => handleMarkPaid(expense.id)}
+                        className="flex-1 sm:flex-none"
                       >
                         <DollarSign className="w-4 h-4 mr-1" />
-                        Mark Paid
+                        <span className="hidden sm:inline">Mark Paid</span>
                       </Button>
                     )}
                   </div>
@@ -388,10 +395,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
 
       {/* View Modal */}
       {viewModal.isOpen && viewModal.expense && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Expense Details</h2>
+              <h2 className="text-lg sm:text-xl font-bold">Expense Details</h2>
               <Button
                 variant="outline"
                 size="sm"
@@ -403,13 +410,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
             
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-lg">{viewModal.expense.title}</h3>
-                <p className="text-2xl font-bold text-green-600">
+                <h3 className="font-semibold text-base sm:text-lg">{viewModal.expense.title}</h3>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
                   {formatCurrency(viewModal.expense.amountCents)}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
                   <p className={`font-medium ${getStatusColor(viewModal.expense.status)}`}>
@@ -449,14 +456,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
               {viewModal.expense.description && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Description</label>
-                  <p className="mt-1 p-3 bg-gray-50 rounded-md">{viewModal.expense.description}</p>
+                  <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.description}</p>
                 </div>
               )}
 
               {viewModal.expense.notes && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Admin Notes</label>
-                  <p className="mt-1 p-3 bg-yellow-50 rounded-md">{viewModal.expense.notes}</p>
+                  <p className="mt-1 p-3 bg-yellow-50 rounded-md text-sm sm:text-base">{viewModal.expense.notes}</p>
                 </div>
               )}
 

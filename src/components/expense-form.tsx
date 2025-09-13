@@ -135,11 +135,11 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Create New Expense Request</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Create New Expense Request</CardTitle>
+              <CardDescription className="text-sm">
                 Submit a new expense request for approval
               </CardDescription>
             </div>
@@ -148,9 +148,9 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium mb-1">
                   Title *
