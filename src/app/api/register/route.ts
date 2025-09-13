@@ -2,19 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
-import { sendEmail } from '@/lib/email'
-import { randomBytes } from 'crypto'
 
 const registerSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1),
+  email: z.string().email('Please enter a valid email address'),
+  name: z.string().min(1, 'Full name is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
   role: z.enum(['ADMIN', 'CAMPUS_PASTOR', 'LEADER']).default('LEADER'),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, name, role } = registerSchema.parse(body)
+    const { email, name, password, role } = registerSchema.parse(body)
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({
@@ -28,35 +27,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create user without password (will be set after email verification)
+    // Hash password
+    const hashedPassword = await hashPassword(password)
+
+    // Create user with pending approval status
     const user = await db.user.create({
       data: {
         email,
         name,
+        password: hashedPassword,
         role,
+        status: 'PENDING_APPROVAL', // New status for pending approval
       },
     })
-
-    // Generate verification token
-    const token = randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-
-    await db.verificationToken.create({
-      data: {
-        email,
-        token,
-        purpose: 'verify_email',
-        expiresAt,
-      },
-    })
-
-    // Send verification email
-    const emailTemplate = generateVerificationEmail(name, token)
-    emailTemplate.to = email
-    await sendEmail(emailTemplate)
 
     return NextResponse.json({
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful. Your account is pending approval from an administrator. You will be notified once approved.',
     })
   } catch (error) {
     console.error('Registration error:', error)
@@ -67,22 +53,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateVerificationEmail(name: string, token: string) {
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify?token=${token}`
-  
-  return {
-    to: '',
-    subject: 'Verify your email address',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Welcome to Church Expense System</h2>
-        <p>Hello ${name},</p>
-        <p>Thank you for registering. Please click the link below to verify your email address:</p>
-        <p><a href="${verifyUrl}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
-        <p>This link will expire in 24 hours.</p>
-        <p>Best regards,<br>Church Expense System</p>
-      </div>
-    `,
-    text: `Welcome to Church Expense System\n\nHello ${name},\n\nThank you for registering. Please visit the following link to verify your email address:\n\n${verifyUrl}\n\nThis link will expire in 24 hours.\n\nBest regards,\nChurch Expense System`,
-  }
-}

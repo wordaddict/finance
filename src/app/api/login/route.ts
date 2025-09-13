@@ -26,9 +26,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!user.emailVerifiedAt) {
+    if (user.status === 'PENDING_APPROVAL') {
       return NextResponse.json(
-        { error: 'Please verify your email before logging in' },
+        { error: 'Your account is pending approval from an administrator' },
+        { status: 401 }
+      )
+    }
+
+    if (user.status === 'SUSPENDED') {
+      return NextResponse.json(
+        { error: 'Your account has been suspended. Please contact an administrator' },
         { status: 401 }
       )
     }

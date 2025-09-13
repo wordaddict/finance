@@ -28,6 +28,7 @@ async function main() {
       name: 'Church Admin',
       role: 'ADMIN',
       password: adminPassword,
+      status: 'ACTIVE',
       emailVerifiedAt: new Date(),
     },
   })
@@ -42,6 +43,7 @@ async function main() {
       name: 'Campus Pastor',
       role: 'CAMPUS_PASTOR',
       password: pastorPassword,
+      status: 'ACTIVE',
       emailVerifiedAt: new Date(),
     },
   })
@@ -56,6 +58,7 @@ async function main() {
       name: 'Team Leader',
       role: 'LEADER',
       password: leaderPassword,
+      status: 'ACTIVE',
       emailVerifiedAt: new Date(),
     },
   })

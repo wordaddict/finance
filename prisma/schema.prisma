@@ -13,6 +13,7 @@ model User {
   password        String?
   name            String?
   role            Role             @default(LEADER)
+  status          UserStatus       @default(ACTIVE)
   emailVerifiedAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -121,6 +122,12 @@ enum Role {
   ADMIN
   CAMPUS_PASTOR
   LEADER
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING_APPROVAL
+  SUSPENDED
 }
 
 enum Status {

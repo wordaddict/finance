@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SessionUser } from '@/lib/auth'
+import { canManageUsers } from '@/lib/rbac'
 import { LogOut, User, Settings, Menu, X } from 'lucide-react'
 import Image from 'next/image'
 
@@ -70,6 +71,14 @@ export function Navigation({ user }: NavigationProps) {
               >
                 Expenses
               </a>
+              {canManageUsers(user) && (
+                <a
+                  href="/users"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Users
+                </a>
+              )}
             </div>
           </div>
           
@@ -128,6 +137,15 @@ export function Navigation({ user }: NavigationProps) {
                 >
                   Expenses
                 </a>
+                {canManageUsers(user) && (
+                  <a
+                    href="/users"
+                    className="text-gray-600 hover:text-gray-900 transition-colors py-2"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Users
+                  </a>
+                )}
               </div>
               
               {/* Mobile user info */}
