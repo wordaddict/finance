@@ -26,7 +26,13 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<{
+    userId: string | null
+    action: 'approve' | 'deny' | 'suspend' | null
+  }>({
+    userId: null,
+    action: null,
+  })
   const [denyModal, setDenyModal] = useState<{
     isOpen: boolean
     userId: string | null
@@ -66,7 +72,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
 
   const handleApprove = async (userId: string) => {
     try {
-      setActionLoading(userId)
+      setActionLoading({ userId, action: 'approve' })
       const response = await fetch('/api/users/approve', {
         method: 'POST',
         headers: {
@@ -84,13 +90,13 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     } catch (error) {
       setError('Failed to approve user')
     } finally {
-      setActionLoading(null)
+      setActionLoading({ userId: null, action: null })
     }
   }
 
   const handleSuspend = async (userId: string) => {
     try {
-      setActionLoading(userId)
+      setActionLoading({ userId, action: 'suspend' })
       const response = await fetch('/api/users/suspend', {
         method: 'POST',
         headers: {
@@ -108,7 +114,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     } catch (error) {
       setError('Failed to suspend user')
     } finally {
-      setActionLoading(null)
+      setActionLoading({ userId: null, action: null })
     }
   }
 
@@ -132,7 +138,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     if (!denyModal.userId) return
 
     try {
-      setActionLoading(denyModal.userId)
+      setActionLoading({ userId: denyModal.userId, action: 'deny' })
       const response = await fetch('/api/users/deny', {
         method: 'POST',
         headers: {
@@ -151,7 +157,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     } catch (error) {
       setError('Failed to deny user')
     } finally {
-      setActionLoading(null)
+      setActionLoading({ userId: null, action: null })
     }
   }
 
@@ -307,22 +313,22 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                           <>
                             <Button
                               onClick={() => handleApprove(userItem.id)}
-                              disabled={actionLoading === userItem.id}
+                              disabled={actionLoading.userId === userItem.id}
                               className="bg-green-600 hover:bg-green-700 text-white"
                               size="sm"
                             >
                               <Check className="w-4 h-4 mr-1" />
-                              {actionLoading === userItem.id ? 'Approving...' : 'Approve'}
+                              {actionLoading.userId === userItem.id && actionLoading.action === 'approve' ? 'Approving...' : 'Approve'}
                             </Button>
                             <Button
                               onClick={() => openDenyModal(userItem.id, userItem.name)}
-                              disabled={actionLoading === userItem.id}
+                              disabled={actionLoading.userId === userItem.id}
                               variant="outline"
                               className="border-red-300 text-red-600 hover:bg-red-50"
                               size="sm"
                             >
                               <X className="w-4 h-4 mr-1" />
-                              {actionLoading === userItem.id ? 'Denying...' : 'Deny'}
+                              {actionLoading.userId === userItem.id && actionLoading.action === 'deny' ? 'Denying...' : 'Deny'}
                             </Button>
                           </>
                         )}
@@ -330,25 +336,25 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                         {userItem.status === 'ACTIVE' && userItem.id !== user.id && (
                           <Button
                             onClick={() => handleSuspend(userItem.id)}
-                            disabled={actionLoading === userItem.id}
+                            disabled={actionLoading.userId === userItem.id}
                             variant="outline"
                             className="border-red-300 text-red-600 hover:bg-red-50"
                             size="sm"
                           >
                             <UserX className="w-4 h-4 mr-1" />
-                            {actionLoading === userItem.id ? 'Suspending...' : 'Suspend'}
+                            {actionLoading.userId === userItem.id && actionLoading.action === 'suspend' ? 'Suspending...' : 'Suspend'}
                           </Button>
                         )}
                         
                         {userItem.status === 'SUSPENDED' && (
                           <Button
                             onClick={() => handleApprove(userItem.id)}
-                            disabled={actionLoading === userItem.id}
+                            disabled={actionLoading.userId === userItem.id}
                             className="bg-green-600 hover:bg-green-700 text-white"
                             size="sm"
                           >
                             <Check className="w-4 h-4 mr-1" />
-                            {actionLoading === userItem.id ? 'Reactivating...' : 'Reactivate'}
+                            {actionLoading.userId === userItem.id && actionLoading.action === 'approve' ? 'Reactivating...' : 'Reactivate'}
                           </Button>
                         )}
                       </div>
@@ -371,7 +377,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
         confirmText="Deny Registration"
         cancelText="Cancel"
         variant="danger"
-        loading={actionLoading === denyModal.userId}
+        loading={actionLoading.userId === denyModal.userId && actionLoading.action === 'deny'}
       />
     </div>
   )

@@ -14,9 +14,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, password } = loginSchema.parse(body)
 
+    // Normalize email: trim whitespace and convert to lowercase
+    const normalizedEmail = email.trim().toLowerCase()
+
     // Find user
     const user = await db.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     })
 
     if (!user || !user.password) {

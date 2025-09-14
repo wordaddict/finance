@@ -15,9 +15,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, name, password, role } = registerSchema.parse(body)
 
-    // Check if user already exists
+    // Normalize email: trim whitespace and convert to lowercase
+    const normalizedEmail = email.trim().toLowerCase()
+
+    // Check if user already exists with normalized email
     const existingUser = await db.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     })
 
     if (existingUser) {
@@ -33,8 +36,8 @@ export async function POST(request: NextRequest) {
     // Create user with pending approval status
     const user = await db.user.create({
       data: {
-        email,
-        name,
+        email: normalizedEmail,
+        name: name.trim(), // Also trim the name
         password: hashedPassword,
         role,
         status: 'PENDING_APPROVAL', // New status for pending approval
