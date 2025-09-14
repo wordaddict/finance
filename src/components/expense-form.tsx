@@ -44,6 +44,10 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
       }
 
       const signature = await signatureResponse.json()
+      
+      // Debug logging
+      console.log('Cloudinary signature:', signature)
+      console.log('File being uploaded:', file.name, file.size, file.type)
 
       // Upload to Cloudinary
       const formData = new FormData()
@@ -62,7 +66,9 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
       )
 
       if (!uploadResponse.ok) {
-        throw new Error('Upload failed')
+        const errorText = await uploadResponse.text()
+        console.error('Cloudinary upload error:', errorText)
+        throw new Error(`Upload failed: ${errorText}`)
       }
 
       const uploadResult = await uploadResponse.json()
@@ -125,7 +131,35 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    setAttachments(prev => [...prev, ...files])
+    
+    // Validate files
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    
+    const validFiles: File[] = []
+    const errors: string[] = []
+    
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        errors.push(`${file.name}: Only JPG, PNG, and PDF files are allowed`)
+        continue
+      }
+      
+      if (file.size > maxSize) {
+        errors.push(`${file.name}: File size must be less than 10MB`)
+        continue
+      }
+      
+      validFiles.push(file)
+    }
+    
+    if (errors.length > 0) {
+      setError(errors.join('; '))
+      return
+    }
+    
+    setAttachments(prev => [...prev, ...validFiles])
+    setError('') // Clear any previous errors
   }
 
   const removeAttachment = (index: number) => {
@@ -258,10 +292,13 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
                 id="attachments"
                 type="file"
                 multiple
-                accept="image/*,.pdf"
+                accept="image/jpeg,image/jpg,image/png,application/pdf"
                 onChange={handleFileChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Allowed formats: JPG, PNG, PDF. Maximum size: 10MB per file.
+              </p>
               {attachments.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {attachments.map((file, index) => (

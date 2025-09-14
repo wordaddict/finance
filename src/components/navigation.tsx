@@ -94,7 +94,7 @@ export function Navigation({ user }: NavigationProps) {
             </Button>
 
             {/* Desktop user info */}
-            <div className="hidden md:flex items-center space-x-2">
+            <div className="hidden lg:flex items-center space-x-2">
               <User className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-700">
                 {user.name || user.email}
@@ -148,8 +148,8 @@ export function Navigation({ user }: NavigationProps) {
                 )}
               </div>
               
-              {/* Mobile user info */}
-              <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
+              {/* Mobile user info - hidden on md screens, shown on smaller screens */}
+              <div className="flex md:hidden items-center space-x-2 pt-2 border-t border-gray-200">
                 <User className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-700">
                   {user.name || user.email}

@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           requester: true,
+          attachments: true,
         },
         orderBy: {
           createdAt: 'desc',

@@ -46,13 +46,15 @@ export async function uploadToCloudinary(
 
 export function generateUploadSignature(folder: string = 'expense-receipts') {
   const timestamp = Math.round(new Date().getTime() / 1000)
+  
+  // Create the parameters object in the correct order for signing
+  // Only include parameters that will be sent to Cloudinary
   const params = {
     folder,
     timestamp,
-    allowed_formats: 'jpg,jpeg,png,pdf',
-    max_bytes: 10485760, // 10MB
   }
 
+  // Generate signature using only the parameters that will be sent to Cloudinary
   const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET!)
 
   return {

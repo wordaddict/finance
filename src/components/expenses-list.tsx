@@ -15,7 +15,8 @@ import {
   Eye,
   Check,
   X,
-  DollarSign
+  DollarSign,
+  FileText
 } from 'lucide-react'
 
 interface Expense {
@@ -35,6 +36,12 @@ interface Expense {
     name: string | null
     email: string
   }
+  attachments?: {
+    id: string
+    publicId: string
+    secureUrl: string
+    mimeType: string
+  }[]
 }
 
 interface ExpensesListProps {
@@ -457,6 +464,47 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Description</label>
                   <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.description}</p>
+                </div>
+              )}
+
+              {viewModal.expense.attachments && viewModal.expense.attachments.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Attachments</label>
+                  <div className="mt-2 space-y-2">
+                    {viewModal.expense.attachments.map((attachment) => (
+                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <div className="flex items-center space-x-3">
+                          {attachment.mimeType.startsWith('image/') ? (
+                            <img
+                              src={attachment.secureUrl}
+                              alt="Receipt"
+                              className="w-12 h-12 object-cover rounded border"
+                              onClick={() => window.open(attachment.secureUrl, '_blank')}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-red-600" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-medium">
+                              {attachment.mimeType.startsWith('image/') ? 'Receipt Image' : 'PDF Document'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {attachment.mimeType}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
