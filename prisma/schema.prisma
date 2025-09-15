@@ -54,6 +54,7 @@ model ExpenseRequest {
   notes         String?
   status        Status        @default(SUBMITTED)
   paidAt        DateTime?
+  eventDate     DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   campus        Campus
@@ -61,6 +62,7 @@ model ExpenseRequest {
   attachments   Attachment[]
   requester     User          @relation("RequestUser", fields: [requesterId], references: [id])
   statusHistory StatusEvent[]
+  reports       ExpenseReport[]
 }
 
 model StatusEvent {
@@ -142,4 +144,28 @@ enum Campus {
   DALLAS
   BOSTON
   AUSTIN
+}
+
+model ExpenseReport {
+  id            String        @id @default(uuid())
+  expenseId     String
+  title         String
+  content       String
+  reportDate    DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  attachments   ReportAttachment[]
+}
+
+model ReportAttachment {
+  id        String        @id @default(uuid())
+  reportId  String
+  publicId  String
+  secureUrl String
+  mimeType  String
+  createdAt DateTime      @default(now())
+  
+  report    ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }

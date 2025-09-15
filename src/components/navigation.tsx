@@ -71,6 +71,12 @@ export function Navigation({ user }: NavigationProps) {
               >
                 Expenses
               </a>
+              <a
+                href="/reports"
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Reports
+              </a>
               {canManageUsers(user) && (
                 <a
                   href="/users"
@@ -136,6 +142,13 @@ export function Navigation({ user }: NavigationProps) {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Expenses
+                </a>
+                <a
+                  href="/reports"
+                  className="text-gray-600 hover:text-gray-900 transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Reports
                 </a>
                 {canManageUsers(user) && (
                   <a

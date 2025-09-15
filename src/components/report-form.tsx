@@ -1,33 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { SessionUser } from '@/lib/auth'
 import { X, Upload, FileText } from 'lucide-react'
-import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES } from '@/lib/constants'
 
-// Teams are now defined as constants
-
-interface ExpenseFormProps {
-  user: SessionUser
+interface ReportFormProps {
+  expense: {
+    id: string
+    title: string
+    amountCents: number
+    team: string
+    campus: string
+    description?: string
+    eventDate?: string
+    requester: {
+      name: string | null
+      email: string
+    }
+  }
   onClose: () => void
 }
 
-export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
-  const [title, setTitle] = useState('')
-  const [amount, setAmount] = useState('')
-  const [team, setTeam] = useState('ADMIN')
-  const [campus, setCampus] = useState('DMV')
-  const [description, setDescription] = useState('')
-  const [urgency, setUrgency] = useState(2)
-  const [eventDate, setEventDate] = useState('')
+export function ReportForm({ expense, onClose }: ReportFormProps) {
+  const [title, setTitle] = useState(`Report for ${expense.title}`)
+  const [content, setContent] = useState('')
+  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0])
+  const [attachments, setAttachments] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [attachments, setAttachments] = useState<File[]>([])
-
-  // Teams are now enums, no need to fetch them
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -37,7 +38,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ folder: 'expense-receipts' }),
+        body: JSON.stringify({ folder: 'expense-reports' }),
       })
 
       if (!signatureResponse.ok) {
@@ -97,20 +98,17 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         uploadedAttachments.push(uploadResult)
       }
 
-      // Create expense request
-      const response = await fetch('/api/expenses/create', {
+      // Create report
+      const response = await fetch('/api/reports/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          expenseId: expense.id,
           title,
-          amountCents: Math.round(parseFloat(amount) * 100),
-          team,
-          campus,
-          description,
-          urgency,
-          eventDate: eventDate || null,
+          content,
+          reportDate,
           attachments: uploadedAttachments,
         }),
       })
@@ -119,13 +117,13 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
 
       if (response.ok) {
         onClose()
-        // Refresh the page to show the new expense
+        // Refresh the page to show the new report
         window.location.reload()
       } else {
-        setError(data.error || 'Failed to create expense request')
+        setError(data.error || 'Failed to create report')
       }
     } catch (error) {
-      setError('Failed to create expense request')
+      setError('Failed to create report')
     } finally {
       setLoading(false)
     }
@@ -174,137 +172,102 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg sm:text-xl">Create New Expense Request</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Create Expense Report</CardTitle>
               <CardDescription className="text-sm">
-                Submit a new expense request for approval
+                Create a report for the paid expense: {expense.title}
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={onClose}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="flex items-center space-x-2"
+            >
               <X className="w-4 h-4" />
             </Button>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium mb-1">
-                  Title *
-                </label>
-                <input
-                  id="title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            {/* Expense Details Preview */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Expense Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">Title:</span> {expense.title}
+                </div>
+                <div>
+                  <span className="text-gray-500">Amount:</span> ${(expense.amountCents / 100).toFixed(2)}
+                </div>
+                <div>
+                  <span className="text-gray-500">Team:</span> {expense.team}
+                </div>
+                <div>
+                  <span className="text-gray-500">Campus:</span> {expense.campus}
+                </div>
+                {expense.eventDate && (
+                  <div>
+                    <span className="text-gray-500">Event Date:</span> {new Date(expense.eventDate).toLocaleDateString()}
+                  </div>
+                )}
+                <div>
+                  <span className="text-gray-500">Requester:</span> {expense.requester.name || expense.requester.email}
+                </div>
               </div>
-              <div>
-                <label htmlFor="amount" className="block text-sm font-medium mb-1">
-                  Amount ($) *
-                </label>
-                <input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="999999.99"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+              {expense.description && (
+                <div className="mt-2">
+                  <span className="text-gray-500 text-sm">Description:</span>
+                  <p className="text-sm mt-1">{expense.description}</p>
+                </div>
+              )}
             </div>
 
             <div>
-              <label htmlFor="team" className="block text-sm font-medium mb-1">
-                Team *
-              </label>
-              <select
-                id="team"
-                value={team}
-                onChange={(e) => setTeam(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                {Object.entries(TEAM_DISPLAY_NAMES).map(([value, displayName]) => (
-                  <option key={value} value={value}>
-                    {displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="campus" className="block text-sm font-medium mb-1">
-                Campus *
-              </label>
-              <select
-                id="campus"
-                value={campus}
-                onChange={(e) => setCampus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                {Object.entries(CAMPUS_DISPLAY_NAMES).map(([value, displayName]) => (
-                  <option key={value} value={value}>
-                    {displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium mb-1">
-                Description
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="urgency" className="block text-sm font-medium mb-1">
-                Urgency
-              </label>
-              <select
-                id="urgency"
-                value={urgency}
-                onChange={(e) => setUrgency(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={1}>Not Urgent (Few months)</option>
-                <option value={2}>Urgent (This Month)</option>
-                <option value={3}>Very Urgent (This week)</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
-                Event Date (Optional)
+              <label htmlFor="title" className="block text-sm font-medium mb-1">
+                Report Title *
               </label>
               <input
-                id="eventDate"
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Date when the expense event occurred (if applicable)
-              </p>
+            </div>
+
+            <div>
+              <label htmlFor="reportDate" className="block text-sm font-medium mb-1">
+                Report Date *
+              </label>
+              <input
+                id="reportDate"
+                type="date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="content" className="block text-sm font-medium mb-1">
+                Report Content *
+              </label>
+              <textarea
+                id="content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Describe the outcome, results, or details of the expense..."
+                required
+              />
             </div>
 
             <div>
               <label htmlFor="attachments" className="block text-sm font-medium mb-1">
-                Attachments (Receipts, etc.)
+                Attachments (Optional)
               </label>
               <input
                 id="attachments"
@@ -324,12 +287,16 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
                       <div className="flex items-center space-x-2">
                         <FileText className="w-4 h-4 text-gray-500" />
                         <span className="text-sm">{file.name}</span>
+                        <span className="text-xs text-gray-500">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
                       </div>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => removeAttachment(index)}
+                        className="text-red-600 hover:text-red-700"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -344,11 +311,20 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
             )}
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={loading}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Expense Request'}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {loading ? 'Creating Report...' : 'Create Report'}
               </Button>
             </div>
           </form>

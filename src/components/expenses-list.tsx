@@ -7,6 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { SessionUser } from '@/lib/auth'
 import { ExpenseForm } from './expense-form'
 import { DenialModal } from './denial-modal'
+import { ReportForm } from './report-form'
 import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES } from '@/lib/constants'
 import { 
   Plus,
@@ -32,6 +33,7 @@ interface Expense {
   description?: string
   notes?: string
   paidAt?: string
+  eventDate?: string
   requester: {
     name: string | null
     email: string
@@ -62,6 +64,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseTitle: '',
   })
   const [viewModal, setViewModal] = useState<{
+    isOpen: boolean
+    expense: Expense | null
+  }>({
+    isOpen: false,
+    expense: null,
+  })
+  const [reportForm, setReportForm] = useState<{
     isOpen: boolean
     expense: Expense | null
   }>({
@@ -152,6 +161,20 @@ export function ExpensesList({ user }: ExpensesListProps) {
     setViewModal({
       isOpen: true,
       expense,
+    })
+  }
+
+  const openReportForm = (expense: Expense) => {
+    setReportForm({
+      isOpen: true,
+      expense,
+    })
+  }
+
+  const closeReportForm = () => {
+    setReportForm({
+      isOpen: false,
+      expense: null,
     })
   }
 
@@ -368,6 +391,17 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <span className="hidden sm:inline">Mark Paid</span>
                       </Button>
                     )}
+                    {expense.status === 'PAID' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openReportForm(expense)}
+                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        <span className="hidden sm:inline">Create Report</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -399,6 +433,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
         onClose={closeDenialModal}
         onConfirm={handleDeny}
       />
+
+      {/* Report Form */}
+      {reportForm.isOpen && reportForm.expense && (
+        <ReportForm
+          expense={reportForm.expense}
+          onClose={closeReportForm}
+        />
+      )}
 
       {/* View Modal */}
       {viewModal.isOpen && viewModal.expense && (
@@ -458,6 +500,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <label className="text-sm font-medium text-gray-500">Created</label>
                   <p className="font-medium">{formatDate(viewModal.expense.createdAt)}</p>
                 </div>
+                {viewModal.expense.eventDate && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Event Date</label>
+                    <p className="font-medium">{formatDate(viewModal.expense.eventDate)}</p>
+                  </div>
+                )}
               </div>
 
               {viewModal.expense.description && (

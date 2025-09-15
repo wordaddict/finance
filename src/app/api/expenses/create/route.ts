@@ -13,6 +13,7 @@ const createExpenseSchema = z.object({
   campus: z.enum(CAMPUS_VALUES as [string, ...string[]]),
   description: z.string().optional(),
   urgency: z.number().min(1).max(3).default(2),
+  eventDate: z.string().optional().nullable(),
   attachments: z.array(z.object({
     publicId: z.string(),
     secureUrl: z.string(),
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         campus: data.campus as any,
         description: data.description,
         urgency: data.urgency,
+        eventDate: data.eventDate ? new Date(data.eventDate) : null,
         attachments: data.attachments ? {
           create: data.attachments.map(attachment => ({
             publicId: attachment.publicId,
