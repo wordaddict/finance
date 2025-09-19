@@ -12,7 +12,7 @@ const createExpenseSchema = z.object({
   team: z.enum(TEAM_VALUES as [string, ...string[]]),
   campus: z.enum(CAMPUS_VALUES as [string, ...string[]]),
   description: z.string().min(1),
-  category: z.enum(EXPENSE_CATEGORY_VALUES as [string, ...string[]]).optional(),
+  category: z.enum(EXPENSE_CATEGORY_VALUES as [string, ...string[]]),
   urgency: z.number().min(1).max(3).default(2),
   eventDate: z.string().optional().nullable(),
   attachments: z.array(z.object({
@@ -20,6 +20,15 @@ const createExpenseSchema = z.object({
     secureUrl: z.string(),
     mimeType: z.string(),
   })).optional(),
+}).refine((data) => {
+  // If category is "Special Events and Programs", eventDate must be provided
+  if (data.category === 'Special Events and Programs') {
+    return data.eventDate && data.eventDate.trim() !== '';
+  }
+  return true;
+}, {
+  message: "Event date is required for Special Events and Programs",
+  path: ["eventDate"]
 })
 
 export async function POST(request: NextRequest) {

@@ -110,7 +110,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
           team,
           campus,
           description,
-          category: category || null,
+          category,
           urgency,
           eventDate: eventDate || null,
           attachments: uploadedAttachments,
@@ -275,15 +275,23 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
 
             <div>
               <label htmlFor="category" className="block text-sm font-medium mb-1">
-                Category
+                Category *
               </label>
               <select
                 id="category"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => {
+                  const newCategory = e.target.value
+                  setCategory(newCategory)
+                  // Clear event date if category is not Special Events and Programs
+                  if (newCategory !== 'Special Events and Programs') {
+                    setEventDate('')
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               >
-                <option value="">Select a category (optional)</option>
+                <option value="">Select a category</option>
                 {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
                   <option key={categoryValue} value={categoryValue}>
                     {categoryValue}
@@ -308,21 +316,24 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
               </select>
             </div>
 
-            <div>
-              <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
-                Event Date (Optional)
-              </label>
-              <input
-                id="eventDate"
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Date when the expense event occurred (if applicable)
-              </p>
-            </div>
+            {category === 'Special Events and Programs' && (
+              <div>
+                <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
+                  Event Date *
+                </label>
+                <input
+                  id="eventDate"
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Event date is required for special events and programs
+                </p>
+              </div>
+            )}
 
             <div>
               <label htmlFor="attachments" className="block text-sm font-medium mb-1">

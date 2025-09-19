@@ -50,7 +50,7 @@ model ExpenseRequest {
   team          String
   requesterId   String
   description   String?
-  category      String?
+  category      String
   urgency       Int
   notes         String?
   status        Status        @default(SUBMITTED)
