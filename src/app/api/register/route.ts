@@ -8,12 +8,13 @@ const registerSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
   role: z.enum(['ADMIN', 'CAMPUS_PASTOR', 'LEADER']).default('LEADER'),
+  campus: z.enum(['DMV', 'DALLAS', 'BOSTON', 'AUSTIN', 'CCI_USA_NASHVILLE', 'CCI_USA_OKLAHOMA', 'CCI_USA_NEWYORK_NEWJERSEY', 'CCI_USA_KNOXVILLE', 'CCI_USA_NORTH_CAROLINA', 'CCI_USA_ATLANTA', 'CCI_USA_BAY_AREA', 'CCI_USA_CHICAGO']),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, name, password, role } = registerSchema.parse(body)
+    const { email, name, password, role, campus } = registerSchema.parse(body)
 
     // Normalize email: trim whitespace and convert to lowercase
     const normalizedEmail = email.trim().toLowerCase()
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(), // Also trim the name
         password: hashedPassword,
         role,
+        campus,
         status: 'PENDING_APPROVAL', // New status for pending approval
       },
     })

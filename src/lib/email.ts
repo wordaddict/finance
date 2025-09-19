@@ -170,3 +170,85 @@ export function generateReminderEmail(
     text: `You have ${pendingCount} pending expense request${pendingCount > 1 ? 's' : ''} that require${pendingCount === 1 ? 's' : ''} your attention. Please log in to review these requests.`,
   }
 }
+
+export function generateUserApprovedEmail(
+  recipientName: string,
+  recipientEmail: string,
+  reason?: string
+): EmailTemplate {
+  return {
+    to: recipientEmail,
+    subject: 'Account Approved - Welcome to the Church Expense System',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Account Approved</h2>
+        <p>Hello ${recipientName},</p>
+        <p>Great news! Your account has been approved and you now have access to the Church Expense System.</p>
+        <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>Account Details</h3>
+          <p><strong>Email:</strong> ${recipientEmail}</p>
+          <p><strong>Status:</strong> Active</p>
+          ${reason ? `<p><strong>Admin Note:</strong> ${reason}</p>` : ''}
+        </div>
+        <p>You can now log in to the system and submit expense requests.</p>
+        <p>If you have any questions, please contact your team leader or administrator.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Account Approved\n\nHello ${recipientName},\n\nGreat news! Your account has been approved and you now have access to the Church Expense System.\n\nAccount Details:\nEmail: ${recipientEmail}\nStatus: Active${reason ? `\nAdmin Note: ${reason}` : ''}\n\nYou can now log in to the system and submit expense requests.\n\nIf you have any questions, please contact your team leader or administrator.\n\nBest regards,\nChurch Expense System`,
+  }
+}
+
+export function generateUserDeniedEmail(
+  recipientName: string,
+  recipientEmail: string,
+  reason: string
+): EmailTemplate {
+  return {
+    to: recipientEmail,
+    subject: 'Account Registration Denied',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Account Registration Denied</h2>
+        <p>Hello ${recipientName},</p>
+        <p>We regret to inform you that your account registration has been denied.</p>
+        <div style="background: #ffeaea; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>Registration Details</h3>
+          <p><strong>Email:</strong> ${recipientEmail}</p>
+          <p><strong>Status:</strong> Denied</p>
+          <p><strong>Reason:</strong> ${reason}</p>
+        </div>
+        <p>If you believe this decision was made in error or have additional information to provide, please contact the church administration.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Account Registration Denied\n\nHello ${recipientName},\n\nWe regret to inform you that your account registration has been denied.\n\nRegistration Details:\nEmail: ${recipientEmail}\nStatus: Denied\nReason: ${reason}\n\nIf you believe this decision was made in error or have additional information to provide, please contact the church administration.\n\nBest regards,\nChurch Expense System`,
+  }
+}
+
+export function generateUserSuspendedEmail(
+  recipientName: string,
+  recipientEmail: string,
+  reason: string
+): EmailTemplate {
+  return {
+    to: recipientEmail,
+    subject: 'Account Suspended - Church Expense System',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Account Suspended</h2>
+        <p>Hello ${recipientName},</p>
+        <p>Your account has been suspended and you no longer have access to the Church Expense System.</p>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <h3>Account Details</h3>
+          <p><strong>Email:</strong> ${recipientEmail}</p>
+          <p><strong>Status:</strong> Suspended</p>
+          <p><strong>Reason:</strong> ${reason}</p>
+        </div>
+        <p>If you have questions about this suspension or wish to appeal this decision, please contact the church administration immediately.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Account Suspended\n\nHello ${recipientName},\n\nYour account has been suspended and you no longer have access to the Church Expense System.\n\nAccount Details:\nEmail: ${recipientEmail}\nStatus: Suspended\nReason: ${reason}\n\nIf you have questions about this suspension or wish to appeal this decision, please contact the church administration immediately.\n\nBest regards,\nChurch Expense System`,
+  }
+}

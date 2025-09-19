@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canManageUsers } from '@/lib/rbac'
+import { sendEmail, generateUserDeniedEmail } from '@/lib/email'
 
 const denyUserSchema = z.object({
   userId: z.string().uuid(),
+  reason: z.string().min(1, 'Reason is required for denial'),
 })
 
 export async function POST(request: NextRequest) {
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId } = denyUserSchema.parse(body)
+    const { userId, reason } = denyUserSchema.parse(body)
 
     // Get the user to deny
     const userToDeny = await db.user.findUnique({
@@ -39,6 +41,19 @@ export async function POST(request: NextRequest) {
         { error: 'User is not pending approval' },
         { status: 400 }
       )
+    }
+
+    // Send email notification before deleting the user
+    try {
+      const emailTemplate = generateUserDeniedEmail(
+        userToDeny.name || 'User',
+        userToDeny.email,
+        reason
+      )
+      await sendEmail(emailTemplate)
+    } catch (emailError) {
+      console.error('Failed to send denial email:', emailError)
+      // Don't fail the request if email fails
     }
 
     // Delete the user (deny their registration)

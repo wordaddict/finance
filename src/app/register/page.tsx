@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
+import { CAMPUSES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -15,6 +16,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [role, setRole] = useState('LEADER')
+  const [campus, setCampus] = useState('DMV')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -57,13 +59,19 @@ export default function RegisterPage() {
       return
     }
 
+    if (!campus) {
+      setError('Campus is required')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), name, password, role }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), name, password, role, campus }),
       })
 
       const data = await response.json()
@@ -180,6 +188,31 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+            </div>
+            <div>
+              <label htmlFor="campus" className="block text-sm font-medium mb-1">
+                Campus *
+              </label>
+              <select
+                id="campus"
+                value={campus}
+                onChange={(e) => setCampus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="DMV">DMV</option>
+                <option value="DALLAS">Dallas</option>
+                <option value="BOSTON">Boston</option>
+                <option value="AUSTIN">Austin</option>
+                <option value="CCI_USA_NASHVILLE">CCI-USA Nashville</option>
+                <option value="CCI_USA_OKLAHOMA">CCI-USA Oklahoma</option>
+                <option value="CCI_USA_NEWYORK_NEWJERSEY">CCI-USA New York/New Jersey</option>
+                <option value="CCI_USA_KNOXVILLE">CCI-USA Knoxville</option>
+                <option value="CCI_USA_NORTH_CAROLINA">CCI-USA North Carolina</option>
+                <option value="CCI_USA_ATLANTA">CCI-USA Atlanta</option>
+                <option value="CCI_USA_BAY_AREA">CCI-USA Bay Area</option>
+                <option value="CCI_USA_CHICAGO">CCI-USA Chicago</option>
+              </select>
             </div>
             <div>
               <label htmlFor="role" className="block text-sm font-medium mb-1">

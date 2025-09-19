@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canManageUsers } from '@/lib/rbac'
+import { sendEmail, generateUserApprovedEmail } from '@/lib/email'
 
 const approveUserSchema = z.object({
   userId: z.string().uuid(),
+  reason: z.string().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId } = approveUserSchema.parse(body)
+    const { userId, reason } = approveUserSchema.parse(body)
 
     // Get the user to approve
     const userToApprove = await db.user.findUnique({
@@ -55,6 +57,19 @@ export async function POST(request: NextRequest) {
       where: { id: userId },
       data: updateData,
     })
+
+    // Send email notification
+    try {
+      const emailTemplate = generateUserApprovedEmail(
+        userToApprove.name || 'User',
+        userToApprove.email,
+        reason
+      )
+      await sendEmail(emailTemplate)
+    } catch (emailError) {
+      console.error('Failed to send approval email:', emailError)
+      // Don't fail the request if email fails
+    }
 
     const action = userToApprove.status === 'PENDING_APPROVAL' ? 'approved' : 'reactivated'
     return NextResponse.json({

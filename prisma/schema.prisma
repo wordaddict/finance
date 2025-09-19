@@ -14,7 +14,7 @@ model User {
   name            String?
   role            Role             @default(LEADER)
   status          UserStatus       @default(ACTIVE)
-  campus          Campus           @default(DMV)
+  campus          Campus
   emailVerifiedAt DateTime?
   zelle           String?
   createdAt       DateTime         @default(now())
@@ -194,6 +194,14 @@ enum Campus {
   DALLAS
   BOSTON
   AUSTIN
+  CCI_USA_NASHVILLE
+  CCI_USA_OKLAHOMA
+  CCI_USA_NEWYORK_NEWJERSEY
+  CCI_USA_KNOXVILLE
+  CCI_USA_NORTH_CAROLINA
+  CCI_USA_ATLANTA
+  CCI_USA_BAY_AREA
+  CCI_USA_CHICAGO
 }
 
 model ExpenseReport {

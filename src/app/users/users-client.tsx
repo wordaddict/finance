@@ -37,10 +37,36 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     isOpen: boolean
     userId: string | null
     userName: string | null
+    reason: string
   }>({
     isOpen: false,
     userId: null,
     userName: null,
+    reason: '',
+  })
+
+  const [approveModal, setApproveModal] = useState<{
+    isOpen: boolean
+    userId: string | null
+    userName: string | null
+    reason: string
+  }>({
+    isOpen: false,
+    userId: null,
+    userName: null,
+    reason: '',
+  })
+
+  const [suspendModal, setSuspendModal] = useState<{
+    isOpen: boolean
+    userId: string | null
+    userName: string | null
+    reason: string
+  }>({
+    isOpen: false,
+    userId: null,
+    userName: null,
+    reason: '',
   })
 
   useEffect(() => {
@@ -70,19 +96,43 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     }
   }
 
-  const handleApprove = async (userId: string) => {
+  const openApproveModal = (userId: string, userName: string | null) => {
+    setApproveModal({
+      isOpen: true,
+      userId,
+      userName,
+      reason: '',
+    })
+  }
+
+  const closeApproveModal = () => {
+    setApproveModal({
+      isOpen: false,
+      userId: null,
+      userName: null,
+      reason: '',
+    })
+  }
+
+  const handleApprove = async () => {
+    if (!approveModal.userId) return
+
     try {
-      setActionLoading({ userId, action: 'approve' })
+      setActionLoading({ userId: approveModal.userId, action: 'approve' })
       const response = await fetch('/api/users/approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ 
+          userId: approveModal.userId,
+          reason: approveModal.reason || undefined
+        }),
       })
 
       if (response.ok) {
         await fetchUsers() // Refresh the list
+        closeApproveModal()
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to approve user')
@@ -94,19 +144,43 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     }
   }
 
-  const handleSuspend = async (userId: string) => {
+  const openSuspendModal = (userId: string, userName: string | null) => {
+    setSuspendModal({
+      isOpen: true,
+      userId,
+      userName,
+      reason: '',
+    })
+  }
+
+  const closeSuspendModal = () => {
+    setSuspendModal({
+      isOpen: false,
+      userId: null,
+      userName: null,
+      reason: '',
+    })
+  }
+
+  const handleSuspend = async () => {
+    if (!suspendModal.userId) return
+
     try {
-      setActionLoading({ userId, action: 'suspend' })
+      setActionLoading({ userId: suspendModal.userId, action: 'suspend' })
       const response = await fetch('/api/users/suspend', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ 
+          userId: suspendModal.userId,
+          reason: suspendModal.reason
+        }),
       })
 
       if (response.ok) {
         await fetchUsers() // Refresh the list
+        closeSuspendModal()
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to suspend user')
@@ -123,6 +197,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
       isOpen: true,
       userId,
       userName,
+      reason: '',
     })
   }
 
@@ -131,6 +206,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
       isOpen: false,
       userId: null,
       userName: null,
+      reason: '',
     })
   }
 
@@ -144,7 +220,10 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: denyModal.userId }),
+        body: JSON.stringify({ 
+          userId: denyModal.userId,
+          reason: denyModal.reason
+        }),
       })
 
       if (response.ok) {
@@ -312,7 +391,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                         {userItem.status === 'PENDING_APPROVAL' && (
                           <>
                             <Button
-                              onClick={() => handleApprove(userItem.id)}
+                              onClick={() => openApproveModal(userItem.id, userItem.name)}
                               disabled={actionLoading.userId === userItem.id}
                               className="bg-green-600 hover:bg-green-700 text-white"
                               size="sm"
@@ -335,7 +414,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                         
                         {userItem.status === 'ACTIVE' && userItem.id !== user.id && (
                           <Button
-                            onClick={() => handleSuspend(userItem.id)}
+                            onClick={() => openSuspendModal(userItem.id, userItem.name)}
                             disabled={actionLoading.userId === userItem.id}
                             variant="outline"
                             className="border-red-300 text-red-600 hover:bg-red-50"
@@ -348,7 +427,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                         
                         {userItem.status === 'SUSPENDED' && (
                           <Button
-                            onClick={() => handleApprove(userItem.id)}
+                            onClick={() => openApproveModal(userItem.id, userItem.name)}
                             disabled={actionLoading.userId === userItem.id}
                             className="bg-green-600 hover:bg-green-700 text-white"
                             size="sm"
@@ -367,18 +446,190 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
         </div>
       </div>
 
-      {/* Deny Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={denyModal.isOpen}
-        onClose={closeDenyModal}
-        onConfirm={handleDeny}
-        title="Deny User Registration"
-        message={`Are you sure you want to deny the registration for ${denyModal.userName || 'this user'}? This action cannot be undone and will permanently delete their account.`}
-        confirmText="Deny Registration"
-        cancelText="Cancel"
-        variant="danger"
-        loading={actionLoading.userId === denyModal.userId && actionLoading.action === 'deny'}
-      />
+      {/* Approve Modal */}
+      {approveModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Approve User</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeApproveModal}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>User:</strong> {approveModal.userName || 'Unknown User'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Add an optional note for the user (this will be included in their approval email).
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Approval Note (Optional)
+                </label>
+                <textarea
+                  value={approveModal.reason}
+                  onChange={(e) => setApproveModal(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Add a note for the user..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={closeApproveModal}
+                  disabled={actionLoading.userId === approveModal.userId}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleApprove}
+                  disabled={actionLoading.userId === approveModal.userId}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {actionLoading.userId === approveModal.userId ? 'Approving...' : 'Approve User'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deny Modal */}
+      {denyModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Deny User Registration</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeDenyModal}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>User:</strong> {denyModal.userName || 'Unknown User'}
+                </p>
+                <p className="text-sm text-red-600 mb-2">
+                  <strong>Warning:</strong> This action will permanently delete the user's account and cannot be undone.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Please provide a reason for the denial (this will be sent to the user via email).
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Denial <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={denyModal.reason}
+                  onChange={(e) => setDenyModal(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Please provide a reason for denying this user registration..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={closeDenyModal}
+                  disabled={actionLoading.userId === denyModal.userId}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeny}
+                  disabled={actionLoading.userId === denyModal.userId || !denyModal.reason.trim()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {actionLoading.userId === denyModal.userId ? 'Denying...' : 'Deny Registration'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suspend Modal */}
+      {suspendModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Suspend User</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeSuspendModal}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>User:</strong> {suspendModal.userName || 'Unknown User'}
+                </p>
+                <p className="text-sm text-orange-600 mb-2">
+                  <strong>Warning:</strong> This will suspend the user's account and prevent them from accessing the system.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Please provide a reason for the suspension (this will be sent to the user via email).
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Suspension <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={suspendModal.reason}
+                  onChange={(e) => setSuspendModal(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Please provide a reason for suspending this user..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={closeSuspendModal}
+                  disabled={actionLoading.userId === suspendModal.userId}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSuspend}
+                  disabled={actionLoading.userId === suspendModal.userId || !suspendModal.reason.trim()}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {actionLoading.userId === suspendModal.userId ? 'Suspending...' : 'Suspend User'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

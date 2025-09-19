@@ -10,7 +10,7 @@ export interface SessionUser {
   name: string | null
   role: 'ADMIN' | 'CAMPUS_PASTOR' | 'LEADER'
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED'
-  campus: 'DMV' | 'LAGOS' | 'ABUJA' | 'KANO' | 'IBADAN'
+  campus: 'DMV' | 'DALLAS' | 'BOSTON' | 'AUSTIN' | 'CCI_USA_NASHVILLE' | 'CCI_USA_OKLAHOMA' | 'CCI_USA_NEWYORK_NEWJERSEY' | 'CCI_USA_KNOXVILLE' | 'CCI_USA_NORTH_CAROLINA' | 'CCI_USA_ATLANTA' | 'CCI_USA_BAY_AREA' | 'CCI_USA_CHICAGO'
   zelle?: string | null
 }
 
@@ -59,7 +59,7 @@ export async function getSession(sessionId: string): Promise<SessionUser | null>
     name: session.user.name,
     role: session.user.role as 'ADMIN' | 'CAMPUS_PASTOR' | 'LEADER',
     status: session.user.status as 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED',
-    campus: session.user.campus as 'DMV' | 'LAGOS' | 'ABUJA' | 'KANO' | 'IBADAN',
+    campus: session.user.campus as 'DMV' | 'DALLAS' | 'BOSTON' | 'AUSTIN' | 'CCI_USA_NASHVILLE' | 'CCI_USA_OKLAHOMA' | 'CCI_USA_NEWYORK_NEWJERSEY' | 'CCI_USA_KNOXVILLE' | 'CCI_USA_NORTH_CAROLINA' | 'CCI_USA_ATLANTA' | 'CCI_USA_BAY_AREA' | 'CCI_USA_CHICAGO',
     zelle: session.user.zelle,
   }
 }

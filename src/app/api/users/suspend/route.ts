@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canManageUsers } from '@/lib/rbac'
+import { sendEmail, generateUserSuspendedEmail } from '@/lib/email'
 
 const suspendUserSchema = z.object({
   userId: z.string().uuid(),
+  reason: z.string().min(1, 'Reason is required for suspension'),
 })
 
 export async function POST(request: NextRequest) {
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId } = suspendUserSchema.parse(body)
+    const { userId, reason } = suspendUserSchema.parse(body)
 
     // Get the user to suspend
     const userToSuspend = await db.user.findUnique({
@@ -48,6 +50,19 @@ export async function POST(request: NextRequest) {
         status: 'SUSPENDED',
       },
     })
+
+    // Send email notification
+    try {
+      const emailTemplate = generateUserSuspendedEmail(
+        userToSuspend.name || 'User',
+        userToSuspend.email,
+        reason
+      )
+      await sendEmail(emailTemplate)
+    } catch (emailError) {
+      console.error('Failed to send suspension email:', emailError)
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json({
       message: 'User suspended successfully',
