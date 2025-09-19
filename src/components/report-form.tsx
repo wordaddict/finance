@@ -14,10 +14,29 @@ interface ReportFormProps {
     campus: string
     description?: string
     eventDate?: string
+    status: string
     requester: {
       name: string | null
       email: string
     }
+    items?: {
+      id: string
+      description: string
+      quantity: number
+      unitPriceCents: number
+      amountCents: number
+      approvals?: {
+        id: string
+        status: string
+        approvedAmountCents?: number | null
+        comment?: string | null
+        approver: {
+          name: string | null
+          email: string
+        }
+        createdAt: string
+      }[]
+    }[]
   }
   onClose: () => void
 }
@@ -29,6 +48,43 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
   const [attachments, setAttachments] = useState<File[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Calculate approved expenses and required attachments
+  const calculateApprovedExpenses = () => {
+    if (!expense.items || expense.items.length === 0) {
+      // Non-itemized expense - return the full approved amount
+      return {
+        approvedItems: [],
+        totalApprovedAmount: expense.amountCents,
+        requiredAttachments: 1
+      }
+    }
+
+    // Itemized expense - calculate approved amounts for each item
+    const approvedItems = expense.items.map(item => {
+      const itemApproval = item.approvals?.[0] // Get the first (and should be only) approval
+      if (itemApproval && itemApproval.status === 'APPROVED') {
+        return {
+          ...item,
+          approvedAmountCents: itemApproval.approvedAmountCents || item.amountCents
+        }
+      }
+      return {
+        ...item,
+        approvedAmountCents: 0 // Not approved
+      }
+    }).filter(item => item.approvedAmountCents > 0) // Only include approved items
+
+    const totalApprovedAmount = approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0)
+    
+    return {
+      approvedItems,
+      totalApprovedAmount,
+      requiredAttachments: approvedItems.length
+    }
+  }
+
+  const { approvedItems, totalApprovedAmount, requiredAttachments } = calculateApprovedExpenses()
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -91,6 +147,13 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
     setError('')
 
     try {
+      // Validate attachment requirements
+      if (attachments.length < requiredAttachments) {
+        setError(`This expense report requires at least ${requiredAttachments} attachment(s) because it has ${approvedItems.length > 0 ? `${approvedItems.length} approved item(s)` : 'approved expenses'}. Please upload the required documents.`)
+        setLoading(false)
+        return
+      }
+
       // Upload attachments
       const uploadedAttachments = []
       for (const file of attachments) {
@@ -98,7 +161,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         uploadedAttachments.push(uploadResult)
       }
 
-      // Create report
+      // Create report with approved expenses data
       const response = await fetch('/api/reports/create', {
         method: 'POST',
         headers: {
@@ -110,6 +173,14 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
           content,
           reportDate,
           attachments: uploadedAttachments,
+          approvedExpenses: {
+            totalApprovedAmount,
+            approvedItems: approvedItems.map(item => ({
+              id: item.id,
+              description: item.description,
+              approvedAmountCents: item.approvedAmountCents
+            }))
+          }
         }),
       })
 
@@ -197,7 +268,10 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                   <span className="text-gray-500">Title:</span> {expense.title}
                 </div>
                 <div>
-                  <span className="text-gray-500">Amount:</span> ${(expense.amountCents / 100).toFixed(2)}
+                  <span className="text-gray-500">Requested Amount:</span> ${(expense.amountCents / 100).toFixed(2)}
+                </div>
+                <div>
+                  <span className="text-gray-500">Approved Amount:</span> <span className="font-semibold text-green-600">${(totalApprovedAmount / 100).toFixed(2)}</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Team:</span> {expense.team}
@@ -221,6 +295,31 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                 </div>
               )}
             </div>
+
+            {/* Approved Items Details */}
+            {approvedItems.length > 0 && (
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h3 className="font-semibold text-sm text-green-800 mb-2">Approved Items</h3>
+                <div className="space-y-2">
+                  {approvedItems.map((item, index) => (
+                    <div key={item.id} className="bg-white p-3 rounded border border-green-100">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                          <p className="text-xs text-gray-500">Qty: {item.quantity} × ${(item.unitPriceCents / 100).toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-green-600">
+                            ${(item.approvedAmountCents / 100).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-500">Item {index + 1}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label htmlFor="title" className="block text-sm font-medium mb-1">
@@ -267,7 +366,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
 
             <div>
               <label htmlFor="attachments" className="block text-sm font-medium mb-1">
-                Attachments (Optional)
+                Attachments <span className="text-red-500">*</span>
               </label>
               <input
                 id="attachments"
@@ -277,9 +376,17 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                 onChange={handleFileChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Allowed formats: JPG, PNG, PDF. Maximum size: 10MB per file.
-              </p>
+              <div className="mt-1">
+                <p className="text-xs text-gray-500">
+                  Allowed formats: JPG, PNG, PDF. Maximum size: 10MB per file.
+                </p>
+                <p className="text-sm font-medium text-blue-600">
+                  Required: {requiredAttachments} attachment(s) ({attachments.length}/{requiredAttachments} uploaded)
+                  {requiredAttachments > 1 && (
+                    <span className="text-gray-600"> - One document per approved item</span>
+                  )}
+                </p>
+              </div>
               {attachments.length > 0 && (
                 <div className="mt-2 space-y-2">
                   {attachments.map((file, index) => (
@@ -321,10 +428,13 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
               </Button>
               <Button
                 type="submit"
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={loading || attachments.length < requiredAttachments}
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
               >
-                {loading ? 'Creating Report...' : 'Create Report'}
+                {loading ? 'Creating Report...' : 
+                 attachments.length < requiredAttachments ? 
+                 `Upload ${requiredAttachments - attachments.length} more file(s)` : 
+                 'Create Report'}
               </Button>
             </div>
           </form>

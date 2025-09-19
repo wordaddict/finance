@@ -69,6 +69,12 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          reports: {
+            include: {
+              attachments: true,
+              approvedItems: true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',

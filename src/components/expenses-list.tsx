@@ -74,6 +74,25 @@ interface Expense {
       createdAt: string
     }[]
   }[]
+  reports?: {
+    id: string
+    title: string
+    content: string
+    reportDate: string
+    totalApprovedAmount?: number
+    attachments: {
+      id: string
+      publicId: string
+      secureUrl: string
+      mimeType: string
+    }[]
+    approvedItems: {
+      id: string
+      originalItemId: string
+      description: string
+      approvedAmountCents: number
+    }[]
+  }[]
 }
 
 interface ExpensesListProps {
@@ -118,6 +137,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }>({
     isOpen: false,
     expense: null
+  })
+  const [reportViewModal, setReportViewModal] = useState<{
+    isOpen: boolean
+    report: any | null
+  }>({
+    isOpen: false,
+    report: null,
   })
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
     isOpen: boolean
@@ -626,6 +652,20 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
+  const openReportViewModal = (report: any) => {
+    setReportViewModal({
+      isOpen: true,
+      report,
+    })
+  }
+
+  const closeReportViewModal = () => {
+    setReportViewModal({
+      isOpen: false,
+      report: null,
+    })
+  }
+
   const closeDenialModal = () => {
     setDenialModal({ isOpen: false, expenseId: '', expenseTitle: '' })
   }
@@ -897,15 +937,29 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       </Button>
                     )}
                     {expense.status === 'PAID' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openReportForm(expense)}
-                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                      >
-                        <FileText className="w-4 h-4 mr-1" />
-                        <span className="hidden sm:inline">Create Report</span>
-                      </Button>
+                      <>
+                        {(!expense.reports || expense.reports.length === 0) ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openReportForm(expense)}
+                            className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Create Report</span>
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
+                            className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">View Report</span>
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1496,6 +1550,107 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   {pastorRemarkModal.processing ? 'Adding Remark...' : 'Add Remark'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report View Modal */}
+      {reportViewModal.isOpen && reportViewModal.report && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg sm:text-xl font-bold">Report Details</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={closeReportViewModal}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-base sm:text-lg">{reportViewModal.report.title}</h3>
+                <p className="text-sm text-gray-500">
+                  Report Date: {formatDate(reportViewModal.report.reportDate)}
+                </p>
+              </div>
+
+              {/* Report Content */}
+              <div>
+                <label className="text-sm font-medium text-gray-500">Report Content</label>
+                <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base whitespace-pre-wrap">
+                  {reportViewModal.report.content}
+                </p>
+              </div>
+
+              {/* Approved Items Details */}
+              {reportViewModal.report.approvedItems && reportViewModal.report.approvedItems.length > 0 && (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-sm text-green-800 mb-2">Approved Items</h4>
+                  <div className="space-y-2">
+                    {reportViewModal.report.approvedItems.map((item: any, index: number) => (
+                      <div key={item.id} className="bg-white p-3 rounded border border-green-100">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                            <p className="text-xs text-gray-500">Item {index + 1}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-green-600">
+                              {formatCurrency(item.approvedAmountCents)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attachments */}
+              {reportViewModal.report.attachments && reportViewModal.report.attachments.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Attachments</label>
+                  <div className="mt-2 space-y-2">
+                    {reportViewModal.report.attachments.map((attachment: any) => (
+                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                        <div className="flex items-center space-x-3">
+                          {attachment.mimeType.startsWith('image/') ? (
+                            <img
+                              src={attachment.secureUrl}
+                              alt="Report attachment"
+                              className="w-12 h-12 object-cover rounded border"
+                              onClick={() => window.open(attachment.secureUrl, '_blank')}
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
+                              <FileText className="w-6 h-6 text-red-600" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-medium">
+                              {attachment.mimeType.startsWith('image/') ? 'Image' : 'PDF Document'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {attachment.mimeType}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -210,11 +210,13 @@ model ExpenseReport {
   title         String
   content       String
   reportDate    DateTime      @default(now())
+  totalApprovedAmount Int?    // Store the total approved amount for this report
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   
   expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   attachments   ReportAttachment[]
+  approvedItems ApprovedReportItem[]
 }
 
 model ReportAttachment {
@@ -224,6 +226,17 @@ model ReportAttachment {
   secureUrl String
   mimeType  String
   createdAt DateTime      @default(now())
-  
+
   report    ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model ApprovedReportItem {
+  id                  String        @id @default(uuid())
+  reportId            String
+  originalItemId      String        // Reference to the original ExpenseItem
+  description         String
+  approvedAmountCents Int
+  createdAt           DateTime      @default(now())
+
+  report              ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }

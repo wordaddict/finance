@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
             },
           },
           attachments: true,
+          approvedItems: true,
         },
         orderBy: {
           createdAt: 'desc',

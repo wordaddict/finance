@@ -22,6 +22,7 @@ interface Report {
   content: string
   reportDate: string
   createdAt: string
+  totalApprovedAmount?: number
   expense: {
     id: string
     title: string
@@ -39,6 +40,12 @@ interface Report {
     publicId: string
     secureUrl: string
     mimeType: string
+  }[]
+  approvedItems: {
+    id: string
+    originalItemId: string
+    description: string
+    approvedAmountCents: number
   }[]
 }
 
@@ -199,7 +206,10 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                         </div>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
                           <div className="flex items-center text-gray-500">
-                            <span>{formatCurrency(report.expense.amountCents)}</span>
+                            <span>Requested: {formatCurrency(report.expense.amountCents)}</span>
+                          </div>
+                          <div className="flex items-center text-gray-500">
+                            <span>Approved: <span className="font-semibold text-green-600">{formatCurrency(report.totalApprovedAmount || report.expense.amountCents)}</span></span>
                           </div>
                           <div className="flex items-center text-gray-500">
                             <User className="w-4 h-4 mr-1" />
@@ -268,7 +278,10 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                     <span className="text-gray-500">Title:</span> {viewModal.report.expense.title}
                   </div>
                   <div>
-                    <span className="text-gray-500">Amount:</span> {formatCurrency(viewModal.report.expense.amountCents)}
+                    <span className="text-gray-500">Requested Amount:</span> {formatCurrency(viewModal.report.expense.amountCents)}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Approved Amount:</span> <span className="font-semibold text-green-600">{formatCurrency(viewModal.report.totalApprovedAmount || viewModal.report.expense.amountCents)}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Team:</span> {viewModal.report.expense.team}
@@ -286,6 +299,30 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Approved Items Details */}
+              {viewModal.report.approvedItems && viewModal.report.approvedItems.length > 0 && (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-sm text-green-800 mb-2">Approved Items</h4>
+                  <div className="space-y-2">
+                    {viewModal.report.approvedItems.map((item, index) => (
+                      <div key={item.id} className="bg-white p-3 rounded border border-green-100">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                            <p className="text-xs text-gray-500">Item {index + 1}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-green-600">
+                              {formatCurrency(item.approvedAmountCents)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Report Content */}
               <div>
