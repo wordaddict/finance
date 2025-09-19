@@ -20,10 +20,13 @@ interface ExpenseItem {
 
 interface ExpenseFormProps {
   user: SessionUser
-  onClose: () => void
+  onClose?: () => void
+  onSuccess?: () => void
+  onCancel?: () => void
+  editExpense?: any // Expense object for editing
 }
 
-export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
+export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }: ExpenseFormProps) {
   const [title, setTitle] = useState('')
   const [team, setTeam] = useState('ADMIN')
   const [campus, setCampus] = useState('DMV')
@@ -46,6 +49,31 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
     const total = items.reduce((sum, item) => sum + item.amount, 0)
     setTotalAmount(total)
   }, [items])
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editExpense) {
+      setTitle(editExpense.title || '')
+      setTeam(editExpense.team || 'ADMIN')
+      setCampus(editExpense.campus || 'DMV')
+      setDescription(editExpense.description || '')
+      setCategory(editExpense.category || '')
+      setUrgency(editExpense.urgency || 2)
+      setEventDate(editExpense.eventDate || '')
+
+      // Populate items if they exist
+      if (editExpense.items && editExpense.items.length > 0) {
+        const formattedItems = editExpense.items.map((item: any, index: number) => ({
+          id: item.id || (index + 1).toString(),
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unitPrice: (item.unitPriceCents || 0) / 100,
+          amount: (item.amountCents || 0) / 100,
+        }))
+        setItems(formattedItems)
+      }
+    }
+  }, [editExpense])
 
   const updateItem = (id: string, field: keyof ExpenseItem, value: string | number) => {
     setItems(prev => prev.map(item => {
@@ -139,39 +167,54 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         uploadedAttachments.push(uploadResult)
       }
 
-      // Create expense request
-      const response = await fetch('/api/expenses/create', {
-        method: 'POST',
+      // Create or update expense request
+      const isEditing = !!editExpense
+      const url = isEditing ? `/api/expenses/update` : '/api/expenses/create'
+      const method = isEditing ? 'PUT' : 'POST'
+      
+      const requestBody: any = {
+        title,
+        amountCents: Math.round(totalAmount * 100),
+        team,
+        campus,
+        description,
+        category,
+        urgency,
+        eventDate: eventDate || null,
+        attachments: uploadedAttachments,
+        items: items.map(item => ({
+          description: item.description,
+          quantity: item.quantity,
+          unitPriceCents: Math.round(item.unitPrice * 100),
+          amountCents: Math.round(item.amount * 100),
+        })),
+      }
+
+      // Add expense ID for updates
+      if (isEditing) {
+        requestBody.expenseId = editExpense.id
+      }
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title,
-          amountCents: Math.round(totalAmount * 100),
-          team,
-          campus,
-          description,
-          category,
-          urgency,
-          eventDate: eventDate || null,
-          attachments: uploadedAttachments,
-          items: items.map(item => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPriceCents: Math.round(item.unitPrice * 100),
-            amountCents: Math.round(item.amount * 100),
-          })),
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        onClose()
-        // Refresh the page to show the new expense
-        window.location.reload()
+        if (onSuccess) {
+          onSuccess()
+        } else if (onClose) {
+          onClose()
+          // Refresh the page to show the new expense
+          window.location.reload()
+        }
       } else {
-        setError(data.error || 'Failed to create expense request')
+        setError(data.error || `Failed to ${isEditing ? 'update' : 'create'} expense request`)
       }
     } catch (error) {
       setError('Failed to create expense request')
@@ -223,9 +266,11 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg sm:text-xl">Create New Expense Request</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">
+                {editExpense ? 'Edit Expense Request' : 'Create New Expense Request'}
+              </CardTitle>
               <CardDescription className="text-sm">
-                Submit a new expense request for approval
+                {editExpense ? 'Update your expense request' : 'Submit a new expense request for approval'}
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={onClose}>
@@ -509,11 +554,11 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
             )}
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onCancel || onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Expense Request'}
+                {loading ? (editExpense ? 'Updating...' : 'Creating...') : (editExpense ? 'Update Expense Request' : 'Create Expense Request')}
               </Button>
             </div>
           </form>

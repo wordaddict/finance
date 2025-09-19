@@ -117,6 +117,7 @@ export const STATUS = {
   APPROVED: 'APPROVED',
   DENIED: 'DENIED',
   PARTIALLY_APPROVED: 'PARTIALLY_APPROVED',
+  CHANGE_REQUESTED: 'CHANGE_REQUESTED',
   PAID: 'PAID',
 } as const
 
@@ -126,6 +127,7 @@ export const STATUS_DISPLAY_NAMES = {
   [STATUS.APPROVED]: 'Approved',
   [STATUS.DENIED]: 'Denied',
   [STATUS.PARTIALLY_APPROVED]: 'Partially Approved',
+  [STATUS.CHANGE_REQUESTED]: 'Change Requested',
   [STATUS.PAID]: 'Paid',
 } as const
 

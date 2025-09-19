@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 const updateStatusSchema = z.object({
   expenseId: z.string().uuid(),
-  status: z.enum(['PARTIALLY_APPROVED']),
+  status: z.enum(['PARTIALLY_APPROVED', 'CHANGE_REQUESTED']),
 })
 
 export async function POST(request: NextRequest) {
@@ -52,13 +52,17 @@ export async function POST(request: NextRequest) {
     })
 
     // Create status event
+    const reason = status === 'PARTIALLY_APPROVED' 
+      ? 'Mixed item approvals - some approved, some denied'
+      : 'All items require changes'
+    
     await db.statusEvent.create({
       data: {
         expenseId,
         from: 'SUBMITTED',
         to: status,
         actorId: user.id,
-        reason: 'Mixed item approvals - some approved, some denied',
+        reason,
       },
     })
 

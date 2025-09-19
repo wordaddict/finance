@@ -3,26 +3,25 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
 
-const approveItemSchema = z.object({
+const changeRequestSchema = z.object({
   itemId: z.string().uuid(),
-  approvedAmountCents: z.number().min(0).optional(), // Optional approved amount
-  comment: z.string().optional(),
+  comment: z.string().min(1, 'Comment is required when requesting changes to an item'),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth()
     
-    // Only admins can approve items
+    // Only admins can request changes to items
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Only admins can approve expense items' },
+        { error: 'Only admins can request changes to expense items' },
         { status: 403 }
       )
     }
 
     const body = await request.json()
-    const { itemId, approvedAmountCents, comment } = approveItemSchema.parse(body)
+    const { itemId, comment } = changeRequestSchema.parse(body)
 
     // Check if item exists and get the expense
     const item = await db.expenseItem.findUnique({
@@ -45,23 +44,12 @@ export async function POST(request: NextRequest) {
     // Check if expense is still in SUBMITTED status
     if (item.expense.status !== 'SUBMITTED') {
       return NextResponse.json(
-        { error: 'Can only approve items in submitted expenses' },
+        { error: 'Can only request changes to items in submitted expenses' },
         { status: 400 }
       )
     }
 
-    // If no approved amount specified, approve the full amount
-    const approvedAmount = approvedAmountCents ?? item.amountCents
-
-    // Validate that approved amount doesn't exceed item amount
-    if (approvedAmount > item.amountCents) {
-      return NextResponse.json(
-        { error: 'Approved amount cannot exceed item amount' },
-        { status: 400 }
-      )
-    }
-
-    // Upsert approval (update if exists, create if not)
+    // Upsert change request (update if exists, create if not)
     const approval = await db.expenseItemApproval.upsert({
       where: {
         itemId_approverId: {
@@ -70,17 +58,17 @@ export async function POST(request: NextRequest) {
         },
       },
       update: {
-        status: 'APPROVED',
-        approvedAmountCents: approvedAmount,
-        comment: comment || null,
+        status: 'CHANGE_REQUESTED',
+        comment: comment,
+        approvedAmountCents: null,
         updatedAt: new Date(),
       },
       create: {
         itemId: itemId,
         approverId: user.id,
-        status: 'APPROVED',
-        approvedAmountCents: approvedAmount,
-        comment: comment || null,
+        status: 'CHANGE_REQUESTED',
+        comment: comment,
+        approvedAmountCents: null,
       },
       include: {
         approver: true,
@@ -92,9 +80,9 @@ export async function POST(request: NextRequest) {
       approval,
     })
   } catch (error) {
-    console.error('Error approving expense item:', error)
+    console.error('Error requesting changes to expense item:', error)
     return NextResponse.json(
-      { error: 'Failed to approve expense item' },
+      { error: 'Failed to request changes to expense item' },
       { status: 500 }
     )
   }

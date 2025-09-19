@@ -83,15 +83,16 @@ model ExpenseItem {
 }
 
 model ExpenseItemApproval {
-  id        String      @id @default(uuid())
-  itemId    String
-  approverId String
-  status    String      // APPROVED, DENIED, PENDING
-  comment   String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  item      ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  approver  User        @relation("ItemApprover", fields: [approverId], references: [id])
+  id                String      @id @default(uuid())
+  itemId            String
+  approverId        String
+  status            String      // APPROVED, DENIED, PENDING
+  approvedAmountCents Int?      // Amount approved (null for DENIED, full amount for full approval)
+  comment           String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  item              ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  approver          User        @relation("ItemApprover", fields: [approverId], references: [id])
 
   @@unique([itemId, approverId])
 }
@@ -168,6 +169,7 @@ enum Status {
   APPROVED
   DENIED
   PARTIALLY_APPROVED
+  CHANGE_REQUESTED
   PAID
 }
 

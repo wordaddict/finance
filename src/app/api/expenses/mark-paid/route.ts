@@ -25,11 +25,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { expenseId } = markPaidSchema.parse(body)
 
-    // Get expense with current status
+    // Get expense with current status and items
     const expense = await db.expenseRequest.findUnique({
       where: { id: expenseId },
       include: {
         requester: true,
+        items: {
+          include: {
+            approvals: true,
+          },
+        },
       },
     })
 
@@ -40,9 +45,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (expense.status !== 'APPROVED') {
+    if (expense.status !== 'APPROVED' && expense.status !== 'PARTIALLY_APPROVED') {
       return NextResponse.json(
-        { error: 'Expense request must be approved before marking as paid' },
+        { error: 'Expense request must be approved or partially approved before marking as paid' },
         { status: 400 }
       )
     }
@@ -63,11 +68,25 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Calculate approved amount
+    let approvedAmountCents = expense.amountCents // Default to full amount
+    
+    if (expense.items && expense.items.length > 0) {
+      // For itemized expenses, calculate sum of approved amounts
+      approvedAmountCents = expense.items.reduce((total: number, item: any) => {
+        const itemApproval = item.approvals?.[0]
+        if (itemApproval?.status === 'APPROVED') {
+          return total + (itemApproval.approvedAmountCents ?? item.amountCents)
+        }
+        return total
+      }, 0)
+    }
+
     // Create status event
     await db.statusEvent.create({
       data: {
         expenseId,
-        from: 'APPROVED',
+        from: expense.status,
         to: 'PAID',
         actorId: user.id,
       },
@@ -77,7 +96,7 @@ export async function POST(request: NextRequest) {
     const emailTemplate = generateExpensePaidEmail(
       expense.requester.name || expense.requester.email,
       expense.title,
-      expense.amountCents
+      approvedAmountCents
     )
     emailTemplate.to = expense.requester.email
     await sendEmail(emailTemplate)
@@ -85,7 +104,7 @@ export async function POST(request: NextRequest) {
     // SMS notification (if phone number available)
     // const smsTemplate = generateExpensePaidSMS(
     //   expense.title,
-    //   expense.amountCents
+    //   approvedAmountCents
     // )
     // smsTemplate.to = expense.requester.phone
     // await sendSMS(smsTemplate)

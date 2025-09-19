@@ -55,6 +55,7 @@ interface Expense {
     approvals?: {
       id: string
       status: string
+      approvedAmountCents?: number | null
       comment?: string | null
       approver: {
         name: string | null
@@ -78,14 +79,18 @@ export function ExpensesList({ user }: ExpensesListProps) {
   const [itemCommentModal, setItemCommentModal] = useState<{
     isOpen: boolean
     itemId: string
-    action: 'APPROVED' | 'DENIED'
+    action: 'APPROVED' | 'DENIED' | 'CHANGE_REQUESTED'
     comment: string
+    approvedAmount: string
+    itemAmount: number
     processing: boolean
   }>({
     isOpen: false,
     itemId: '',
     action: 'APPROVED',
     comment: '',
+    approvedAmount: '',
+    itemAmount: 0,
     processing: false
   })
   const [denialModal, setDenialModal] = useState<{
@@ -96,6 +101,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
     isOpen: false,
     expenseId: '',
     expenseTitle: '',
+  })
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean
+    expense: Expense | null
+  }>({
+    isOpen: false,
+    expense: null
   })
   const [viewModal, setViewModal] = useState<{
     isOpen: boolean
@@ -146,21 +158,30 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const handleItemApproval = async (itemId: string, status: 'APPROVED' | 'DENIED', comment?: string) => {
+  const handleItemApproval = async (itemId: string, status: 'APPROVED' | 'DENIED' | 'CHANGE_REQUESTED', comment?: string, approvedAmountCents?: number) => {
     try {
       setLoading(true)
       
-      const endpoint = status === 'APPROVED' ? '/api/expense-items/approve' : '/api/expense-items/deny'
+      const endpoint = status === 'APPROVED' ? '/api/expense-items/approve' : 
+                      status === 'DENIED' ? '/api/expense-items/deny' : 
+                      '/api/expense-items/change-request'
+      
+      const requestBody: any = {
+        itemId,
+        comment: comment || undefined,
+      }
+
+      // Add approved amount for approval requests
+      if (status === 'APPROVED' && approvedAmountCents !== undefined) {
+        requestBody.approvedAmountCents = approvedAmountCents
+      }
       
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          itemId,
-          comment: comment || undefined,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
@@ -179,6 +200,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     approvals: [{
                       id: data.approval.id,
                       status: status,
+                      approvedAmountCents: data.approval.approvedAmountCents || null,
                       comment: comment || null,
                       approver: {
                         name: user.name,
@@ -207,8 +229,16 @@ export function ExpensesList({ user }: ExpensesListProps) {
               item.approvals?.[0]?.status === 'DENIED'
             )
 
+            const someItemsChangeRequested = updatedItems?.some(item => 
+              item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
+            )
+
+            const allItemsChangeRequested = updatedItems?.every(item => 
+              item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
+            )
+
             const allItemsProcessed = updatedItems?.every(item => 
-              item.approvals?.[0]?.status === 'APPROVED' || item.approvals?.[0]?.status === 'DENIED'
+              item.approvals?.[0]?.status === 'APPROVED' || item.approvals?.[0]?.status === 'DENIED' || item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
             )
 
             if (allItemsApproved && expense.status === 'SUBMITTED') {
@@ -256,6 +286,30 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   console.error('Error auto-denying expense:', error)
                 }
               }, 1000) // Small delay to show item denial first
+            } else if (allItemsChangeRequested && expense.status === 'SUBMITTED') {
+              // Set expense to CHANGE_REQUESTED status
+              setTimeout(async () => {
+                try {
+                  const updateResponse = await fetch('/api/expenses/update-status', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                      expenseId: expense.id,
+                      status: 'CHANGE_REQUESTED'
+                    }),
+                  })
+
+                  if (updateResponse.ok) {
+                    setMessage('All items require changes - expense set to change requested')
+                    // Refresh expenses to get updated status
+                    await fetchExpenses()
+                  }
+                } catch (error) {
+                  console.error('Error updating expense status:', error)
+                }
+              }, 1000) // Small delay to show item change request first
             } else if (allItemsProcessed && someItemsApproved && someItemsDenied && expense.status === 'SUBMITTED') {
               // Set expense to PARTIALLY_APPROVED status
               setTimeout(async () => {
@@ -312,26 +366,46 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const handleItemApprovalClick = (itemId: string, action: 'APPROVED' | 'DENIED') => {
+  const handleItemApprovalClick = (itemId: string, action: 'APPROVED' | 'DENIED' | 'CHANGE_REQUESTED', itemAmount: number) => {
     setItemCommentModal({
       isOpen: true,
       itemId,
       action,
       comment: '',
+      approvedAmount: action === 'APPROVED' ? (itemAmount / 100).toFixed(2) : '',
+      itemAmount,
       processing: false
     })
   }
 
   const handleItemCommentSubmit = () => {
-    const { itemId, action, comment } = itemCommentModal
-    if (action === 'DENIED' && !comment.trim()) {
-      setError('Comment is required when denying an item')
+    const { itemId, action, comment, approvedAmount, itemAmount } = itemCommentModal
+    
+    if ((action === 'DENIED' || action === 'CHANGE_REQUESTED') && !comment.trim()) {
+      setError(`Comment is required when ${action === 'DENIED' ? 'denying' : 'requesting changes to'} an item`)
       return
+    }
+
+    if (action === 'APPROVED' && approvedAmount) {
+      const approvedAmountCents = Math.round(parseFloat(approvedAmount) * 100)
+      if (approvedAmountCents > itemAmount) {
+        setError('Approved amount cannot exceed item amount')
+        return
+      }
+      if (approvedAmountCents < 0) {
+        setError('Approved amount cannot be negative')
+        return
+      }
     }
     
     // Set processing state
     setItemCommentModal(prev => ({ ...prev, processing: true }))
-    handleItemApproval(itemId, action, comment.trim() || undefined)
+    
+    const approvedAmountCents = action === 'APPROVED' && approvedAmount 
+      ? Math.round(parseFloat(approvedAmount) * 100) 
+      : undefined
+
+    handleItemApproval(itemId, action, comment.trim() || undefined, approvedAmountCents)
   }
 
   const handleApprove = async (expenseId: string) => {
@@ -386,6 +460,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
+  const handleViewOrEditClick = (expense: Expense) => {
+    // If it's a change request and the user is the original requester, open edit modal
+    if (expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email) {
+      setEditModal({
+        isOpen: true,
+        expense
+      })
+    } else {
+      // Otherwise, open view modal
+      openViewModal(expense)
+    }
+  }
+
   const openReportForm = (expense: Expense) => {
     setReportForm({
       isOpen: true,
@@ -430,6 +517,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
         return 'text-red-600 bg-red-50'
       case 'PARTIALLY_APPROVED':
         return 'text-orange-600 bg-orange-50'
+      case 'CHANGE_REQUESTED':
+        return 'text-purple-600 bg-purple-50'
       case 'PAID':
         return 'text-blue-600 bg-blue-50'
       case 'SUBMITTED':
@@ -443,6 +532,25 @@ export function ExpensesList({ user }: ExpensesListProps) {
     if (urgency === 3) return 'text-red-600' // Very Urgent
     if (urgency === 2) return 'text-yellow-600' // Urgent
     return 'text-green-600' // Not Urgent
+  }
+
+  const calculateApprovedAmount = (expense: any) => {
+    if (!expense.items || expense.items.length === 0) {
+      // For non-itemized expenses, return full amount if approved, 0 if denied
+      if (expense.status === 'APPROVED') return expense.amountCents
+      if (expense.status === 'DENIED') return 0
+      return expense.amountCents // For submitted/partial, show full amount as potential
+    }
+
+    // For itemized expenses, calculate sum of approved amounts
+    return expense.items.reduce((total: number, item: any) => {
+      const itemApproval = item.approvals?.[0]
+      if (itemApproval?.status === 'APPROVED') {
+        // Use approvedAmountCents if specified and not null, otherwise use full item amount
+        return total + (itemApproval.approvedAmountCents ?? item.amountCents)
+      }
+      return total
+    }, 0)
   }
 
   if (loading) {
@@ -575,17 +683,31 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                   <div className="text-left sm:text-right">
-                    <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
+                    <div className="space-y-1">
+                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
+                      {(expense.status === 'PARTIALLY_APPROVED' || expense.status === 'DENIED') && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Approved:</span>
+                          <span className={`text-sm font-semibold ${
+                            expense.status === 'DENIED' ? 'text-red-600' : 'text-orange-600'
+                          }`}>
+                            {formatCurrency(calculateApprovedAmount(expense))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => openViewModal(expense)}
+                      onClick={() => handleViewOrEditClick(expense)}
                       className="flex-1 sm:flex-none"
                     >
                       <Eye className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">View</span>
+                      <span className="hidden sm:inline">
+                        {expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email ? 'Edit' : 'View'}
+                      </span>
                     </Button>
                     {expense.status === 'SUBMITTED' && (user.role === 'ADMIN' || user.role === 'CAMPUS_PASTOR') && (
                       <>
@@ -609,7 +731,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         </Button>
                       </>
                     )}
-                    {expense.status === 'APPROVED' && user.role === 'ADMIN' && (
+                    {(expense.status === 'APPROVED' || expense.status === 'PARTIALLY_APPROVED') && user.role === 'ADMIN' && (
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -689,9 +811,16 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">{viewModal.expense.title}</h3>
-                <p className="text-xl sm:text-2xl font-bold text-green-600">
-                  {formatCurrency(viewModal.expense.amountCents)}
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xl sm:text-2xl font-bold text-green-600">
+                    Requested: {formatCurrency(viewModal.expense.amountCents)}
+                  </p>
+                  {(viewModal.expense.status === 'PARTIALLY_APPROVED' || viewModal.expense.status === 'DENIED') && (
+                    <p className="text-lg font-semibold text-orange-600">
+                      Approved: {formatCurrency(calculateApprovedAmount(viewModal.expense))}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -784,6 +913,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               <p className="font-medium text-sm">
                                 ${(item.amountCents / 100).toFixed(2)}
                               </p>
+                              {itemApproval && itemApproval.status === 'APPROVED' && itemApproval.approvedAmountCents !== undefined && itemApproval.approvedAmountCents !== null && itemApproval.approvedAmountCents !== item.amountCents && (
+                                <p className="text-xs text-green-600 font-medium">
+                                  Approved: ${(itemApproval.approvedAmountCents / 100).toFixed(2)}
+                                </p>
+                              )}
                               <span className={`text-xs px-2 py-1 rounded-full ${
                                 approvalStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
                                 approvalStatus === 'DENIED' ? 'bg-red-100 text-red-800' :
@@ -808,11 +942,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           )}
 
                           {user.role === 'ADMIN' && viewModal.expense && viewModal.expense.status === 'SUBMITTED' && approvalStatus === 'PENDING' && (
-                            <div className="mt-2 flex gap-2">
+                            <div className="mt-2 flex gap-2 flex-wrap">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleItemApprovalClick(item.id, 'APPROVED')}
+                                onClick={() => handleItemApprovalClick(item.id, 'APPROVED', item.amountCents)}
                                 className="text-green-600 border-green-300 hover:bg-green-50"
                               >
                                 Approve
@@ -820,7 +954,15 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleItemApprovalClick(item.id, 'DENIED')}
+                                onClick={() => handleItemApprovalClick(item.id, 'CHANGE_REQUESTED', item.amountCents)}
+                                className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                              >
+                                Request Changes
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleItemApprovalClick(item.id, 'DENIED', item.amountCents)}
                                 className="text-red-600 border-red-300 hover:bg-red-50"
                               >
                                 Deny
@@ -831,11 +973,21 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       )
                     })}
                     <div className="bg-green-50 p-3 rounded-md border-t-2 border-green-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-green-800">Total Amount:</span>
-                        <span className="font-bold text-lg text-green-800">
-                          ${(viewModal.expense.amountCents / 100).toFixed(2)}
-                        </span>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-green-800">Total Requested:</span>
+                          <span className="font-bold text-lg text-green-800">
+                            ${(viewModal.expense.amountCents / 100).toFixed(2)}
+                          </span>
+                        </div>
+                        {(viewModal.expense.status === 'PARTIALLY_APPROVED' || viewModal.expense.status === 'DENIED') && (
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-orange-800">Total Approved:</span>
+                            <span className="font-bold text-lg text-orange-800">
+                              ${(calculateApprovedAmount(viewModal.expense) / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -907,18 +1059,46 @@ export function ExpensesList({ user }: ExpensesListProps) {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">
-                {itemCommentModal.action === 'APPROVED' ? 'Approve Item' : 'Deny Item'}
+                {itemCommentModal.action === 'APPROVED' ? 'Approve Item' : 
+                 itemCommentModal.action === 'DENIED' ? 'Deny Item' : 
+                 'Request Changes'}
               </h3>
               
+              {itemCommentModal.action === 'APPROVED' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Amount to Approve (USD)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={(itemCommentModal.itemAmount / 100).toFixed(2)}
+                      value={itemCommentModal.approvedAmount}
+                      onChange={(e) => setItemCommentModal(prev => ({ ...prev, approvedAmount: e.target.value }))}
+                      placeholder={(itemCommentModal.itemAmount / 100).toFixed(2)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Item total: ${(itemCommentModal.itemAmount / 100).toFixed(2)} • Leave empty to approve full amount
+                  </p>
+                </div>
+              )}
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comment {itemCommentModal.action === 'DENIED' && <span className="text-red-500">*</span>}
+                  Comment {(itemCommentModal.action === 'DENIED' || itemCommentModal.action === 'CHANGE_REQUESTED') && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   value={itemCommentModal.comment}
                   onChange={(e) => setItemCommentModal(prev => ({ ...prev, comment: e.target.value }))}
                   placeholder={itemCommentModal.action === 'DENIED' 
                     ? "Please provide a reason for denial..." 
+                    : itemCommentModal.action === 'CHANGE_REQUESTED'
+                    ? "Please specify what changes are needed..."
                     : "Add an optional comment..."
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -936,15 +1116,68 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </Button>
                 <Button
                   onClick={handleItemCommentSubmit}
-                  disabled={itemCommentModal.processing || (itemCommentModal.action === 'DENIED' && !itemCommentModal.comment.trim())}
+                  disabled={itemCommentModal.processing || ((itemCommentModal.action === 'DENIED' || itemCommentModal.action === 'CHANGE_REQUESTED') && !itemCommentModal.comment.trim())}
                   className={itemCommentModal.action === 'APPROVED' 
                     ? "bg-green-600 hover:bg-green-700" 
+                    : itemCommentModal.action === 'CHANGE_REQUESTED'
+                    ? "bg-orange-600 hover:bg-orange-700"
                     : "bg-red-600 hover:bg-red-700"
                   }
                 >
-                  {itemCommentModal.processing ? 'Processing...' : (itemCommentModal.action === 'APPROVED' ? 'Approve' : 'Deny')}
+                  {itemCommentModal.processing ? 'Processing...' : 
+                   itemCommentModal.action === 'APPROVED' ? 'Approve' : 
+                   itemCommentModal.action === 'CHANGE_REQUESTED' ? 'Request Changes' :
+                   'Deny'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Expense Modal */}
+      {editModal.isOpen && editModal.expense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">Edit Expense Request</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditModal({ isOpen: false, expense: null })}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      Changes Requested
+                    </h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>This expense has been marked for changes. Please review the feedback and update your request accordingly.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ExpenseForm
+                user={user}
+                onSuccess={() => {
+                  setEditModal({ isOpen: false, expense: null })
+                  fetchExpenses()
+                }}
+                onCancel={() => setEditModal({ isOpen: false, expense: null })}
+                editExpense={editModal.expense}
+              />
             </div>
           </div>
         </div>
