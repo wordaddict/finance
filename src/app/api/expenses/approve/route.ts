@@ -41,6 +41,11 @@ export async function POST(request: NextRequest) {
       include: {
         requester: true,
         approvals: true,
+        items: {
+          include: {
+            approvals: true,
+          },
+        },
       },
     })
 
@@ -111,6 +116,39 @@ export async function POST(request: NextRequest) {
 
     // Update expense status if fully approved
     if (newStatus === 'APPROVED') {
+      // First, automatically approve all items if they exist
+      if (expense.items && expense.items.length > 0) {
+        for (const item of expense.items) {
+          // Check if item already has an approval
+          const existingItemApproval = item.approvals.find((approval: { approverId: string }) => approval.approverId === user.id)
+          
+          if (!existingItemApproval) {
+            // Create approval for this item
+            await db.expenseItemApproval.create({
+              data: {
+                itemId: item.id,
+                approverId: user.id,
+                status: 'APPROVED',
+                approvedAmountCents: item.amountCents, // Approve full amount
+                comment: comment ? `Auto-approved with main expense approval: ${comment}` : 'Auto-approved with main expense approval',
+              },
+            })
+          } else if (existingItemApproval.status !== 'APPROVED') {
+            // Update existing approval to approved
+            await db.expenseItemApproval.update({
+              where: { id: existingItemApproval.id },
+              data: {
+                status: 'APPROVED',
+                approvedAmountCents: item.amountCents, // Approve full amount
+                comment: existingItemApproval.comment || (comment ? `Auto-approved with main expense approval: ${comment}` : 'Auto-approved with main expense approval'),
+                updatedAt: new Date(),
+              },
+            })
+          }
+        }
+      }
+
+      // Then update the main expense status
       await db.expenseRequest.update({
         where: { id: expenseId },
         data: { status: 'APPROVED' },

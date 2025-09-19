@@ -109,6 +109,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
     isOpen: false,
     expense: null
   })
+  const [approvalCommentModal, setApprovalCommentModal] = useState<{
+    isOpen: boolean
+    expenseId: string
+    expenseTitle: string
+    comment: string
+    processing: boolean
+  }>({
+    isOpen: false,
+    expenseId: '',
+    expenseTitle: '',
+    comment: '',
+    processing: false
+  })
   const [viewModal, setViewModal] = useState<{
     isOpen: boolean
     expense: Expense | null
@@ -250,7 +263,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     headers: {
                       'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ expenseId: expense.id }),
+                    body: JSON.stringify({ 
+                      expenseId: expense.id,
+                      comment: 'Auto-approved: All items approved'
+                    }),
                   })
 
                   if (approveResponse.ok) {
@@ -470,6 +486,54 @@ export function ExpensesList({ user }: ExpensesListProps) {
     } else {
       // Otherwise, open view modal
       openViewModal(expense)
+    }
+  }
+
+  const openApprovalCommentModal = (expenseId: string, expenseTitle: string) => {
+    setApprovalCommentModal({
+      isOpen: true,
+      expenseId,
+      expenseTitle,
+      comment: '',
+      processing: false
+    })
+  }
+
+  const handleApprovalCommentSubmit = async () => {
+
+    setApprovalCommentModal(prev => ({ ...prev, processing: true }))
+
+    try {
+      const response = await fetch('/api/expenses/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          expenseId: approvalCommentModal.expenseId,
+          comment: approvalCommentModal.comment,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setApprovalCommentModal({
+          isOpen: false,
+          expenseId: '',
+          expenseTitle: '',
+          comment: '',
+          processing: false
+        })
+        setMessage('Expense request approved successfully')
+        fetchExpenses()
+      } else {
+        setMessage(data.error || 'Failed to approve expense request')
+      }
+    } catch (error) {
+      setMessage('Failed to approve expense request')
+    } finally {
+      setApprovalCommentModal(prev => ({ ...prev, processing: false }))
     }
   }
 
@@ -714,7 +778,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => handleApprove(expense.id)}
+                          onClick={() => openApprovalCommentModal(expense.id, expense.title)}
                           className="flex-1 sm:flex-none"
                         >
                           <Check className="w-4 h-4 mr-1" />
@@ -1178,6 +1242,77 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 onCancel={() => setEditModal({ isOpen: false, expense: null })}
                 editExpense={editModal.expense}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Comment Modal */}
+      {approvalCommentModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Approve Expense Request</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setApprovalCommentModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    comment: '',
+                    processing: false
+                  })}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {approvalCommentModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Approving this expense will automatically approve all items within it.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Approval Comment (Optional)
+                </label>
+                <textarea
+                  value={approvalCommentModal.comment}
+                  onChange={(e) => setApprovalCommentModal(prev => ({ ...prev, comment: e.target.value }))}
+                  placeholder="Add an optional comment for this approval..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setApprovalCommentModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    comment: '',
+                    processing: false
+                  })}
+                  disabled={approvalCommentModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleApprovalCommentSubmit}
+                  disabled={approvalCommentModal.processing}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {approvalCommentModal.processing ? 'Approving...' : 'Approve Expense'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
