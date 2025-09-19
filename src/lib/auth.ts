@@ -9,6 +9,8 @@ export interface SessionUser {
   email: string
   name: string | null
   role: 'ADMIN' | 'CAMPUS_PASTOR' | 'LEADER'
+  status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED'
+  zelle?: string | null
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -55,6 +57,8 @@ export async function getSession(sessionId: string): Promise<SessionUser | null>
     email: session.user.email,
     name: session.user.name,
     role: session.user.role as 'ADMIN' | 'CAMPUS_PASTOR' | 'LEADER',
+    status: session.user.status as 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED',
+    zelle: session.user.zelle,
   }
 }
 

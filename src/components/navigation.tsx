@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SessionUser } from '@/lib/auth'
 import { canManageUsers } from '@/lib/rbac'
-import { LogOut, User, Settings, Menu, X } from 'lucide-react'
+import { LogOut, User, Settings, Menu, X, UserCircle } from 'lucide-react'
 import Image from 'next/image'
 
 interface NavigationProps {
@@ -85,6 +85,13 @@ export function Navigation({ user }: NavigationProps) {
                   Users
                 </a>
               )}
+              <a
+                href="/profile"
+                className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
+              >
+                <UserCircle className="w-4 h-4" />
+                Profile
+              </a>
             </div>
           </div>
           
@@ -159,6 +166,14 @@ export function Navigation({ user }: NavigationProps) {
                     Users
                   </a>
                 )}
+                <a
+                  href="/profile"
+                  className="text-gray-600 hover:text-gray-900 transition-colors py-2 flex items-center gap-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <UserCircle className="w-4 h-4" />
+                  Profile
+                </a>
               </div>
               
               {/* Mobile user info - hidden on md screens, shown on smaller screens */}

@@ -38,6 +38,7 @@ interface Expense {
   requester: {
     name: string | null
     email: string
+    zelle: string | null
   }
   attachments?: {
     id: string
@@ -502,6 +503,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     {viewModal.expense.requester.name || viewModal.expense.requester.email}
                   </p>
                 </div>
+                {user.role === 'ADMIN' && viewModal.expense.requester.zelle && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Zelle</label>
+                    <p className="font-medium text-green-600">
+                      {viewModal.expense.requester.zelle}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-gray-500">Created</label>
                   <p className="font-medium">{formatDate(viewModal.expense.createdAt)}</p>

@@ -15,6 +15,7 @@ model User {
   role            Role             @default(LEADER)
   status          UserStatus       @default(ACTIVE)
   emailVerifiedAt DateTime?
+  zelle           String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   approvals       Approval[]
