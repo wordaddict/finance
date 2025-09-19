@@ -49,6 +49,17 @@ export async function GET(request: NextRequest) {
         include: {
           requester: true,
           attachments: true,
+          pastorRemarks: {
+            include: {
+              pastor: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
           items: {
             include: {
               approvals: {

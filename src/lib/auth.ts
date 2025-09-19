@@ -10,6 +10,7 @@ export interface SessionUser {
   name: string | null
   role: 'ADMIN' | 'CAMPUS_PASTOR' | 'LEADER'
   status: 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED'
+  campus: 'DMV' | 'LAGOS' | 'ABUJA' | 'KANO' | 'IBADAN'
   zelle?: string | null
 }
 
@@ -58,6 +59,7 @@ export async function getSession(sessionId: string): Promise<SessionUser | null>
     name: session.user.name,
     role: session.user.role as 'ADMIN' | 'CAMPUS_PASTOR' | 'LEADER',
     status: session.user.status as 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED',
+    campus: session.user.campus as 'DMV' | 'LAGOS' | 'ABUJA' | 'KANO' | 'IBADAN',
     zelle: session.user.zelle,
   }
 }

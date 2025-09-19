@@ -46,6 +46,16 @@ interface Expense {
     secureUrl: string
     mimeType: string
   }[]
+  pastorRemarks?: {
+    id: string
+    remark: string
+    createdAt: string
+    pastor: {
+      id: string
+      name: string | null
+      email: string
+    }
+  }[]
   items?: {
     id: string
     description: string
@@ -120,6 +130,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseId: '',
     expenseTitle: '',
     comment: '',
+    processing: false
+  })
+  const [pastorRemarkModal, setPastorRemarkModal] = useState<{
+    isOpen: boolean
+    expenseId: string
+    expenseTitle: string
+    remark: string
+    processing: boolean
+  }>({
+    isOpen: false,
+    expenseId: '',
+    expenseTitle: '',
+    remark: '',
     processing: false
   })
   const [viewModal, setViewModal] = useState<{
@@ -499,6 +522,16 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
+  const openPastorRemarkModal = (expenseId: string, expenseTitle: string) => {
+    setPastorRemarkModal({
+      isOpen: true,
+      expenseId,
+      expenseTitle,
+      remark: '',
+      processing: false
+    })
+  }
+
   const handleApprovalCommentSubmit = async () => {
 
     setApprovalCommentModal(prev => ({ ...prev, processing: true }))
@@ -534,6 +567,48 @@ export function ExpensesList({ user }: ExpensesListProps) {
       setMessage('Failed to approve expense request')
     } finally {
       setApprovalCommentModal(prev => ({ ...prev, processing: false }))
+    }
+  }
+
+  const handlePastorRemarkSubmit = async () => {
+    if (!pastorRemarkModal.remark.trim()) {
+      setMessage('Please provide a remark')
+      return
+    }
+
+    setPastorRemarkModal(prev => ({ ...prev, processing: true }))
+
+    try {
+      const response = await fetch('/api/expenses/pastor-remark', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          expenseId: pastorRemarkModal.expenseId,
+          remark: pastorRemarkModal.remark,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setPastorRemarkModal({
+          isOpen: false,
+          expenseId: '',
+          expenseTitle: '',
+          remark: '',
+          processing: false
+        })
+        setMessage('Pastor remark added successfully')
+        fetchExpenses()
+      } else {
+        setMessage(data.error || 'Failed to add pastor remark')
+      }
+    } catch (error) {
+      setMessage('Failed to add pastor remark')
+    } finally {
+      setPastorRemarkModal(prev => ({ ...prev, processing: false }))
     }
   }
 
@@ -773,26 +848,41 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         {expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email ? 'Edit' : 'View'}
                       </span>
                     </Button>
-                    {expense.status === 'SUBMITTED' && (user.role === 'ADMIN' || user.role === 'CAMPUS_PASTOR') && (
+                    {expense.status === 'SUBMITTED' && (
                       <>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => openApprovalCommentModal(expense.id, expense.title)}
-                          className="flex-1 sm:flex-none"
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          <span className="hidden sm:inline">Approve</span>
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => openDenialModal(expense.id, expense.title)}
-                          className="flex-1 sm:flex-none"
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          <span className="hidden sm:inline">Deny</span>
-                        </Button>
+                        {user.role === 'ADMIN' && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openApprovalCommentModal(expense.id, expense.title)}
+                              className="flex-1 sm:flex-none"
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              <span className="hidden sm:inline">Approve</span>
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openDenialModal(expense.id, expense.title)}
+                              className="flex-1 sm:flex-none"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              <span className="hidden sm:inline">Deny</span>
+                            </Button>
+                          </>
+                        )}
+                        {user.role === 'CAMPUS_PASTOR' && expense.campus === user.campus && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openPastorRemarkModal(expense.id, expense.title)}
+                            className="flex-1 sm:flex-none"
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Add Remark</span>
+                          </Button>
+                        )}
                       </>
                     )}
                     {(expense.status === 'APPROVED' || expense.status === 'PARTIALLY_APPROVED') && user.role === 'ADMIN' && (
@@ -949,6 +1039,28 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Category</label>
                   <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.category}</p>
+                </div>
+              )}
+
+              {viewModal.expense.pastorRemarks && viewModal.expense.pastorRemarks.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Pastor Remarks</label>
+                  <div className="mt-2 space-y-3">
+                    {viewModal.expense.pastorRemarks.map((remark, index) => (
+                      <div key={remark.id} className="p-3 rounded-md border bg-blue-50 border-blue-200">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="text-sm text-blue-800">{remark.remark}</p>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">
+                              <span>By: {remark.pastor.name || remark.pastor.email}</span>
+                              <span>•</span>
+                              <span>{new Date(remark.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1311,6 +1423,77 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {approvalCommentModal.processing ? 'Approving...' : 'Approve Expense'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pastor Remark Modal */}
+      {pastorRemarkModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Add Pastor Remark</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPastorRemarkModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    remark: '',
+                    processing: false
+                  })}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {pastorRemarkModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Add your campus-specific remark for this expense request.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pastor Remark <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={pastorRemarkModal.remark}
+                  onChange={(e) => setPastorRemarkModal(prev => ({ ...prev, remark: e.target.value }))}
+                  placeholder="Add your remark about this expense request..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setPastorRemarkModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    remark: '',
+                    processing: false
+                  })}
+                  disabled={pastorRemarkModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePastorRemarkSubmit}
+                  disabled={pastorRemarkModal.processing || !pastorRemarkModal.remark.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {pastorRemarkModal.processing ? 'Adding Remark...' : 'Add Remark'}
                 </Button>
               </div>
             </div>

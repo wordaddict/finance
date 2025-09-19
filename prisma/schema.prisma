@@ -14,6 +14,7 @@ model User {
   name            String?
   role            Role             @default(LEADER)
   status          UserStatus       @default(ACTIVE)
+  campus          Campus           @default(DMV)
   emailVerifiedAt DateTime?
   zelle           String?
   createdAt       DateTime         @default(now())
@@ -23,6 +24,7 @@ model User {
   sessions        Session[]
   statusEvents    StatusEvent[]
   itemApprovals   ExpenseItemApproval[] @relation("ItemApprover")
+  pastorRemarks  PastorRemark[]
 }
 
 model Session {
@@ -67,6 +69,7 @@ model ExpenseRequest {
   requester     User          @relation("RequestUser", fields: [requesterId], references: [id])
   statusHistory StatusEvent[]
   reports       ExpenseReport[]
+  pastorRemarks PastorRemark[]
 }
 
 model ExpenseItem {
@@ -121,6 +124,19 @@ model Approval {
   expense    ExpenseRequest @relation(fields: [expenseId], references: [id])
 
   @@unique([expenseId, stage])
+}
+
+model PastorRemark {
+  id        String         @id @default(uuid())
+  expenseId String
+  pastorId  String
+  remark    String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
+  pastor    User           @relation(fields: [pastorId], references: [id])
+
+  @@unique([expenseId, pastorId])
 }
 
 model Attachment {

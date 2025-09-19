@@ -13,7 +13,11 @@ export function hasRole(user: SessionUser, requiredRole: Role): boolean {
 }
 
 export function canApproveExpenses(user: SessionUser): boolean {
-  return hasRole(user, 'CAMPUS_PASTOR')
+  return hasRole(user, 'ADMIN')
+}
+
+export function canAddPastorRemarks(user: SessionUser): boolean {
+  return user.role === 'CAMPUS_PASTOR'
 }
 
 export function canViewAllExpenses(user: SessionUser): boolean {
@@ -40,10 +44,7 @@ export function getApprovalStages(user: SessionUser): number[] {
   if (user.role === 'ADMIN') {
     return [1, 2] // Can approve at both stages
   }
-  if (user.role === 'CAMPUS_PASTOR') {
-    return [1] // Can approve at first stage
-  }
-  return [] // Leaders cannot approve
+  return [] // Only admins can approve
 }
 
 export function canApproveAtStage(user: SessionUser, stage: number): boolean {
