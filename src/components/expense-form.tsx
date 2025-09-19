@@ -259,7 +259,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium mb-1">
-                Description
+                Description *
               </label>
               <textarea
                 id="description"
@@ -267,6 +267,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 

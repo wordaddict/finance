@@ -11,7 +11,7 @@ const createExpenseSchema = z.object({
   amountCents: z.number().positive(),
   team: z.enum(TEAM_VALUES as [string, ...string[]]),
   campus: z.enum(CAMPUS_VALUES as [string, ...string[]]),
-  description: z.string().optional(),
+  description: z.string().min(1),
   urgency: z.number().min(1).max(3).default(2),
   eventDate: z.string().optional().nullable(),
   attachments: z.array(z.object({
