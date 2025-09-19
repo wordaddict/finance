@@ -31,6 +31,7 @@ interface Expense {
   updatedAt: string
   team: string
   description?: string
+  category?: string
   notes?: string
   paidAt?: string
   eventDate?: string
@@ -340,6 +341,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <p className="text-gray-500 mt-1 text-sm">
                     {TEAM_DISPLAY_NAMES[expense.team as keyof typeof TEAM_DISPLAY_NAMES] || expense.team} • {CAMPUS_DISPLAY_NAMES[expense.campus as keyof typeof CAMPUS_DISPLAY_NAMES] || expense.campus} • {expense.requester.name || expense.requester.email}
                   </p>
+                  {expense.category && (
+                    <p className="text-gray-600 mt-1 text-sm font-medium">
+                      Category: {expense.category}
+                    </p>
+                  )}
                   <p className="text-xs sm:text-sm text-gray-500 mt-1">
                     Created: {formatDate(expense.createdAt)}
                   </p>
@@ -512,6 +518,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Description</label>
                   <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.description}</p>
+                </div>
+              )}
+
+              {viewModal.expense.category && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Category</label>
+                  <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.category}</p>
                 </div>
               )}
 

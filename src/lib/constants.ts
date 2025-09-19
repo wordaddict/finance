@@ -71,3 +71,42 @@ export const URGENCY_VALUES = Object.keys(URGENCY_OPTIONS).map(Number)
 
 // Type for urgency values
 export type UrgencyValue = keyof typeof URGENCY_OPTIONS
+
+// Expense category constants
+export const EXPENSE_CATEGORIES = {
+  ADMINISTRATIVE_EXPENSES: 'Administrative Expenses',
+  ADVERTISEMENT_AND_PUBLICITY: 'Advertisement and Publicity',
+  AMBIENCE: 'Ambience',
+  BANK_CHARGES: 'Bank Charges',
+  CCI_GLOBAL: 'CCI Global',
+  CCW_MUSIC_EXPENSES: 'CCW/Music Expenses',
+  CELEB_KIDS: 'Celeb Kids',
+  DMV_BUILDING_PROJECT: 'DMV Building Project',
+  EQUIPMENT_PURCHASE: 'Equipment Purchase',
+  EQUIPMENT_RENTAL: 'Equipment Rental',
+  FOLLOW_UP: 'Follow Up',
+  GUEST_MINISTER_WELFARE: 'Guest Minister Welfare',
+  HONORARIUM: 'Honorarium',
+  HOTEL_AND_ACCOMMODATION: 'Hotel and Accommodation',
+  INTERNAL_FUND_TRANSFER: 'Internal Fund Transfer',
+  INTERNET_TELEPHONE: 'Internet/telephone',
+  LOGISTICS: 'Logistics',
+  MEDIA_AND_TECHNICAL: 'Media and Technical',
+  OTHERS: 'Others',
+  OUTREACH: 'Outreach',
+  PASTORAL_WELFARE: 'Pastoral Welfare',
+  RENT: 'Rent',
+  REPAIRS_AND_MAINTENANCE: 'Repairs and Maintenance',
+  SALARIES_AND_ALLOWANCES: 'Salaries and Allowances',
+  SECURITY_PROTOCOL: 'Security/Protocol',
+  SPECIAL_EVENTS_AND_PROGRAMS: 'Special Events and Programs',
+  SUBSCRIPTION: 'Subscription',
+  TRAVEL_EXPENSES: 'Travel Expenses',
+  WELFARE: 'Welfare',
+} as const
+
+// Array of expense category values for easy iteration
+export const EXPENSE_CATEGORY_VALUES = Object.values(EXPENSE_CATEGORIES)
+
+// Type for expense category values
+export type ExpenseCategoryValue = typeof EXPENSE_CATEGORIES[keyof typeof EXPENSE_CATEGORIES]

@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { sendEmail, generateExpenseSubmittedEmail } from '@/lib/email'
 import { sendSMS, generateExpenseSubmittedSMS } from '@/lib/sms'
-import { TEAM_VALUES, CAMPUS_VALUES } from '@/lib/constants'
+import { TEAM_VALUES, CAMPUS_VALUES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
 const createExpenseSchema = z.object({
   title: z.string().min(1),
@@ -12,6 +12,7 @@ const createExpenseSchema = z.object({
   team: z.enum(TEAM_VALUES as [string, ...string[]]),
   campus: z.enum(CAMPUS_VALUES as [string, ...string[]]),
   description: z.string().min(1),
+  category: z.enum(EXPENSE_CATEGORY_VALUES as [string, ...string[]]).optional(),
   urgency: z.number().min(1).max(3).default(2),
   eventDate: z.string().optional().nullable(),
   attachments: z.array(z.object({
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         requesterId: user.id,
         campus: data.campus as any,
         description: data.description,
+        category: data.category,
         urgency: data.urgency,
         eventDate: data.eventDate ? new Date(data.eventDate) : null,
         attachments: data.attachments ? {

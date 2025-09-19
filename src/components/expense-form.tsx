@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { SessionUser } from '@/lib/auth'
 import { X, Upload, FileText } from 'lucide-react'
-import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES } from '@/lib/constants'
+import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
 // Teams are now defined as constants
 
@@ -21,6 +21,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
   const [team, setTeam] = useState('ADMIN')
   const [campus, setCampus] = useState('DMV')
   const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('')
   const [urgency, setUrgency] = useState(2)
   const [eventDate, setEventDate] = useState('')
   const [loading, setLoading] = useState(false)
@@ -109,6 +110,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
           team,
           campus,
           description,
+          category: category || null,
           urgency,
           eventDate: eventDate || null,
           attachments: uploadedAttachments,
@@ -269,6 +271,25 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
+            </div>
+
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium mb-1">
+                Category
+              </label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a category (optional)</option>
+                {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
+                  <option key={categoryValue} value={categoryValue}>
+                    {categoryValue}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
