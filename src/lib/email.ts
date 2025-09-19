@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { db } from './db'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -10,6 +11,15 @@ export interface EmailTemplate {
 }
 
 export async function sendEmail(template: EmailTemplate): Promise<boolean> {
+  // Check if email notifications are disabled via environment variable
+  if (process.env.DISABLE_EMAIL_NOTIFICATIONS === 'true') {
+    console.log('Email notifications disabled via DISABLE_EMAIL_NOTIFICATIONS env var. Email would be sent:', {
+      to: template.to,
+      subject: template.subject
+    })
+    return true
+  }
+
   if (!process.env.RESEND_API_KEY) {
     console.log('Resend not configured, email would be sent:', template)
     return true

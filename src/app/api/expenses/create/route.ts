@@ -20,6 +20,12 @@ const createExpenseSchema = z.object({
     secureUrl: z.string(),
     mimeType: z.string(),
   })).optional(),
+  items: z.array(z.object({
+    description: z.string().min(1),
+    quantity: z.number().positive(),
+    unitPriceCents: z.number().nonnegative(),
+    amountCents: z.number().nonnegative(),
+  })).min(1),
 }).refine((data) => {
   // If category is "Special Events and Programs", eventDate must be provided
   if (data.category === 'Special Events and Programs') {
@@ -60,6 +66,14 @@ export async function POST(request: NextRequest) {
             mimeType: attachment.mimeType,
           })),
         } : undefined,
+        items: {
+          create: data.items.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            amountCents: item.amountCents,
+          })),
+        },
       },
       include: {
         requester: true,

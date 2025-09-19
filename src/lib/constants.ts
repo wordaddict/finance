@@ -110,3 +110,27 @@ export const EXPENSE_CATEGORY_VALUES = Object.values(EXPENSE_CATEGORIES)
 
 // Type for expense category values
 export type ExpenseCategoryValue = typeof EXPENSE_CATEGORIES[keyof typeof EXPENSE_CATEGORIES]
+
+// Status constants
+export const STATUS = {
+  SUBMITTED: 'SUBMITTED',
+  APPROVED: 'APPROVED',
+  DENIED: 'DENIED',
+  PARTIALLY_APPROVED: 'PARTIALLY_APPROVED',
+  PAID: 'PAID',
+} as const
+
+// Status display names for UI
+export const STATUS_DISPLAY_NAMES = {
+  [STATUS.SUBMITTED]: 'Submitted',
+  [STATUS.APPROVED]: 'Approved',
+  [STATUS.DENIED]: 'Denied',
+  [STATUS.PARTIALLY_APPROVED]: 'Partially Approved',
+  [STATUS.PAID]: 'Paid',
+} as const
+
+// Array of status values
+export const STATUS_VALUES = Object.values(STATUS)
+
+// Type for status values
+export type StatusValue = typeof STATUS[keyof typeof STATUS]

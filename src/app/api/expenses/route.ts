@@ -49,6 +49,15 @@ export async function GET(request: NextRequest) {
         include: {
           requester: true,
           attachments: true,
+          items: {
+            include: {
+              approvals: {
+                include: {
+                  approver: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',

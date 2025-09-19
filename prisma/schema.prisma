@@ -22,6 +22,7 @@ model User {
   requests        ExpenseRequest[] @relation("RequestUser")
   sessions        Session[]
   statusEvents    StatusEvent[]
+  itemApprovals   ExpenseItemApproval[] @relation("ItemApprover")
 }
 
 model Session {
@@ -62,9 +63,37 @@ model ExpenseRequest {
   campus        Campus
   approvals     Approval[]
   attachments   Attachment[]
+  items         ExpenseItem[]
   requester     User          @relation("RequestUser", fields: [requesterId], references: [id])
   statusHistory StatusEvent[]
   reports       ExpenseReport[]
+}
+
+model ExpenseItem {
+  id            String        @id @default(uuid())
+  expenseId     String
+  description   String
+  amountCents   Int
+  quantity      Int           @default(1)
+  unitPriceCents Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approvals     ExpenseItemApproval[]
+}
+
+model ExpenseItemApproval {
+  id        String      @id @default(uuid())
+  itemId    String
+  approverId String
+  status    String      // APPROVED, DENIED, PENDING
+  comment   String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  item      ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  approver  User        @relation("ItemApprover", fields: [approverId], references: [id])
+
+  @@unique([itemId, approverId])
 }
 
 model StatusEvent {
@@ -138,6 +167,7 @@ enum Status {
   SUBMITTED
   APPROVED
   DENIED
+  PARTIALLY_APPROVED
   PAID
 }
 

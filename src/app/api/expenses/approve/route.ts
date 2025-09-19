@@ -75,9 +75,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create approval record
-    await db.approval.create({
-      data: {
+    // Create approval record using upsert to handle race conditions
+    await db.approval.upsert({
+      where: {
+        expenseId_stage: {
+          expenseId,
+          stage,
+        },
+      },
+      update: {
+        approverId: user.id,
+        decision: 'approved',
+        comment,
+        decidedAt: new Date(),
+      },
+      create: {
         expenseId,
         stage,
         approverId: user.id,

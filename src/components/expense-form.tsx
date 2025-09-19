@@ -8,6 +8,14 @@ import { SessionUser } from '@/lib/auth'
 import { X, Upload, FileText } from 'lucide-react'
 import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
+interface ExpenseItem {
+  id: string
+  description: string
+  quantity: number
+  unitPrice: number
+  amount: number
+}
+
 // Teams are now defined as constants
 
 interface ExpenseFormProps {
@@ -17,7 +25,6 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
   const [title, setTitle] = useState('')
-  const [amount, setAmount] = useState('')
   const [team, setTeam] = useState('ADMIN')
   const [campus, setCampus] = useState('DMV')
   const [description, setDescription] = useState('')
@@ -27,8 +34,42 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
+  const [items, setItems] = useState<ExpenseItem[]>([
+    { id: '1', description: '', quantity: 1, unitPrice: 0, amount: 0 }
+  ])
+  const [totalAmount, setTotalAmount] = useState(0)
 
   // Teams are now enums, no need to fetch them
+
+  // Calculate total amount whenever items change
+  useEffect(() => {
+    const total = items.reduce((sum, item) => sum + item.amount, 0)
+    setTotalAmount(total)
+  }, [items])
+
+  const updateItem = (id: string, field: keyof ExpenseItem, value: string | number) => {
+    setItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updated = { ...item, [field]: value }
+        if (field === 'quantity' || field === 'unitPrice') {
+          updated.amount = updated.quantity * updated.unitPrice
+        }
+        return updated
+      }
+      return item
+    }))
+  }
+
+  const addItem = () => {
+    const newId = (Math.max(...items.map(i => parseInt(i.id))) + 1).toString()
+    setItems(prev => [...prev, { id: newId, description: '', quantity: 1, unitPrice: 0, amount: 0 }])
+  }
+
+  const removeItem = (id: string) => {
+    if (items.length > 1) {
+      setItems(prev => prev.filter(item => item.id !== id))
+    }
+  }
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -106,7 +147,7 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         },
         body: JSON.stringify({
           title,
-          amountCents: Math.round(parseFloat(amount) * 100),
+          amountCents: Math.round(totalAmount * 100),
           team,
           campus,
           description,
@@ -114,6 +155,12 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
           urgency,
           eventDate: eventDate || null,
           attachments: uploadedAttachments,
+          items: items.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPriceCents: Math.round(item.unitPrice * 100),
+            amountCents: Math.round(item.amount * 100),
+          })),
         }),
       })
 
@@ -188,36 +235,121 @@ export function ExpenseForm({ user, onClose }: ExpenseFormProps) {
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium mb-1">
-                  Title *
-                </label>
-                <input
-                  id="title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium mb-1">
+                Title *
+              </label>
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Expense Items *
+              </label>
+              <div className="space-y-4">
+                {items.map((item, index) => (
+                  <div key={item.id} className="border border-gray-200 rounded-md p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-sm">Item {index + 1}</h4>
+                      {items.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeItem(item.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Description *
+                        </label>
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Item description"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Quantity *
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity === 1 && item.unitPrice === 0 ? '' : item.quantity.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            const numericValue = value === '' ? 1 : parseInt(value) || 1
+                            updateItem(item.id, 'quantity', numericValue)
+                          }}
+                          placeholder="1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Unit Price ($) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.unitPrice === 0 ? '' : item.unitPrice.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            const numericValue = value === '' ? 0 : parseFloat(value) || 0
+                            updateItem(item.id, 'unitPrice', numericValue)
+                          }}
+                          placeholder="0.00"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-2 text-right">
+                      <span className="text-sm font-medium text-gray-700">
+                        Total: ${item.amount.toFixed(2)}
+                      </span>
+                      {item.quantity > 1 && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({item.quantity} × ${item.unitPrice.toFixed(2)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addItem}
+                  className="w-full"
+                >
+                  + Add Another Item
+                </Button>
               </div>
-              <div>
-                <label htmlFor="amount" className="block text-sm font-medium mb-1">
-                  Amount ($) *
-                </label>
-                <input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="999999.99"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+              <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Amount:</span>
+                  <span className="text-lg font-bold text-green-600">
+                    ${totalAmount.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
 
