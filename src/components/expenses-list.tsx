@@ -35,6 +35,7 @@ interface Expense {
   notes?: string
   paidAt?: string
   eventDate?: string
+  reportRequired: boolean
   requester: {
     name: string | null
     email: string
@@ -144,6 +145,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }>({
     isOpen: false,
     report: null,
+  })
+  const [markPaidModal, setMarkPaidModal] = useState<{
+    isOpen: boolean
+    expenseId: string
+    expenseTitle: string
+    reportRequired: boolean
+    processing: boolean
+  }>({
+    isOpen: false,
+    expenseId: '',
+    expenseTitle: '',
+    reportRequired: true,
+    processing: false,
   })
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
     isOpen: boolean
@@ -666,25 +680,57 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
+  const openMarkPaidModal = (expense: Expense) => {
+    setMarkPaidModal({
+      isOpen: true,
+      expenseId: expense.id,
+      expenseTitle: expense.title,
+      reportRequired: true, // Default to requiring a report
+      processing: false,
+    })
+  }
+
+  const closeMarkPaidModal = () => {
+    setMarkPaidModal({
+      isOpen: false,
+      expenseId: '',
+      expenseTitle: '',
+      reportRequired: true,
+      processing: false,
+    })
+  }
+
   const closeDenialModal = () => {
     setDenialModal({ isOpen: false, expenseId: '', expenseTitle: '' })
   }
 
-  const handleMarkPaid = async (expenseId: string) => {
+  const handleMarkPaid = async () => {
+    setMarkPaidModal(prev => ({ ...prev, processing: true }))
+    
     try {
       const response = await fetch('/api/expenses/mark-paid', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ expenseId }),
+        body: JSON.stringify({ 
+          expenseId: markPaidModal.expenseId,
+          reportRequired: markPaidModal.reportRequired
+        }),
       })
 
       if (response.ok) {
         fetchExpenses() // Refresh the list
+        closeMarkPaidModal()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to mark expense as paid')
       }
     } catch (error) {
       console.error('Failed to mark expense as paid:', error)
+      setError('Failed to mark expense as paid')
+    } finally {
+      setMarkPaidModal(prev => ({ ...prev, processing: false }))
     }
   }
 
@@ -929,7 +975,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleMarkPaid(expense.id)}
+                        onClick={() => openMarkPaidModal(expense)}
                         className="flex-1 sm:flex-none"
                       >
                         <DollarSign className="w-4 h-4 mr-1" />
@@ -938,7 +984,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     )}
                     {expense.status === 'PAID' && (
                       <>
-                        {(!expense.reports || expense.reports.length === 0) ? (
+                        {expense.reportRequired && (!expense.reports || expense.reports.length === 0) ? (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -949,15 +995,17 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             <span className="hidden sm:inline">Create Report</span>
                           </Button>
                         ) : (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
-                            className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                          >
-                            <FileText className="w-4 h-4 mr-1" />
-                            <span className="hidden sm:inline">View Report</span>
-                          </Button>
+                          expense.reportRequired && expense.reports && expense.reports.length > 0 ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
+                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            >
+                              <FileText className="w-4 h-4 mr-1" />
+                              <span className="hidden sm:inline">View Report</span>
+                            </Button>
+                          ) : null
                         )}
                       </>
                     )}
@@ -1651,6 +1699,71 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark Paid Modal */}
+      {markPaidModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Mark Expense as Paid</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeMarkPaidModal}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {markPaidModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Please confirm the payment and specify if an expense report is required.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={markPaidModal.reportRequired}
+                    onChange={(e) => setMarkPaidModal(prev => ({ ...prev, reportRequired: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Expense report is required
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      Uncheck this if no expense report is needed for this expense
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={closeMarkPaidModal}
+                  disabled={markPaidModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleMarkPaid}
+                  disabled={markPaidModal.processing}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {markPaidModal.processing ? 'Marking as Paid...' : 'Mark as Paid'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

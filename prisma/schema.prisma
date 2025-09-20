@@ -60,6 +60,7 @@ model ExpenseRequest {
   status        Status        @default(SUBMITTED)
   paidAt        DateTime?
   eventDate     DateTime?
+  reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   campus        Campus

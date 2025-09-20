@@ -8,6 +8,7 @@ import { sendSMS, generateExpensePaidSMS } from '@/lib/sms'
 
 const markPaidSchema = z.object({
   expenseId: z.string().uuid(),
+  reportRequired: z.boolean().default(true),
 })
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { expenseId } = markPaidSchema.parse(body)
+    const { expenseId, reportRequired } = markPaidSchema.parse(body)
 
     // Get expense with current status and items
     const expense = await db.expenseRequest.findUnique({
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
       data: { 
         status: 'PAID',
         paidAt: new Date(),
+        reportRequired: reportRequired,
       },
     })
 
