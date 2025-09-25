@@ -63,13 +63,13 @@ export function Navigation({ user }: NavigationProps) {
                 href="/"
                 className="text-gray-600 hover:text-gray-900 transition-colors"
               >
-                Dashboard
+                Expenses
               </a>
               <a
-                href="/expenses"
+                href="/dashboard"
                 className="text-gray-600 hover:text-gray-900 transition-colors"
               >
-                Expenses
+                Dashboard
               </a>
               <a
                 href="/reports"
@@ -141,14 +141,14 @@ export function Navigation({ user }: NavigationProps) {
                   className="text-gray-600 hover:text-gray-900 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Dashboard
+                  Expenses
                 </a>
                 <a
-                  href="/expenses"
+                  href="/dashboard"
                   className="text-gray-600 hover:text-gray-900 transition-colors py-2"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Expenses
+                  Dashboard
                 </a>
                 <a
                   href="/reports"

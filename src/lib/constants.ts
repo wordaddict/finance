@@ -68,6 +68,71 @@ export const CAMPUS_VALUES = Object.values(CAMPUSES)
 // Type for campus values
 export type CampusValue = typeof CAMPUSES[keyof typeof CAMPUSES]
 
+// Account constants
+export const ACCOUNTS = {
+  CCI_DMV_CHECKINGS: 'CCI_DMV_CHECKINGS',
+  CCI_USA_CHECKINGS: 'CCI_USA_CHECKINGS',
+  CCI_DALLAS_CHECKING: 'CCI_DALLAS_CHECKING',
+  CCI_BOSTON_CHECKINGS: 'CCI_BOSTON_CHECKINGS',
+  CCI_AUSTIN_CHECKINGS: 'CCI_AUSTIN_CHECKINGS',
+  CCI_DMV_SAVINGS: 'CCI_DMV_SAVINGS',
+  CCI_DALLAS_SAVINGS: 'CCI_DALLAS_SAVINGS',
+  CCI_BOSTON_SAVINGS: 'CCI_BOSTON_SAVINGS',
+  CCI_AUSTIN_SAVINGS: 'CCI_AUSTIN_SAVINGS',
+  CCI_GLOBAL: 'CCI_GLOBAL',
+  CCI_SEED_CHURCH_CHECKINGS: 'CCI_SEED_CHURCH_CHECKINGS',
+  CCI_SPECIAL_EVENT_CHECKINGS: 'CCI_SPECIAL_EVENT_CHECKINGS',
+} as const
+
+// Account display names for UI
+export const ACCOUNT_DISPLAY_NAMES = {
+  [ACCOUNTS.CCI_DMV_CHECKINGS]: 'CCI DMV Checkings',
+  [ACCOUNTS.CCI_USA_CHECKINGS]: 'CCI USA Checkings',
+  [ACCOUNTS.CCI_DALLAS_CHECKING]: 'CCI Dallas Checking',
+  [ACCOUNTS.CCI_BOSTON_CHECKINGS]: 'CCI Boston Checkings',
+  [ACCOUNTS.CCI_AUSTIN_CHECKINGS]: 'CCI Austin Checkings',
+  [ACCOUNTS.CCI_DMV_SAVINGS]: 'CCI DMV Savings',
+  [ACCOUNTS.CCI_DALLAS_SAVINGS]: 'CCI Dallas Savings',
+  [ACCOUNTS.CCI_BOSTON_SAVINGS]: 'CCI Boston Savings',
+  [ACCOUNTS.CCI_AUSTIN_SAVINGS]: 'CCI Austin Savings',
+  [ACCOUNTS.CCI_GLOBAL]: 'CCI Global',
+  [ACCOUNTS.CCI_SEED_CHURCH_CHECKINGS]: 'CCI Seed Church Checkings',
+  [ACCOUNTS.CCI_SPECIAL_EVENT_CHECKINGS]: 'CCI Special Event Checkings',
+} as const
+
+// Array of account values for easy iteration
+export const ACCOUNT_VALUES = Object.values(ACCOUNTS)
+
+// Type for account values
+export type AccountValue = typeof ACCOUNTS[keyof typeof ACCOUNTS]
+
+// Expense Type constants
+export const EXPENSE_TYPES = {
+  DIRECT_PAYMENT: 'Direct Payment',
+  INTERNAL_TRANSFER: 'Internal Transfer',
+  REIMBURSEMENT: 'Reimbursement',
+  VENDOR_PAYMENT: 'Vendor Payment',
+  CONTRACTOR_PAYMENT: 'Contractor Payment',
+  UTILITY_PAYMENT: 'Utility Payment',
+  RENT_PAYMENT: 'Rent Payment',
+  SALARY_PAYMENT: 'Salary Payment',
+  BENEFITS_PAYMENT: 'Benefits Payment',
+  EQUIPMENT_PURCHASE: 'Equipment Purchase',
+  SUPPLIES_PURCHASE: 'Supplies Purchase',
+  TRAVEL_EXPENSE: 'Travel Expense',
+  MEAL_EXPENSE: 'Meal Expense',
+  CONFERENCE_EXPENSE: 'Conference Expense',
+  MARKETING_EXPENSE: 'Marketing Expense',
+  MAINTENANCE_EXPENSE: 'Maintenance Expense',
+  OTHER: 'Other',
+} as const
+
+// Array of expense type values for easy iteration
+export const EXPENSE_TYPE_VALUES = Object.values(EXPENSE_TYPES)
+
+// Type for expense type values
+export type ExpenseTypeValue = typeof EXPENSE_TYPES[keyof typeof EXPENSE_TYPES]
+
 // Urgency constants
 export const URGENCY_OPTIONS = {
   1: 'Not Urgent (Few months)',

@@ -8,7 +8,7 @@ import { SessionUser } from '@/lib/auth'
 import { ExpenseForm } from './expense-form'
 import { DenialModal } from './denial-modal'
 import { ReportForm } from './report-form'
-import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES } from '@/lib/constants'
+import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
 import { 
   Plus,
   Filter,
@@ -17,7 +17,8 @@ import {
   Check,
   X,
   DollarSign,
-  FileText
+  FileText,
+  Tag
 } from 'lucide-react'
 
 interface Expense {
@@ -34,8 +35,11 @@ interface Expense {
   category?: string
   notes?: string
   paidAt?: string
+  paymentDate?: string
   eventDate?: string
   reportRequired: boolean
+  account?: string | null
+  expenseType?: string | null
   requester: {
     name: string | null
     email: string
@@ -151,12 +155,44 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseId: string
     expenseTitle: string
     reportRequired: boolean
+    paymentDate: string
     processing: boolean
   }>({
     isOpen: false,
     expenseId: '',
     expenseTitle: '',
     reportRequired: true,
+    paymentDate: '',
+    processing: false,
+  })
+
+  const [accountModal, setAccountModal] = useState<{
+    isOpen: boolean
+    expenseId: string
+    expenseTitle: string
+    currentAccount: string | null
+    processing: boolean
+  }>({
+    isOpen: false,
+    expenseId: '',
+    expenseTitle: '',
+    currentAccount: null,
+    processing: false,
+  })
+
+  const [expenseTypeModal, setExpenseTypeModal] = useState<{
+    isOpen: boolean
+    expenseId: string
+    expenseTitle: string
+    currentType: string | null
+    customType: string
+    processing: boolean
+  }>({
+    isOpen: false,
+    expenseId: '',
+    expenseTitle: '',
+    currentType: null,
+    customType: '',
     processing: false,
   })
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
@@ -681,11 +717,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }
 
   const openMarkPaidModal = (expense: Expense) => {
+    // Set default payment date to today
+    const today = new Date().toISOString().split('T')[0]
     setMarkPaidModal({
       isOpen: true,
       expenseId: expense.id,
       expenseTitle: expense.title,
       reportRequired: true, // Default to requiring a report
+      paymentDate: today,
       processing: false,
     })
   }
@@ -696,6 +735,49 @@ export function ExpensesList({ user }: ExpensesListProps) {
       expenseId: '',
       expenseTitle: '',
       reportRequired: true,
+      paymentDate: '',
+      processing: false,
+    })
+  }
+
+  const openAccountModal = (expense: Expense) => {
+    setAccountModal({
+      isOpen: true,
+      expenseId: expense.id,
+      expenseTitle: expense.title,
+      currentAccount: expense.account || null,
+      processing: false,
+    })
+  }
+
+  const closeAccountModal = () => {
+    setAccountModal({
+      isOpen: false,
+      expenseId: '',
+      expenseTitle: '',
+      currentAccount: null,
+      processing: false,
+    })
+  }
+
+  const openExpenseTypeModal = (expense: Expense) => {
+    setExpenseTypeModal({
+      isOpen: true,
+      expenseId: expense.id,
+      expenseTitle: expense.title,
+      currentType: expense.expenseType || null,
+      customType: '',
+      processing: false,
+    })
+  }
+
+  const closeExpenseTypeModal = () => {
+    setExpenseTypeModal({
+      isOpen: false,
+      expenseId: '',
+      expenseTitle: '',
+      currentType: null,
+      customType: '',
       processing: false,
     })
   }
@@ -715,7 +797,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
         },
         body: JSON.stringify({ 
           expenseId: markPaidModal.expenseId,
-          reportRequired: markPaidModal.reportRequired
+          reportRequired: markPaidModal.reportRequired,
+          paymentDate: markPaidModal.paymentDate ? new Date(markPaidModal.paymentDate).toISOString() : undefined
         }),
       })
 
@@ -731,6 +814,105 @@ export function ExpensesList({ user }: ExpensesListProps) {
       setError('Failed to mark expense as paid')
     } finally {
       setMarkPaidModal(prev => ({ ...prev, processing: false }))
+    }
+  }
+
+  const handleAccountUpdate = async (newAccount: string | null) => {
+    setAccountModal(prev => ({ ...prev, processing: true }))
+    
+    try {
+      const response = await fetch('/api/expenses/update-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          expenseId: accountModal.expenseId,
+          account: newAccount
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMessage(data.message)
+        
+        // Update the expense in the list
+        setExpenses(prev => prev.map(expense => 
+          expense.id === accountModal.expenseId 
+            ? { ...expense, account: newAccount }
+            : expense
+        ))
+        
+        // Update the expense in the view modal if it's currently open
+        if (viewModal.expense && viewModal.expense.id === accountModal.expenseId) {
+          setViewModal(prev => ({
+            ...prev,
+            expense: prev.expense ? { ...prev.expense, account: newAccount } : null
+          }))
+        }
+        
+        closeAccountModal()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Failed to update account tag')
+      }
+    } catch (error) {
+      console.error('Update account error:', error)
+      setError('Failed to update account tag')
+    } finally {
+      setAccountModal(prev => ({ ...prev, processing: false }))
+    }
+  }
+
+  const handleExpenseTypeUpdate = async () => {
+    setExpenseTypeModal(prev => ({ ...prev, processing: true }))
+    
+    try {
+      // Determine the final expense type
+      const finalType = expenseTypeModal.currentType === 'CUSTOM' 
+        ? expenseTypeModal.customType.trim() || null
+        : expenseTypeModal.currentType
+
+      const response = await fetch('/api/expenses/update-type', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          expenseId: expenseTypeModal.expenseId,
+          expenseType: finalType
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMessage(data.message)
+        
+        // Update the expense in the list
+        setExpenses(prev => prev.map(expense => 
+          expense.id === expenseTypeModal.expenseId 
+            ? { ...expense, expenseType: finalType }
+            : expense
+        ))
+        
+        // Update the expense in the view modal if it's currently open
+        if (viewModal.expense && viewModal.expense.id === expenseTypeModal.expenseId) {
+          setViewModal(prev => ({
+            ...prev,
+            expense: prev.expense ? { ...prev.expense, expenseType: finalType } : null
+          }))
+        }
+        
+        closeExpenseTypeModal()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Failed to update expense type')
+      }
+    } catch (error) {
+      console.error('Update expense type error:', error)
+      setError('Failed to update expense type')
+    } finally {
+      setExpenseTypeModal(prev => ({ ...prev, processing: false }))
     }
   }
 
@@ -1092,6 +1274,51 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     {URGENCY_DISPLAY_NAMES[viewModal.expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${viewModal.expense.urgency}`}
                   </p>
                 </div>
+                {/* Account Information - Visible to Admins and Pastors */}
+                {(user.role === 'ADMIN' || user.role === 'CAMPUS_PASTOR') && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Account</label>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">
+                        {viewModal.expense.account 
+                          ? ACCOUNT_DISPLAY_NAMES[viewModal.expense.account as keyof typeof ACCOUNT_DISPLAY_NAMES] || viewModal.expense.account
+                          : 'Not tagged'
+                        }
+                      </p>
+                      {user.role === 'ADMIN' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAccountModal(viewModal.expense!)}
+                          className="text-xs"
+                        >
+                          <Tag className="w-3 h-3 mr-1" />
+                          Tag Account
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {/* Expense Type Information - Admin Only */}
+                {user.role === 'ADMIN' && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Expense Type</label>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">
+                        {viewModal.expense.expenseType || 'Not tagged'}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openExpenseTypeModal(viewModal.expense!)}
+                        className="text-xs"
+                      >
+                        <Tag className="w-3 h-3 mr-1" />
+                        Set Type
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-gray-500">Team</label>
                   <p className="font-medium">
@@ -1324,6 +1551,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid At</label>
                   <p className="font-medium">{formatDate(viewModal.expense.paidAt)}</p>
+                </div>
+              )}
+
+              {/* Payment Date - Admin Only */}
+              {user.role === 'ADMIN' && viewModal.expense.paymentDate && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Payment Date</label>
+                  <p className="font-medium text-blue-600">{formatDate(viewModal.expense.paymentDate)}</p>
                 </div>
               )}
             </div>
@@ -1748,6 +1983,21 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </label>
               </div>
 
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Date
+                </label>
+                <input
+                  type="date"
+                  value={markPaidModal.paymentDate}
+                  onChange={(e) => setMarkPaidModal(prev => ({ ...prev, paymentDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Select the date when the payment was actually made
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-3">
                 <Button
                   variant="outline"
@@ -1762,6 +2012,164 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {markPaidModal.processing ? 'Marking as Paid...' : 'Mark as Paid'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Modal */}
+      {accountModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Tag Account</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeAccountModal}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {accountModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Select the account that the money came from for this expense.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account
+                </label>
+                <select
+                  value={accountModal.currentAccount || ''}
+                  onChange={(e) => setAccountModal(prev => ({ 
+                    ...prev, 
+                    currentAccount: e.target.value || null 
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select an account...</option>
+                  {Object.entries(ACCOUNT_DISPLAY_NAMES).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={closeAccountModal}
+                  disabled={accountModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleAccountUpdate(accountModal.currentAccount)}
+                  disabled={accountModal.processing}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {accountModal.processing ? 'Updating...' : 'Update Account'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Type Modal */}
+      {expenseTypeModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Set Expense Type</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={closeExpenseTypeModal}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {expenseTypeModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Select or create a type for this expense for reporting purposes.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Expense Type
+                </label>
+                <select
+                  value={expenseTypeModal.currentType || ''}
+                  onChange={(e) => setExpenseTypeModal(prev => ({ 
+                    ...prev, 
+                    currentType: e.target.value || null,
+                    customType: e.target.value === 'CUSTOM' ? prev.customType : ''
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a type...</option>
+                  {Object.values(EXPENSE_TYPES).map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                  <option value="CUSTOM">Custom Type...</option>
+                </select>
+                
+                {expenseTypeModal.currentType === 'CUSTOM' && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Custom Type
+                    </label>
+                    <input
+                      type="text"
+                      value={expenseTypeModal.customType}
+                      onChange={(e) => setExpenseTypeModal(prev => ({ 
+                        ...prev, 
+                        customType: e.target.value 
+                      }))}
+                      placeholder="Enter custom expense type..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      maxLength={100}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Maximum 100 characters
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={closeExpenseTypeModal}
+                  disabled={expenseTypeModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleExpenseTypeUpdate}
+                  disabled={expenseTypeModal.processing || (expenseTypeModal.currentType === 'CUSTOM' && !expenseTypeModal.customType.trim())}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {expenseTypeModal.processing ? 'Updating...' : 'Update Type'}
                 </Button>
               </div>
             </div>

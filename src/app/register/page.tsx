@@ -66,13 +66,27 @@ export default function RegisterPage() {
       return
     }
 
+    // Zelle validation (optional but if provided, must be valid)
+    if (zelle.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const phoneRegex = /^\+?[\d\s\-\(\)]+$/
+      const isValidEmail = emailRegex.test(zelle.trim())
+      const isValidPhone = phoneRegex.test(zelle.trim().replace(/\s/g, ''))
+      
+      if (!isValidEmail && !isValidPhone) {
+        setError('Zelle info must be a valid email address or phone number')
+        setLoading(false)
+        return
+      }
+    }
+
     try {
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), name, password, role, campus }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), name, password, role, campus, zelle: zelle.trim() }),
       })
 
       const data = await response.json()
@@ -214,6 +228,22 @@ export default function RegisterPage() {
                 <option value="CCI_USA_BAY_AREA">CCI-USA Bay Area</option>
                 <option value="CCI_USA_CHICAGO">CCI-USA Chicago</option>
               </select>
+            </div>
+            <div>
+              <label htmlFor="zelle" className="block text-sm font-medium mb-1">
+                Zelle Information (Optional)
+              </label>
+              <input
+                id="zelle"
+                type="text"
+                value={zelle}
+                onChange={(e) => setZelle(e.target.value)}
+                placeholder="Enter email or phone number for Zelle payments"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Provide your email or phone number for receiving Zelle payments. This can be updated later in your profile.
+              </p>
             </div>
             <div>
               <label htmlFor="role" className="block text-sm font-medium mb-1">

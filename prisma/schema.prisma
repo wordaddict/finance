@@ -59,8 +59,11 @@ model ExpenseRequest {
   notes         String?
   status        Status        @default(SUBMITTED)
   paidAt        DateTime?
+  paymentDate   DateTime?     // Date when payment was actually made (set by admin)
   eventDate     DateTime?
   reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
+  account       Account?      // Account that the money came from (tagged by admin)
+  expenseType   String?       // Type of expense for reporting (set by admin)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   campus        Campus
@@ -203,6 +206,21 @@ enum Campus {
   CCI_USA_ATLANTA
   CCI_USA_BAY_AREA
   CCI_USA_CHICAGO
+}
+
+enum Account {
+  CCI_DMV_CHECKINGS
+  CCI_USA_CHECKINGS
+  CCI_DALLAS_CHECKING
+  CCI_BOSTON_CHECKINGS
+  CCI_AUSTIN_CHECKINGS
+  CCI_DMV_SAVINGS
+  CCI_DALLAS_SAVINGS
+  CCI_BOSTON_SAVINGS
+  CCI_AUSTIN_SAVINGS
+  CCI_GLOBAL
+  CCI_SEED_CHURCH_CHECKINGS
+  CCI_SPECIAL_EVENT_CHECKINGS
 }
 
 model ExpenseReport {
