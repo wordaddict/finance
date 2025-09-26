@@ -50,6 +50,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Clean up any existing verification tokens for this email
+    await db.verificationToken.deleteMany({
+      where: { email: normalizedEmail },
+    })
+
     // Generate verification token
     const verificationToken = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours

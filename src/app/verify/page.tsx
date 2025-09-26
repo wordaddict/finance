@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ export default function VerifyPage() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const hasCalledAPIRef = useRef(false)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -22,9 +23,19 @@ export default function VerifyPage() {
       return
     }
 
-    // Call the verification API
+    // Prevent multiple API calls
+    if (hasCalledAPIRef.current) {
+      return
+    }
+
+    // Add a small delay to prevent race conditions
     const verifyEmail = async () => {
       try {
+        hasCalledAPIRef.current = true
+        
+        // Small delay to ensure any previous operations complete
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         const response = await fetch(`/api/verify?token=${token}`)
         const data = await response.json()
 

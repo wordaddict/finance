@@ -25,6 +25,7 @@ model User {
   statusEvents    StatusEvent[]
   itemApprovals   ExpenseItemApproval[] @relation("ItemApprover")
   pastorRemarks  PastorRemark[]
+  verificationTokens VerificationToken[]
 }
 
 model Session {
@@ -45,6 +46,7 @@ model VerificationToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+  user      User      @relation(fields: [email], references: [email], onDelete: Cascade)
 }
 
 model ExpenseRequest {
