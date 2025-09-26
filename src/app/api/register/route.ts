@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
+import { sendEmail, generateEmailVerificationEmail } from '@/lib/email'
+import { randomBytes } from 'crypto'
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -48,8 +50,33 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Generate verification token
+    const verificationToken = randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    // Store verification token
+    await db.verificationToken.create({
+      data: {
+        email: normalizedEmail,
+        token: verificationToken,
+        purpose: 'EMAIL_VERIFICATION',
+        expiresAt,
+      },
+    })
+
+    // Send verification email
+    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify?token=${verificationToken}`
+    const emailTemplate = generateEmailVerificationEmail(
+      name.trim(),
+      verificationUrl,
+      process.env.NEXT_PUBLIC_APP_URL!
+    )
+    emailTemplate.to = normalizedEmail
+
+    await sendEmail(emailTemplate)
+
     return NextResponse.json({
-      message: 'Registration successful. Your account is pending approval from an administrator. You will be notified once approved.',
+      message: 'Registration successful. Please check your email to verify your account before it can be approved by an administrator.',
     })
   } catch (error) {
     console.error('Registration error:', error)

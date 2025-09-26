@@ -375,6 +375,37 @@ export function generatePastorRemarkAddedEmail(
   }
 }
 
+export function generateEmailVerificationEmail(
+  recipientName: string,
+  verificationUrl: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  
+  return {
+    to: '',
+    subject: 'Verify Your Email Address - Church Expense System',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Welcome to Church Expense System</h2>
+        <p>Hello ${recipientName},</p>
+        <p>Thank you for registering with the Church Expense System. To complete your registration and activate your account, please verify your email address by clicking the button below:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Verify Email Address
+          </a>
+        </div>
+        <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #666; font-size: 14px;">${verificationUrl}</p>
+        <p><strong>Important:</strong> This verification link will expire in 24 hours for security reasons.</p>
+        <p>If you didn't create an account with us, please ignore this email.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Welcome to Church Expense System\n\nHello ${recipientName},\n\nThank you for registering with the Church Expense System. To complete your registration and activate your account, please verify your email address by visiting this link:\n\n${verificationUrl}\n\nThis verification link will expire in 24 hours for security reasons.\n\nIf you didn't create an account with us, please ignore this email.\n\nBest regards,\nChurch Expense System`,
+  }
+}
+
 export function generateUserSuspendedEmail(
   recipientName: string,
   recipientEmail: string,

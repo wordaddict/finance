@@ -13,7 +13,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const router = useRouter()
+
+  // Check for verification success message
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('verified') === 'true') {
+      setSuccessMessage('Email verified successfully! Your account is now verified and pending administrator approval.')
+    }
+  }, [])
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,6 +113,9 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+            {successMessage && (
+              <div className="text-green-600 text-sm bg-green-50 p-3 rounded-md">{successMessage}</div>
+            )}
             {error && (
               <div className="text-red-600 text-sm">{error}</div>
             )}

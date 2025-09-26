@@ -52,8 +52,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      message: 'Email verified successfully. You can now set your password.',
-      redirectTo: '/set-password?email=' + encodeURIComponent(verificationToken.email),
+      message: 'Email verified successfully. Your account is now verified and pending administrator approval.',
     })
   } catch (error) {
     console.error('Email verification error:', error)
