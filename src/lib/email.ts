@@ -334,6 +334,47 @@ export function generateExpenseReportCreatedEmail(
   }
 }
 
+export function generatePastorRemarkAddedEmail(
+  recipientName: string,
+  expenseTitle: string,
+  pastorName: string,
+  remark: string,
+  campus: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+  
+  return {
+    to: '',
+    subject: `Pastor Remark Added to Expense: ${expenseTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Pastor Remark Added to Expense</h2>
+        <p>Hello ${recipientName},</p>
+        <p>A campus pastor has added a remark to an expense request:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>${expenseTitle}</h3>
+          <p><strong>Pastor:</strong> ${pastorName}</p>
+          <p><strong>Campus:</strong> ${campus}</p>
+          <div style="background: #fff; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;">
+            <p><strong>Remark:</strong></p>
+            <p style="margin: 10px 0; font-style: italic;">"${remark}"</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Expense Details
+          </a>
+        </div>
+        <p>Please review the pastor's remark along with the expense request.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Pastor Remark Added to Expense: ${expenseTitle}\n\nPastor: ${pastorName}\nCampus: ${campus}\n\nRemark: "${remark}"\n\nPlease review the pastor's remark along with the expense request at: ${expenseUrl}`,
+  }
+}
+
 export function generateUserSuspendedEmail(
   recipientName: string,
   recipientEmail: string,

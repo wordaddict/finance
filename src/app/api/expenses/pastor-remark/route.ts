@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
 import { canAddPastorRemarks } from '@/lib/rbac'
+import { sendEmailsWithRateLimit, generatePastorRemarkAddedEmail } from '@/lib/email'
 
 const pastorRemarkSchema = z.object({
   expenseId: z.string().uuid(),
@@ -81,6 +82,40 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Get admins for notifications
+    const admins = await db.user.findMany({
+      where: {
+        role: 'ADMIN',
+      },
+    })
+
+    // Prepare recipients list (admins + expense requester)
+    const recipients = [
+      ...admins,
+      expense.requester
+    ]
+
+    // Prepare email templates for all recipients
+    const emailTemplates = recipients.map((recipient: any) => {
+      const emailTemplate = generatePastorRemarkAddedEmail(
+        recipient.name || recipient.email,
+        expense.title,
+        user.name || user.email,
+        remark,
+        user.campus || 'Unknown',
+        process.env.NEXT_PUBLIC_APP_URL!
+      )
+      emailTemplate.to = recipient.email
+      return emailTemplate
+    })
+
+    // Send notifications with rate limiting (500ms delay = 2 emails per second)
+    const emailResults = await sendEmailsWithRateLimit(emailTemplates, 500)
+    
+    if (emailResults.failed > 0) {
+      console.warn(`Failed to send ${emailResults.failed} out of ${recipients.length} pastor remark notification emails:`, emailResults.errors)
+    }
 
     return NextResponse.json({
       message: 'Pastor remark added successfully',
