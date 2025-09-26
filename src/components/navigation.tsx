@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { ConfirmationModal } from '@/components/confirmation-modal'
 import { SessionUser } from '@/lib/auth'
 import { canManageUsers } from '@/lib/rbac'
 import { LogOut, User, Settings, Menu, X, UserCircle } from 'lucide-react'
@@ -15,9 +16,10 @@ interface NavigationProps {
 export function Navigation({ user }: NavigationProps) {
   const [loading, setLoading] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false)
   const router = useRouter()
 
-  const handleLogout = async () => {
+  const performLogout = async () => {
     setLoading(true)
     try {
       const response = await fetch('/api/logout', {
@@ -37,6 +39,7 @@ export function Navigation({ user }: NavigationProps) {
       console.error('Logout error:', error)
     } finally {
       setLoading(false)
+      setLogoutModalOpen(false)
     }
   }
 
@@ -129,7 +132,7 @@ export function Navigation({ user }: NavigationProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleLogout}
+              onClick={() => setLogoutModalOpen(true)}
               disabled={loading}
               className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0"
             >
@@ -257,7 +260,7 @@ export function Navigation({ user }: NavigationProps) {
                 <div className="p-6 border-t border-gray-200 bg-gray-50">
                   <Button
                     variant="outline"
-                    onClick={handleLogout}
+                    onClick={() => setLogoutModalOpen(true)}
                     disabled={loading}
                     className="w-full flex items-center justify-center space-x-2 py-3"
                   >
@@ -269,6 +272,17 @@ export function Navigation({ user }: NavigationProps) {
             </div>
           </>
         )}
+        <ConfirmationModal
+          isOpen={logoutModalOpen}
+          onClose={() => setLogoutModalOpen(false)}
+          onConfirm={performLogout}
+          title="Confirm Logout"
+          message="Are you sure you want to logout? You'll need to log in again to continue."
+          confirmText="Logout"
+          cancelText="Stay Logged In"
+          variant="warning"
+          loading={loading}
+        />
       </div>
     </nav>
   )
