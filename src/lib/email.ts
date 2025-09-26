@@ -27,7 +27,7 @@ export async function sendEmail(template: EmailTemplate): Promise<boolean> {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'adeyinkamichealola@gmail.com',
+      from: process.env.FROM_EMAIL!,
       to: [template.to],
       subject: template.subject,
       html: template.html,
@@ -39,7 +39,7 @@ export async function sendEmail(template: EmailTemplate): Promise<boolean> {
       return false
     }
 
-    console.log('Email sent successfully:', data?.id)
+    console.log('Email sent successfully:', data)
     return true
   } catch (error) {
     console.error('Failed to send email:', error)
@@ -47,12 +47,52 @@ export async function sendEmail(template: EmailTemplate): Promise<boolean> {
   }
 }
 
+// Rate-limited email sending for multiple recipients
+export async function sendEmailsWithRateLimit(
+  emailTemplates: EmailTemplate[],
+  delayMs: number = 500
+): Promise<{ success: number; failed: number; errors: string[] }> {
+  let success = 0
+  let failed = 0
+  const errors: string[] = []
+
+  for (let i = 0; i < emailTemplates.length; i++) {
+    try {
+      const template = emailTemplates[i]
+      const result = await sendEmail(template)
+      
+      if (result) {
+        success++
+      } else {
+        failed++
+        errors.push(`Failed to send email to ${template.to}`)
+      }
+
+      // Add delay between emails to respect rate limits
+      if (i < emailTemplates.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+    } catch (error) {
+      failed++
+      const errorMsg = `Error sending email to ${emailTemplates[i].to}: ${error}`
+      errors.push(errorMsg)
+      console.error(errorMsg)
+    }
+  }
+
+  return { success, failed, errors }
+}
+
 export function generateExpenseSubmittedEmail(
   recipientName: string,
   expenseTitle: string,
   amount: number,
-  requesterName: string
+  requesterName: string,
+  baseUrl: string
 ): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+  
   return {
     to: '', // Will be set by caller
     subject: `New Expense Request: ${expenseTitle}`,
@@ -66,19 +106,28 @@ export function generateExpenseSubmittedEmail(
           <p><strong>Amount:</strong> $${(amount / 100).toFixed(2)}</p>
           <p><strong>Requested by:</strong> ${requesterName}</p>
         </div>
-        <p>Please log in to review and approve or deny this request.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Review Expense Request
+          </a>
+        </div>
+        <p>You can also log in to your account to review and approve or deny this request.</p>
         <p>Best regards,<br>Church Expense System</p>
       </div>
     `,
-    text: `New Expense Request: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\nRequested by: ${requesterName}\n\nPlease log in to review this request.`,
+    text: `New Expense Request: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\nRequested by: ${requesterName}\n\nPlease log in to review this request at: ${expenseUrl}`,
   }
 }
 
 export function generateExpenseApprovedEmail(
   recipientName: string,
   expenseTitle: string,
-  amount: number
+  amount: number,
+  baseUrl: string
 ): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+  
   return {
     to: '',
     subject: `Expense Request Approved: ${expenseTitle}`,
@@ -91,11 +140,16 @@ export function generateExpenseApprovedEmail(
           <h3>${expenseTitle}</h3>
           <p><strong>Amount:</strong> $${(amount / 100).toFixed(2)}</p>
         </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Expense Details
+          </a>
+        </div>
         <p>You will be notified once payment has been processed.</p>
         <p>Best regards,<br>Church Expense System</p>
       </div>
     `,
-    text: `Expense Request Approved: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\n\nYou will be notified once payment has been processed.`,
+    text: `Expense Request Approved: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\n\nYou will be notified once payment has been processed.\n\nView details at: ${expenseUrl}`,
   }
 }
 
@@ -103,8 +157,12 @@ export function generateExpenseDeniedEmail(
   recipientName: string,
   expenseTitle: string,
   amount: number,
-  reason?: string
+  baseUrl: string,
+  reason?: string,
 ): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+  
   return {
     to: '',
     subject: `Expense Request Denied: ${expenseTitle}`,
@@ -118,19 +176,28 @@ export function generateExpenseDeniedEmail(
           <p><strong>Amount:</strong> $${(amount / 100).toFixed(2)}</p>
           ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
         </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Expense Details
+          </a>
+        </div>
         <p>If you have questions, please contact your team leader.</p>
         <p>Best regards,<br>Church Expense System</p>
       </div>
     `,
-    text: `Expense Request Denied: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\n${reason ? `Reason: ${reason}\n` : ''}\nIf you have questions, please contact your team leader.`,
+    text: `Expense Request Denied: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\n${reason ? `Reason: ${reason}\n` : ''}\nIf you have questions, please contact your team leader.\n\nView details at: ${expenseUrl}`,
   }
 }
 
 export function generateExpensePaidEmail(
   recipientName: string,
   expenseTitle: string,
-  amount: number
+  amount: number,
+  baseUrl: string
 ): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+  
   return {
     to: '',
     subject: `Expense Request Paid: ${expenseTitle}`,
@@ -143,11 +210,16 @@ export function generateExpensePaidEmail(
           <h3>${expenseTitle}</h3>
           <p><strong>Amount:</strong> $${(amount / 100).toFixed(2)}</p>
         </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Expense Details
+          </a>
+        </div>
         <p>Thank you for your service to the church.</p>
         <p>Best regards,<br>Church Expense System</p>
       </div>
     `,
-    text: `Expense Request Paid: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\n\nThank you for your service to the church.`,
+    text: `Expense Request Paid: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\n\nThank you for your service to the church.\n\nView details at: ${expenseUrl}`,
   }
 }
 

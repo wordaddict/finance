@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
     const emailTemplate = generateExpensePaidEmail(
       expense.requester.name || expense.requester.email,
       expense.title,
-      approvedAmountCents
+      approvedAmountCents,
+      process.env.NEXT_PUBLIC_APP_URL!
     )
     emailTemplate.to = expense.requester.email
     await sendEmail(emailTemplate)

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { sendEmail, generateExpenseSubmittedEmail } from '@/lib/email'
+import { sendEmailsWithRateLimit, generateExpenseSubmittedEmail } from '@/lib/email'
 import { sendSMS, generateExpenseSubmittedSMS } from '@/lib/sms'
 import { TEAM_VALUES, CAMPUS_VALUES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
@@ -98,27 +98,34 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Send notifications to approvers
-    for (const approver of approvers) {
-      // Email notification
+    // Prepare email templates for all approvers
+    const emailTemplates = approvers.map((approver: any) => {
       const emailTemplate = generateExpenseSubmittedEmail(
         approver.name || approver.email,
         expense.title,
         expense.amountCents,
-        expense.requester?.name || expense.requester?.email || 'Unknown'
+        expense.requester?.name || expense.requester?.email || 'Unknown',
+        process.env.NEXT_PUBLIC_APP_URL!
       )
       emailTemplate.to = approver.email
-      await sendEmail(emailTemplate)
+      return emailTemplate
+    })
 
-      // SMS notification (if user has phone number - you'd need to add this to User model)
-      // const smsTemplate = generateExpenseSubmittedSMS(
-      //   expense.title,
-      //   expense.amountCents,
-      //   expense.requester.name || expense.requester.email
-      // )
-      // smsTemplate.to = approver.phone // You'd need to add phone field to User model
-      // await sendSMS(smsTemplate)
+    // Send notifications to approvers with rate limiting (500ms delay = 2 emails per second)
+    const emailResults = await sendEmailsWithRateLimit(emailTemplates, 500)
+    
+    if (emailResults.failed > 0) {
+      console.warn(`Failed to send ${emailResults.failed} out of ${approvers.length} notification emails:`, emailResults.errors)
     }
+
+    // SMS notification (if user has phone number - you'd need to add this to User model)
+    // const smsTemplate = generateExpenseSubmittedSMS(
+    //   expense.title,
+    //   expense.amountCents,
+    //   expense.requester.name || expense.requester.email
+    // )
+    // smsTemplate.to = approver.phone // You'd need to add phone field to User model
+    // await sendSMS(smsTemplate)
 
     return NextResponse.json({
       message: 'Expense request created successfully',
