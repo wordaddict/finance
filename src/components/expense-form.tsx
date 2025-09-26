@@ -336,11 +336,17 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                         <input
                           type="number"
                           min="1"
-                          value={item.quantity === 1 && item.unitPrice === 0 ? '' : item.quantity.toString()}
+                          value={item.quantity === 0 ? '' : item.quantity.toString()}
                           onChange={(e) => {
                             const value = e.target.value
-                            const numericValue = value === '' ? 1 : parseInt(value) || 1
+                            const numericValue = value === '' ? 0 : parseInt(value) || 1
                             updateItem(item.id, 'quantity', numericValue)
+                          }}
+                          onBlur={(e) => {
+                            // Ensure minimum value of 1 when user leaves the field
+                            if (item.quantity < 1) {
+                              updateItem(item.id, 'quantity', 1)
+                            }
                           }}
                           placeholder="1"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
