@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canViewAllExpenses } from '@/lib/rbac'
+import { sendEmailsWithRateLimit, generateExpenseReportCreatedEmail } from '@/lib/email'
 
 const createReportSchema = z.object({
   expenseId: z.string().uuid(),
@@ -71,8 +72,8 @@ export async function POST(request: NextRequest) {
     
     if (expense.items && expense.items.length > 0) {
       // Count approved items
-      const approvedItems = expense.items.filter(item => {
-        const approval = item.approvals.find(approval => approval.status === 'APPROVED')
+      const approvedItems = expense.items.filter((item: any) => {
+        const approval = item.approvals.find((approval: any) => approval.status === 'APPROVED')
         return approval && (approval.approvedAmountCents || 0) > 0
       })
       requiredAttachments = approvedItems.length
@@ -124,6 +125,33 @@ export async function POST(request: NextRequest) {
         approvedItems: true,
       },
     })
+
+    // Get admins for notifications
+    const admins = await db.user.findMany({
+      where: {
+        role: 'ADMIN',
+      },
+    })
+
+    // Prepare email templates for all admins
+    const emailTemplates = admins.map((admin: any) => {
+      const emailTemplate = generateExpenseReportCreatedEmail(
+        admin.name || admin.email,
+        report.title,
+        report.totalApprovedAmount || 0,
+        user.name || user.email,
+        process.env.NEXT_PUBLIC_APP_URL!
+      )
+      emailTemplate.to = admin.email
+      return emailTemplate
+    })
+
+    // Send notifications to admins with rate limiting (500ms delay = 2 emails per second)
+    const emailResults = await sendEmailsWithRateLimit(emailTemplates, 500)
+    
+    if (emailResults.failed > 0) {
+      console.warn(`Failed to send ${emailResults.failed} out of ${admins.length} report notification emails:`, emailResults.errors)
+    }
 
     return NextResponse.json(report)
   } catch (error) {

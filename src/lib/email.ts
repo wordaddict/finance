@@ -298,6 +298,42 @@ export function generateUserDeniedEmail(
   }
 }
 
+export function generateExpenseReportCreatedEmail(
+  recipientName: string,
+  reportTitle: string,
+  totalApprovedAmount: number,
+  reporterName: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  const reportsUrl = `${appUrl}/reports`
+  
+  return {
+    to: '',
+    subject: `New Expense Report Submitted: ${reportTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>New Expense Report Submitted</h2>
+        <p>Hello ${recipientName},</p>
+        <p>A new expense report has been submitted and requires your review:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>${reportTitle}</h3>
+          <p><strong>Total Approved Amount:</strong> $${(totalApprovedAmount / 100).toFixed(2)}</p>
+          <p><strong>Submitted by:</strong> ${reporterName}</p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${reportsUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Review Expense Report
+          </a>
+        </div>
+        <p>Please review the expense report and any attached documentation.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `New Expense Report Submitted: ${reportTitle}\n\nTotal Approved Amount: $${(totalApprovedAmount / 100).toFixed(2)}\nSubmitted by: ${reporterName}\n\nPlease review the expense report at: ${reportsUrl}`,
+  }
+}
+
 export function generateUserSuspendedEmail(
   recipientName: string,
   recipientEmail: string,
