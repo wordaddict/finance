@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Navigation } from '@/components/navigation'
 import { SessionUser } from '@/lib/auth'
-import { User, Mail, Phone, DollarSign, ArrowLeft } from 'lucide-react'
+import { User, Mail, Phone, DollarSign } from 'lucide-react'
 
 interface ProfileClientProps {
   user: SessionUser
@@ -65,22 +66,14 @@ export function ProfileClient({ user }: ProfileClientProps) {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-2xl">
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Button>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation user={user} />
+      
+      <div className="container mx-auto py-8 px-4 max-w-2xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Profile</h1>
+          <p className="text-gray-600 mt-2">Manage your account information and payment details</p>
         </div>
-        <h1 className="text-3xl font-bold">Profile</h1>
-        <p className="text-gray-600 mt-2">Manage your account information and payment details</p>
-      </div>
 
       <Card>
         <CardHeader>
@@ -202,6 +195,7 @@ export function ProfileClient({ user }: ProfileClientProps) {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }
