@@ -198,6 +198,7 @@ enum Status {
 
 enum Campus {
   DMV
+  CCI_VIRTUAL
   DALLAS
   BOSTON
   AUSTIN

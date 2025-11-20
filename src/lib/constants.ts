@@ -33,6 +33,7 @@ export type TeamValue = typeof TEAMS[keyof typeof TEAMS]
 // Campus constants
 export const CAMPUSES = {
   DMV: 'DMV',
+  CCI_VIRTUAL: 'CCI_VIRTUAL',
   DALLAS: 'DALLAS', 
   BOSTON: 'BOSTON',
   AUSTIN: 'AUSTIN',
@@ -49,6 +50,7 @@ export const CAMPUSES = {
 // Campus display names for UI
 export const CAMPUS_DISPLAY_NAMES = {
   [CAMPUSES.DMV]: 'DMV',
+  [CAMPUSES.CCI_VIRTUAL]: 'CCI Virtual',
   [CAMPUSES.DALLAS]: 'Dallas',
   [CAMPUSES.BOSTON]: 'Boston', 
   [CAMPUSES.AUSTIN]: 'Austin',

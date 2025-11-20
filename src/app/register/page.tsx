@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [role, setRole] = useState('LEADER')
-  const [campus, setCampus] = useState('DMV')
+  const [campus, setCampus] = useState('')
   const [zelle, setZelle] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -215,18 +215,12 @@ export default function RegisterPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="DMV">DMV</option>
-                <option value="DALLAS">Dallas</option>
-                <option value="BOSTON">Boston</option>
-                <option value="AUSTIN">Austin</option>
-                <option value="CCI_USA_NASHVILLE">CCI-USA Nashville</option>
-                <option value="CCI_USA_OKLAHOMA">CCI-USA Oklahoma</option>
-                <option value="CCI_USA_NEWYORK_NEWJERSEY">CCI-USA New York/New Jersey</option>
-                <option value="CCI_USA_KNOXVILLE">CCI-USA Knoxville</option>
-                <option value="CCI_USA_NORTH_CAROLINA">CCI-USA North Carolina</option>
-                <option value="CCI_USA_ATLANTA">CCI-USA Atlanta</option>
-                <option value="CCI_USA_BAY_AREA">CCI-USA Bay Area</option>
-                <option value="CCI_USA_CHICAGO">CCI-USA Chicago</option>
+                <option value="">Select a campus</option>
+                {Object.entries(CAMPUSES).map(([key, value]) => (
+                  <option key={value} value={value}>
+                    {CAMPUS_DISPLAY_NAMES[value as keyof typeof CAMPUS_DISPLAY_NAMES]}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

@@ -28,8 +28,8 @@ interface ExpenseFormProps {
 
 export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }: ExpenseFormProps) {
   const [title, setTitle] = useState('')
-  const [team, setTeam] = useState('ADMIN')
-  const [campus, setCampus] = useState('DMV')
+  const [team, setTeam] = useState('')
+  const [campus, setCampus] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [urgency, setUrgency] = useState(2)
@@ -54,8 +54,8 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
   useEffect(() => {
     if (editExpense) {
       setTitle(editExpense.title || '')
-      setTeam(editExpense.team || 'ADMIN')
-      setCampus(editExpense.campus || 'DMV')
+      setTeam(editExpense.team || '')
+      setCampus(editExpense.campus || '')
       setDescription(editExpense.description || '')
       setCategory(editExpense.category || '')
       setUrgency(editExpense.urgency || 2)
@@ -415,6 +415,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
+                <option value="">Select a team</option>
                 {Object.entries(TEAM_DISPLAY_NAMES).map(([value, displayName]) => (
                   <option key={value} value={value}>
                     {displayName}
@@ -434,6 +435,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
+                <option value="">Select a campus</option>
                 {Object.entries(CAMPUS_DISPLAY_NAMES).map(([value, displayName]) => (
                   <option key={value} value={value}>
                     {displayName}
