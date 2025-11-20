@@ -36,6 +36,7 @@ interface Expense {
   notes?: string
   paidAt?: string
   paymentDate?: string
+  paidAmountCents?: number | null
   eventDate?: string
   reportRequired: boolean
   account?: string | null
@@ -157,6 +158,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
     reportRequired: boolean
     paymentDate: string
     processing: boolean
+    isAdditionalPayment: boolean
+    additionalPaymentAmount: number
   }>({
     isOpen: false,
     expenseId: '',
@@ -164,6 +167,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
     reportRequired: true,
     paymentDate: '',
     processing: false,
+    isAdditionalPayment: false,
+    additionalPaymentAmount: 0,
   })
 
   const [accountModal, setAccountModal] = useState<{
@@ -716,16 +721,37 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
-  const openMarkPaidModal = (expense: Expense) => {
+  // Helper function to check if additional payment is needed
+  const needsAdditionalPayment = (expense: Expense): { needed: boolean; amount: number } => {
+    if (expense.status !== 'PAID' || !expense.reports || expense.reports.length === 0) {
+      return { needed: false, amount: 0 }
+    }
+    
+    const latestReport = expense.reports[0]
+    const reportedAmount = latestReport.totalApprovedAmount || 0
+    const paidAmount = expense.paidAmountCents || 0
+    
+    if (reportedAmount > paidAmount) {
+      return { needed: true, amount: reportedAmount - paidAmount }
+    }
+    
+    return { needed: false, amount: 0 }
+  }
+
+  const openMarkPaidModal = (expense: Expense, isAdditionalPayment = false) => {
     // Set default payment date to today
     const today = new Date().toISOString().split('T')[0]
+    const additionalPayment = isAdditionalPayment ? needsAdditionalPayment(expense) : { needed: false, amount: 0 }
+    
     setMarkPaidModal({
       isOpen: true,
       expenseId: expense.id,
       expenseTitle: expense.title,
-      reportRequired: true, // Default to requiring a report
+      reportRequired: !isAdditionalPayment, // Don't require report for additional payments
       paymentDate: today,
       processing: false,
+      isAdditionalPayment: isAdditionalPayment && additionalPayment.needed,
+      additionalPaymentAmount: additionalPayment.amount,
     })
   }
 
@@ -737,6 +763,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
       reportRequired: true,
       paymentDate: '',
       processing: false,
+      isAdditionalPayment: false,
+      additionalPaymentAmount: 0,
     })
   }
 
@@ -1178,15 +1206,34 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           </Button>
                         ) : (
                           expense.reportRequired && expense.reports && expense.reports.length > 0 ? (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
-                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                            >
-                              <FileText className="w-4 h-4 mr-1" />
-                              <span className="hidden sm:inline">View Report</span>
-                            </Button>
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
+                                className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                <span className="hidden sm:inline">View Report</span>
+                              </Button>
+                              {user.role === 'ADMIN' && (() => {
+                                const additionalPayment = needsAdditionalPayment(expense)
+                                if (additionalPayment.needed) {
+                                  return (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => openMarkPaidModal(expense, true)}
+                                      className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                    >
+                                      <DollarSign className="w-4 h-4 mr-1" />
+                                      <span className="hidden sm:inline">Pay Additional ${(additionalPayment.amount / 100).toFixed(2)}</span>
+                                    </Button>
+                                  )
+                                }
+                                return null
+                              })()}
+                            </>
                           ) : null
                         )}
                       </>
@@ -1945,7 +1992,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Mark Expense as Paid</h2>
+                <h2 className="text-xl font-semibold">
+                  {markPaidModal.isAdditionalPayment ? 'Process Additional Payment' : 'Mark Expense as Paid'}
+                </h2>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1959,29 +2008,46 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <p className="text-sm text-gray-600 mb-2">
                   <strong>Expense:</strong> {markPaidModal.expenseTitle}
                 </p>
-                <p className="text-sm text-gray-500">
-                  Please confirm the payment and specify if an expense report is required.
-                </p>
-              </div>
-
-              <div className="mb-6">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={markPaidModal.reportRequired}
-                    onChange={(e) => setMarkPaidModal(prev => ({ ...prev, reportRequired: e.target.checked }))}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">
-                      Expense report is required
-                    </span>
-                    <p className="text-xs text-gray-500">
-                      Uncheck this if no expense report is needed for this expense
+                {markPaidModal.isAdditionalPayment ? (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+                    <p className="text-sm font-medium text-orange-800 mb-1">
+                      Additional Payment Required
+                    </p>
+                    <p className="text-sm text-orange-700">
+                      The expense report shows spending of <strong>${((markPaidModal.additionalPaymentAmount + (expenses.find(e => e.id === markPaidModal.expenseId)?.paidAmountCents || 0)) / 100).toFixed(2)}</strong>, 
+                      but only <strong>${((expenses.find(e => e.id === markPaidModal.expenseId)?.paidAmountCents || 0) / 100).toFixed(2)}</strong> was previously paid.
+                    </p>
+                    <p className="text-sm font-semibold text-orange-900 mt-2">
+                      Additional Payment Amount: <strong>${(markPaidModal.additionalPaymentAmount / 100).toFixed(2)}</strong>
                     </p>
                   </div>
-                </label>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Please confirm the payment and specify if an expense report is required.
+                  </p>
+                )}
               </div>
+
+              {!markPaidModal.isAdditionalPayment && (
+                <div className="mb-6">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={markPaidModal.reportRequired}
+                      onChange={(e) => setMarkPaidModal(prev => ({ ...prev, reportRequired: e.target.checked }))}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Expense report is required
+                      </span>
+                      <p className="text-xs text-gray-500">
+                        Uncheck this if no expense report is needed for this expense
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2011,7 +2077,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   disabled={markPaidModal.processing}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {markPaidModal.processing ? 'Marking as Paid...' : 'Mark as Paid'}
+                  {markPaidModal.processing 
+                    ? (markPaidModal.isAdditionalPayment ? 'Processing Payment...' : 'Marking as Paid...')
+                    : (markPaidModal.isAdditionalPayment ? `Pay Additional $${(markPaidModal.additionalPaymentAmount / 100).toFixed(2)}` : 'Mark as Paid')
+                  }
                 </Button>
               </div>
             </div>

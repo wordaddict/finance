@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { expenseId, reportRequired, paymentDate } = markPaidSchema.parse(body)
 
-    // Get expense with current status and items
+    // Get expense with current status, items, and reports
     const expense = await db.expenseRequest.findUnique({
       where: { id: expenseId },
       include: {
@@ -36,6 +36,12 @@ export async function POST(request: NextRequest) {
           include: {
             approvals: true,
           },
+        },
+        reports: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1, // Get the most recent report
         },
       },
     })
@@ -47,44 +53,80 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (expense.status !== 'APPROVED' && expense.status !== 'PARTIALLY_APPROVED') {
-      return NextResponse.json(
-        { error: 'Expense request must be approved or partially approved before marking as paid' },
-        { status: 400 }
-      )
+    // Check if this is a re-payment scenario (expense is PAID and has a report with higher amount)
+    const isRePayment = expense.status === 'PAID' && expense.paidAt
+    const currentPaidAmount = expense.paidAmountCents || 0
+    
+    if (isRePayment) {
+      // For re-payment, check if there's a report showing higher spending
+      const latestReport = expense.reports?.[0]
+      if (!latestReport || !latestReport.totalApprovedAmount) {
+        return NextResponse.json(
+          { error: 'No report found with spending amount. Cannot process additional payment.' },
+          { status: 400 }
+        )
+      }
+      
+      if (latestReport.totalApprovedAmount <= currentPaidAmount) {
+        return NextResponse.json(
+          { error: 'Reported amount does not exceed previously paid amount. No additional payment needed.' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Initial payment - must be approved or partially approved
+      if (expense.status !== 'APPROVED' && expense.status !== 'PARTIALLY_APPROVED') {
+        return NextResponse.json(
+          { error: 'Expense request must be approved or partially approved before marking as paid' },
+          { status: 400 }
+        )
+      }
+
+      if (expense.paidAt) {
+        return NextResponse.json(
+          { error: 'Expense request has already been marked as paid' },
+          { status: 400 }
+        )
+      }
     }
 
-    if (expense.paidAt) {
-      return NextResponse.json(
-        { error: 'Expense request has already been marked as paid' },
-        { status: 400 }
-      )
+    // Calculate payment amount
+    let paymentAmountCents: number
+    let totalPaidAmountCents: number
+    
+    if (isRePayment) {
+      // For re-payment, pay the difference between report amount and previously paid amount
+      const latestReport = expense.reports[0]
+      paymentAmountCents = latestReport.totalApprovedAmount - currentPaidAmount
+      totalPaidAmountCents = latestReport.totalApprovedAmount
+    } else {
+      // Initial payment - calculate approved amount
+      paymentAmountCents = expense.amountCents // Default to full amount
+      
+      if (expense.items && expense.items.length > 0) {
+        // For itemized expenses, calculate sum of approved amounts
+        paymentAmountCents = expense.items.reduce((total: number, item: any) => {
+          const itemApproval = item.approvals?.[0]
+          if (itemApproval?.status === 'APPROVED') {
+            return total + (itemApproval.approvedAmountCents ?? item.amountCents)
+          }
+          return total
+        }, 0)
+      }
+      totalPaidAmountCents = paymentAmountCents
     }
 
-    // Update expense status to paid
+    // Update expense status and paid amount
     await db.expenseRequest.update({
       where: { id: expenseId },
       data: { 
         status: 'PAID',
-        paidAt: new Date(),
+        paidAt: isRePayment ? expense.paidAt : new Date(), // Keep original paidAt for re-payments
         paymentDate: paymentDate ? new Date(paymentDate) : null,
         reportRequired: reportRequired,
+        paidAmountCents: totalPaidAmountCents, // Update cumulative paid amount
       },
     })
-
-    // Calculate approved amount
-    let approvedAmountCents = expense.amountCents // Default to full amount
-    
-    if (expense.items && expense.items.length > 0) {
-      // For itemized expenses, calculate sum of approved amounts
-      approvedAmountCents = expense.items.reduce((total: number, item: any) => {
-        const itemApproval = item.approvals?.[0]
-        if (itemApproval?.status === 'APPROVED') {
-          return total + (itemApproval.approvedAmountCents ?? item.amountCents)
-        }
-        return total
-      }, 0)
-    }
 
     // Create status event
     await db.statusEvent.create({
@@ -100,7 +142,7 @@ export async function POST(request: NextRequest) {
     const emailTemplate = generateExpensePaidEmail(
       expense.requester.name || expense.requester.email,
       expense.title,
-      approvedAmountCents,
+      paymentAmountCents,
       process.env.NEXT_PUBLIC_APP_URL!
     )
     emailTemplate.to = expense.requester.email
@@ -115,7 +157,12 @@ export async function POST(request: NextRequest) {
     // await sendSMS(smsTemplate)
 
     return NextResponse.json({
-      message: 'Expense request marked as paid successfully',
+      message: isRePayment 
+        ? `Additional payment of ${(paymentAmountCents / 100).toFixed(2)} processed successfully. Total paid: ${(totalPaidAmountCents / 100).toFixed(2)}`
+        : 'Expense request marked as paid successfully',
+      paymentAmountCents,
+      totalPaidAmountCents,
+      isRePayment,
     })
   } catch (error) {
     console.error('Mark paid error:', error)

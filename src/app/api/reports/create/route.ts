@@ -92,6 +92,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Calculate reported amount
+    const reportedAmountCents = data.approvedExpenses?.totalApprovedAmount || expense.amountCents
+    const currentPaidAmount = expense.paidAmountCents || 0
+    
+    // Check if reported amount exceeds paid amount
+    const additionalPaymentNeeded = reportedAmountCents > currentPaidAmount
+    const additionalPaymentAmount = additionalPaymentNeeded ? reportedAmountCents - currentPaidAmount : 0
+
     // Create the report with approved expenses data
     const report = await db.expenseReport.create({
       data: {
@@ -99,7 +107,7 @@ export async function POST(request: NextRequest) {
         title: data.title,
         content: data.content,
         reportDate: data.reportDate ? new Date(data.reportDate) : new Date(),
-        totalApprovedAmount: data.approvedExpenses?.totalApprovedAmount || expense.amountCents,
+        totalApprovedAmount: reportedAmountCents,
         attachments: data.attachments ? {
           create: data.attachments.map(attachment => ({
             publicId: attachment.publicId,
@@ -153,7 +161,12 @@ export async function POST(request: NextRequest) {
       console.warn(`Failed to send ${emailResults.failed} out of ${admins.length} report notification emails:`, emailResults.errors)
     }
 
-    return NextResponse.json(report)
+    return NextResponse.json({
+      ...report,
+      additionalPaymentNeeded,
+      additionalPaymentAmount,
+      currentPaidAmount,
+    })
   } catch (error) {
     console.error('Create report error:', error)
     return NextResponse.json(

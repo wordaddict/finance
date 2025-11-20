@@ -62,6 +62,7 @@ model ExpenseRequest {
   status        Status        @default(SUBMITTED)
   paidAt        DateTime?
   paymentDate   DateTime?     // Date when payment was actually made (set by admin)
+  paidAmountCents Int?        // Amount that was actually paid (cumulative)
   eventDate     DateTime?
   reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
   account       Account?      // Account that the money came from (tagged by admin)
