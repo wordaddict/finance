@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
           take: 1, // Get the most recent report
         },
       },
-    })
+    }) as any
 
     if (!expense) {
       return NextResponse.json(
@@ -97,8 +97,9 @@ export async function POST(request: NextRequest) {
     if (isRePayment) {
       // For re-payment, pay the difference between report amount and previously paid amount
       const latestReport = expense.reports[0]
-      paymentAmountCents = latestReport.totalApprovedAmount - currentPaidAmount
-      totalPaidAmountCents = latestReport.totalApprovedAmount
+      const reportAmount = latestReport.totalApprovedAmount ?? 0
+      paymentAmountCents = reportAmount - currentPaidAmount
+      totalPaidAmountCents = reportAmount
     } else {
       // Initial payment - calculate approved amount
       paymentAmountCents = expense.amountCents // Default to full amount
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
         paidAt: isRePayment ? expense.paidAt : new Date(), // Keep original paidAt for re-payments
         paymentDate: paymentDate ? new Date(paymentDate) : null,
         reportRequired: reportRequired,
-        paidAmountCents: totalPaidAmountCents, // Update cumulative paid amount
+        amountCents: totalPaidAmountCents, // Update cumulative paid amount
       },
     })
 
