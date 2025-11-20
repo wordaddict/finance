@@ -130,10 +130,21 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       }
 
       const uploadResult = await uploadResponse.json()
+      // Use the file's original MIME type as it's more reliable than Cloudinary's format
+      // Cloudinary's format field may be undefined or inconsistent for non-image files like spreadsheets
+      // Fallback to constructing from Cloudinary response if file.type is not available
+      let mimeType = file.type
+      if (!mimeType && uploadResult.resource_type && uploadResult.format) {
+        mimeType = `${uploadResult.resource_type}/${uploadResult.format}`
+      }
+      if (!mimeType) {
+        mimeType = 'application/octet-stream'
+      }
+      
       return {
         publicId: uploadResult.public_id,
         secureUrl: uploadResult.secure_url,
-        mimeType: uploadResult.format,
+        mimeType: mimeType,
       }
     } catch (error) {
       console.error('File upload error:', error)
@@ -204,7 +215,16 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
     const files = Array.from(e.target.files || [])
     
     // Validate files
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+    const allowedTypes = [
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv', // .csv
+      'application/vnd.oasis.opendocument.spreadsheet' // .ods
+    ]
     const maxSize = 10 * 1024 * 1024 // 10MB
     
     const validFiles: File[] = []
@@ -212,7 +232,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
     
     for (const file of files) {
       if (!allowedTypes.includes(file.type)) {
-        errors.push(`${file.name}: Only JPG, PNG, and PDF files are allowed`)
+        errors.push(`${file.name}: Only JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, and OpenDocument (.ods) files are allowed`)
         continue
       }
       
@@ -372,13 +392,13 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                 id="attachments"
                 type="file"
                 multiple
-                accept="image/jpeg,image/jpg,image/png,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.oasis.opendocument.spreadsheet,.xlsx,.xls,.csv,.ods"
                 onChange={handleFileChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <div className="mt-1">
                 <p className="text-xs text-gray-500">
-                  Allowed formats: JPG, PNG, PDF. Maximum size: 10MB per file.
+                  Allowed formats: JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, OpenDocument (.ods), and Google Sheets (export as Excel or CSV). Maximum size: 10MB per file.
                 </p>
                 <p className="text-sm font-medium text-blue-600">
                   Required: {requiredAttachments} attachment(s) ({attachments.length}/{requiredAttachments} uploaded)
