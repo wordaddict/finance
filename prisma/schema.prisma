@@ -63,6 +63,7 @@ model ExpenseRequest {
   paidAt        DateTime?
   paymentDate   DateTime?     // Date when payment was actually made (set by admin)
   paidAmountCents Int?        // Amount that was actually paid (cumulative)
+  paidBy        String?       // Person who made the payment (optional)
   eventDate     DateTime?
   reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
   account       Account?      // Account that the money came from (tagged by admin)
@@ -83,6 +84,7 @@ model ExpenseItem {
   id            String        @id @default(uuid())
   expenseId     String
   description   String
+  category      String?
   amountCents   Int
   quantity      Int           @default(1)
   unitPriceCents Int

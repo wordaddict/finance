@@ -21,6 +21,7 @@ const updateExpenseSchema = z.object({
   })).optional(),
   items: z.array(z.object({
     description: z.string().min(1),
+    category: z.string().optional().nullable(),
     quantity: z.number().positive(),
     unitPriceCents: z.number().nonnegative(),
     amountCents: z.number().nonnegative(),
@@ -91,6 +92,7 @@ export async function PUT(request: NextRequest) {
           deleteMany: {}, // Delete all existing items
           create: data.items.map(item => ({
             description: item.description,
+            category: item.category || null,
             quantity: item.quantity,
             unitPriceCents: item.unitPriceCents,
             amountCents: item.amountCents,

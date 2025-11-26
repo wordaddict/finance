@@ -36,6 +36,7 @@ interface Expense {
   notes?: string
   paidAt?: string
   paymentDate?: string
+  paidBy?: string | null
   paidAmountCents?: number | null
   eventDate?: string
   reportRequired: boolean
@@ -65,6 +66,7 @@ interface Expense {
   items?: {
     id: string
     description: string
+    category?: string | null
     quantity: number
     unitPriceCents: number
     amountCents: number
@@ -157,6 +159,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseTitle: string
     reportRequired: boolean
     paymentDate: string
+    paidBy: string
     processing: boolean
     isAdditionalPayment: boolean
     additionalPaymentAmount: number
@@ -166,6 +169,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseTitle: '',
     reportRequired: true,
     paymentDate: '',
+    paidBy: '',
     processing: false,
     isAdditionalPayment: false,
     additionalPaymentAmount: 0,
@@ -749,6 +753,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       expenseTitle: expense.title,
       reportRequired: !isAdditionalPayment, // Don't require report for additional payments
       paymentDate: today,
+      paidBy: '',
       processing: false,
       isAdditionalPayment: isAdditionalPayment && additionalPayment.needed,
       additionalPaymentAmount: additionalPayment.amount,
@@ -762,6 +767,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       expenseTitle: '',
       reportRequired: true,
       paymentDate: '',
+      paidBy: '',
       processing: false,
       isAdditionalPayment: false,
       additionalPaymentAmount: 0,
@@ -823,10 +829,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           expenseId: markPaidModal.expenseId,
           reportRequired: markPaidModal.reportRequired,
-          paymentDate: markPaidModal.paymentDate ? new Date(markPaidModal.paymentDate).toISOString() : undefined
+          paymentDate: markPaidModal.paymentDate ? new Date(markPaidModal.paymentDate).toISOString() : undefined,
+          paidBy: markPaidModal.paidBy || undefined
         }),
       })
 
@@ -1099,6 +1106,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(expense.status)}`}>
                         {STATUS_DISPLAY_NAMES[expense.status as keyof typeof STATUS_DISPLAY_NAMES] || expense.status}
                       </span>
+                      {expense.eventDate && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          Event
+                        </span>
+                      )}
                       <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
                         {URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${expense.urgency}`}
                       </span>
@@ -1107,11 +1119,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <p className="text-gray-500 mt-1 text-sm">
                     {TEAM_DISPLAY_NAMES[expense.team as keyof typeof TEAM_DISPLAY_NAMES] || expense.team} • {CAMPUS_DISPLAY_NAMES[expense.campus as keyof typeof CAMPUS_DISPLAY_NAMES] || expense.campus} • {expense.requester.name || expense.requester.email}
                   </p>
-                  {expense.category && (
-                    <p className="text-gray-600 mt-1 text-sm font-medium">
-                      Category: {expense.category}
-                    </p>
-                  )}
                   <p className="text-xs sm:text-sm text-gray-500 mt-1">
                     Created: {formatDate(expense.createdAt)}
                   </p>
@@ -1397,10 +1404,15 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <p className="font-medium">{formatDate(viewModal.expense.createdAt)}</p>
                 </div>
                 {viewModal.expense.eventDate && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Event Date</label>
-                    <p className="font-medium">{formatDate(viewModal.expense.eventDate)}</p>
-                  </div>
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Event</label>
+                      <p className="font-medium">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-2">Event</span>
+                        {formatDate(viewModal.expense.eventDate)}
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -1408,13 +1420,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Description</label>
                   <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.description}</p>
-                </div>
-              )}
-
-              {viewModal.expense.category && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Category</label>
-                  <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.category}</p>
                 </div>
               )}
 
@@ -1456,7 +1461,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         }`}>
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
-                              <p className="font-medium text-sm">{item.description}</p>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium text-sm">{item.description}</p>
+                                {item.category && (
+                                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    {item.category}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-500">
                                 Qty: {item.quantity} × ${(item.unitPriceCents / 100).toFixed(2)}
                               </p>
@@ -1606,6 +1618,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Payment Date</label>
                   <p className="font-medium text-blue-600">{formatDate(viewModal.expense.paymentDate)}</p>
+                </div>
+              )}
+              {viewModal.expense.paidBy && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Paid By</label>
+                  <p className="font-medium">{viewModal.expense.paidBy}</p>
                 </div>
               )}
             </div>
@@ -2061,6 +2079,22 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Select the date when the payment was actually made
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Person Making Payment (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={markPaidModal.paidBy}
+                  onChange={(e) => setMarkPaidModal(prev => ({ ...prev, paidBy: e.target.value }))}
+                  placeholder="Enter name of person making the payment"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: Name of the person who made this payment
                 </p>
               </div>
 

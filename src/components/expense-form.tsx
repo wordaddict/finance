@@ -11,6 +11,7 @@ import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUSES, CAMPUS_DISPLAY_NAMES, URGENCY_DISP
 interface ExpenseItem {
   id: string
   description: string
+  category: string
   quantity: number
   unitPrice: number
   amount: number
@@ -31,14 +32,14 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
   const [team, setTeam] = useState('')
   const [campus, setCampus] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('')
   const [urgency, setUrgency] = useState(2)
+  const [isEvent, setIsEvent] = useState(false)
   const [eventDate, setEventDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [attachments, setAttachments] = useState<File[]>([])
   const [items, setItems] = useState<ExpenseItem[]>([
-    { id: '1', description: '', quantity: 1, unitPrice: 0, amount: 0 }
+    { id: '1', description: '', category: '', quantity: 1, unitPrice: 0, amount: 0 }
   ])
   const [totalAmount, setTotalAmount] = useState(0)
 
@@ -57,8 +58,9 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
       setTeam(editExpense.team || '')
       setCampus(editExpense.campus || '')
       setDescription(editExpense.description || '')
-      setCategory(editExpense.category || '')
       setUrgency(editExpense.urgency || 2)
+      const hasEventDate = !!editExpense.eventDate
+      setIsEvent(hasEventDate)
       setEventDate(editExpense.eventDate || '')
 
       // Populate items if they exist
@@ -66,6 +68,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
         const formattedItems = editExpense.items.map((item: any, index: number) => ({
           id: item.id || (index + 1).toString(),
           description: item.description || '',
+          category: item.category || editExpense.category || '', // Use item category if available, fallback to expense category
           quantity: item.quantity || 1,
           unitPrice: (item.unitPriceCents || 0) / 100,
           amount: (item.amountCents || 0) / 100,
@@ -90,7 +93,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
 
   const addItem = () => {
     const newId = (Math.max(...items.map(i => parseInt(i.id))) + 1).toString()
-    setItems(prev => [...prev, { id: newId, description: '', quantity: 1, unitPrice: 0, amount: 0 }])
+    setItems(prev => [...prev, { id: newId, description: '', category: '', quantity: 1, unitPrice: 0, amount: 0 }])
   }
 
   const removeItem = (id: string) => {
@@ -171,6 +174,21 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
     setError('')
 
     try {
+      // Validate that all items have a category
+      const itemsWithoutCategory = items.filter(item => !item.category || item.category.trim() === '')
+      if (itemsWithoutCategory.length > 0) {
+        setError('Please select a category for all expense items')
+        setLoading(false)
+        return
+      }
+
+      // Validate event date if event checkbox is checked
+      if (isEvent && !eventDate) {
+        setError('Event date is required when event is checked')
+        setLoading(false)
+        return
+      }
+
       // Upload attachments
       const uploadedAttachments = []
       for (const file of attachments) {
@@ -183,18 +201,22 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
       const url = isEditing ? `/api/expenses/update` : '/api/expenses/create'
       const method = isEditing ? 'PUT' : 'POST'
       
+      // Use first item's category for the expense request category (for backward compatibility)
+      const expenseCategory = items[0]?.category || ''
+      
       const requestBody: any = {
         title,
         amountCents: Math.round(totalAmount * 100),
         team,
         campus,
         description,
-        category,
+        category: expenseCategory,
         urgency,
         eventDate: eventDate || null,
         attachments: uploadedAttachments,
         items: items.map(item => ({
           description: item.description,
+          category: item.category || null,
           quantity: item.quantity,
           unitPriceCents: Math.round(item.unitPrice * 100),
           amountCents: Math.round(item.amount * 100),
@@ -315,33 +337,6 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium mb-1">
-                Category *
-              </label>
-              <select
-                id="category"
-                value={category}
-                onChange={(e) => {
-                  const newCategory = e.target.value
-                  setCategory(newCategory)
-                  // Clear event date if category is not Special Events and Programs
-                  if (newCategory !== 'Special Events and Programs') {
-                    setEventDate('')
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a category</option>
-                {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
-                  <option key={categoryValue} value={categoryValue}>
-                    {categoryValue}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
               <label htmlFor="team" className="block text-sm font-medium mb-1">
                 Team *
               </label>
@@ -411,7 +406,24 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
               </select>
             </div>
 
-            {category === 'Special Events and Programs' && (
+            <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={isEvent}
+                  onChange={(e) => {
+                    setIsEvent(e.target.checked)
+                    if (!e.target.checked) {
+                      setEventDate('')
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium">This is an event</span>
+              </label>
+            </div>
+
+            {isEvent && (
               <div>
                 <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
                   Event Date *
@@ -425,7 +437,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Event date is required for special events and programs
+                  Event date is required for events
                 </p>
               </div>
             )}
@@ -451,62 +463,84 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                         </Button>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          Budget item name *
-                        </label>
-                        <input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="Budget item name"
-                          required
-                        />
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Budget item name *
+                          </label>
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder="Budget item name"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Category *
+                          </label>
+                          <select
+                            value={item.category}
+                            onChange={(e) => updateItem(item.id, 'category', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            required
+                          >
+                            <option value="">Select a category</option>
+                            {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
+                              <option key={categoryValue} value={categoryValue}>
+                                {categoryValue}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          Quantity *
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity === 0 ? '' : item.quantity.toString()}
-                          onChange={(e) => {
-                            const value = e.target.value
-                            const numericValue = value === '' ? 0 : parseInt(value) || 1
-                            updateItem(item.id, 'quantity', numericValue)
-                          }}
-                          onBlur={(e) => {
-                            // Ensure minimum value of 1 when user leaves the field
-                            if (item.quantity < 1) {
-                              updateItem(item.id, 'quantity', 1)
-                            }
-                          }}
-                          placeholder="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          Unit Price ($) *
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.unitPrice === 0 ? '' : item.unitPrice.toString()}
-                          onChange={(e) => {
-                            const value = e.target.value
-                            const numericValue = value === '' ? 0 : parseFloat(value) || 0
-                            updateItem(item.id, 'unitPrice', numericValue)
-                          }}
-                          placeholder="0.00"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          required
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Quantity *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity === 0 ? '' : item.quantity.toString()}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              const numericValue = value === '' ? 0 : parseInt(value) || 1
+                              updateItem(item.id, 'quantity', numericValue)
+                            }}
+                            onBlur={(e) => {
+                              // Ensure minimum value of 1 when user leaves the field
+                              if (item.quantity < 1) {
+                                updateItem(item.id, 'quantity', 1)
+                              }
+                            }}
+                            placeholder="1"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            Unit Price ($) *
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.unitPrice === 0 ? '' : item.unitPrice.toString()}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              const numericValue = value === '' ? 0 : parseFloat(value) || 0
+                              updateItem(item.id, 'unitPrice', numericValue)
+                            }}
+                            placeholder="0.00"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="mt-2 text-right">

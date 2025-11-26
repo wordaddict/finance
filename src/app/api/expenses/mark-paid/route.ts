@@ -10,6 +10,7 @@ const markPaidSchema = z.object({
   expenseId: z.string().uuid(),
   reportRequired: z.boolean().default(true),
   paymentDate: z.string().datetime().optional(),
+  paidBy: z.string().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { expenseId, reportRequired, paymentDate } = markPaidSchema.parse(body)
+    const { expenseId, reportRequired, paymentDate, paidBy } = markPaidSchema.parse(body)
 
     // Get expense with current status, items, and reports
     const expense = await db.expenseRequest.findUnique({
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
         status: 'PAID',
         paidAt: isRePayment ? expense.paidAt : new Date(), // Keep original paidAt for re-payments
         paymentDate: paymentDate ? new Date(paymentDate) : null,
+        paidBy: paidBy || null,
         reportRequired: reportRequired,
         amountCents: totalPaidAmountCents, // Update cumulative paid amount
       },

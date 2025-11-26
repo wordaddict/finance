@@ -171,7 +171,6 @@ export const EXPENSE_CATEGORIES = {
   GUEST_MINISTER_WELFARE: 'Guest Minister Welfare',
   HONORARIUM: 'Honorarium',
   HOTEL_AND_ACCOMMODATION: 'Hotel and Accommodation',
-  INTERNAL_FUND_TRANSFER: 'Internal Fund Transfer',
   INTERNET_TELEPHONE: 'Internet/telephone',
   LOGISTICS: 'Logistics',
   MEDIA_AND_TECHNICAL: 'Media and Technical',
