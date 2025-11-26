@@ -56,13 +56,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (expense.status !== 'SUBMITTED') {
+    // Allow approval if expense is SUBMITTED or if undoing a previous approval
+    if (expense.status !== 'SUBMITTED' && expense.status !== 'APPROVED' && expense.status !== 'DENIED') {
       return NextResponse.json(
-        { error: 'Expense request is not in submitted status' },
+        { error: 'Expense request must be in submitted, approved, or denied status' },
         { status: 400 }
       )
     }
 
+    // If expense is already approved/denied, allow re-approval (this will replace existing approval)
     // Check if approval already exists for this stage
     const existingApproval = await db.approval.findUnique({
       where: {
@@ -72,13 +74,6 @@ export async function POST(request: NextRequest) {
         },
       },
     })
-
-    if (existingApproval) {
-      return NextResponse.json(
-        { error: 'Expense request has already been approved at this stage' },
-        { status: 400 }
-      )
-    }
 
     // Create approval record using upsert to handle race conditions
     await db.approval.upsert({
@@ -116,39 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Update expense status if fully approved
     if (newStatus === 'APPROVED') {
-      // First, automatically approve all items if they exist
-      if (expense.items && expense.items.length > 0) {
-        for (const item of expense.items) {
-          // Check if item already has an approval
-          const existingItemApproval = item.approvals.find((approval: { approverId: string }) => approval.approverId === user.id)
-          
-          if (!existingItemApproval) {
-            // Create approval for this item
-            await db.expenseItemApproval.create({
-              data: {
-                itemId: item.id,
-                approverId: user.id,
-                status: 'APPROVED',
-                approvedAmountCents: item.amountCents, // Approve full amount
-                comment: comment ? `Auto-approved with main expense approval: ${comment}` : 'Auto-approved with main expense approval',
-              },
-            })
-          } else if (existingItemApproval.status !== 'APPROVED') {
-            // Update existing approval to approved
-            await db.expenseItemApproval.update({
-              where: { id: existingItemApproval.id },
-              data: {
-                status: 'APPROVED',
-                approvedAmountCents: item.amountCents, // Approve full amount
-                comment: existingItemApproval.comment || (comment ? `Auto-approved with main expense approval: ${comment}` : 'Auto-approved with main expense approval'),
-                updatedAt: new Date(),
-              },
-            })
-          }
-        }
-      }
-
-      // Then update the main expense status
+      // Update the main expense status (items are approved separately)
       await db.expenseRequest.update({
         where: { id: expenseId },
         data: { status: 'APPROVED' },

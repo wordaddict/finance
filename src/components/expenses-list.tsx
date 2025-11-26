@@ -362,103 +362,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
               item.approvals?.[0]?.status === 'APPROVED' || item.approvals?.[0]?.status === 'DENIED' || item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
             )
 
-            if (allItemsApproved && expense.status === 'SUBMITTED') {
-              // Auto-approve the expense
-              setTimeout(async () => {
-                try {
-                  const approveResponse = await fetch('/api/expenses/approve', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                      expenseId: expense.id,
-                      comment: 'Auto-approved: All items approved'
-                    }),
-                  })
-
-                  if (approveResponse.ok) {
-                    setMessage('All items approved - expense automatically approved')
-                    // Refresh expenses to get updated status
-                    await fetchExpenses()
-                  }
-                } catch (error) {
-                  console.error('Error auto-approving expense:', error)
-                }
-              }, 1000) // Small delay to show item approval first
-            } else if (allItemsDenied && expense.status === 'SUBMITTED') {
-              // Auto-deny the expense
-              setTimeout(async () => {
-                try {
-                  const denyResponse = await fetch('/api/expenses/deny', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                      expenseId: expense.id,
-                      reason: 'All expense items were denied'
-                    }),
-                  })
-
-                  if (denyResponse.ok) {
-                    setMessage('All items denied - expense automatically denied')
-                    // Refresh expenses to get updated status
-                    await fetchExpenses()
-                  }
-                } catch (error) {
-                  console.error('Error auto-denying expense:', error)
-                }
-              }, 1000) // Small delay to show item denial first
-            } else if (allItemsChangeRequested && expense.status === 'SUBMITTED') {
-              // Set expense to CHANGE_REQUESTED status
-              setTimeout(async () => {
-                try {
-                  const updateResponse = await fetch('/api/expenses/update-status', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                      expenseId: expense.id,
-                      status: 'CHANGE_REQUESTED'
-                    }),
-                  })
-
-                  if (updateResponse.ok) {
-                    setMessage('All items require changes - expense set to change requested')
-                    // Refresh expenses to get updated status
-                    await fetchExpenses()
-                  }
-                } catch (error) {
-                  console.error('Error updating expense status:', error)
-                }
-              }, 1000) // Small delay to show item change request first
-            } else if (allItemsProcessed && someItemsApproved && someItemsDenied && expense.status === 'SUBMITTED') {
-              // Set expense to PARTIALLY_APPROVED status
-              setTimeout(async () => {
-                try {
-                  const updateResponse = await fetch('/api/expenses/update-status', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                      expenseId: expense.id,
-                      status: 'PARTIALLY_APPROVED'
-                    }),
-                  })
-
-                  if (updateResponse.ok) {
-                    setMessage('Mixed approvals - expense set to partially approved')
-                    // Refresh expenses to get updated status
-                    await fetchExpenses()
-                  }
-                } catch (error) {
-                  console.error('Error updating expense status:', error)
-                }
-              }, 1000) // Small delay to show item approval/denial first
-            }
+            // Removed auto-approval/denial logic - expenses must be manually approved/denied
 
             return {
               ...expense,
@@ -1494,14 +1398,58 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           
                           {itemApproval && (
                             <div className="mt-2 p-2 bg-white rounded border">
-                              <p className="text-xs text-gray-600">
-                                <strong>{itemApproval.approver.name || itemApproval.approver.email}</strong>
-                                {' - '}
-                                {new Date(itemApproval.createdAt).toLocaleDateString()}
-                              </p>
-                              {itemApproval.comment && (
-                                <p className="text-sm mt-1">{itemApproval.comment}</p>
-                              )}
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <p className="text-xs text-gray-600">
+                                    <strong>{itemApproval.approver.name || itemApproval.approver.email}</strong>
+                                    {' - '}
+                                    {new Date(itemApproval.createdAt).toLocaleDateString()}
+                                  </p>
+                                  {itemApproval.comment && (
+                                    <p className="text-sm mt-1">{itemApproval.comment}</p>
+                                  )}
+                                </div>
+                                {user.role === 'ADMIN' && viewModal.expense && viewModal.expense.status === 'SUBMITTED' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={async () => {
+                                      if (!viewModal.expense) return
+                                      try {
+                                        const response = await fetch('/api/expense-items/undo-approval', {
+                                          method: 'POST',
+                                          headers: {
+                                            'Content-Type': 'application/json',
+                                          },
+                                          body: JSON.stringify({
+                                            itemId: item.id
+                                          }),
+                                        })
+
+                                        const data = await response.json()
+
+                                        if (response.ok) {
+                                          setMessage('Item approval undone successfully')
+                                          fetchExpenses()
+                                          // Refresh the view modal
+                                          const updatedExpense = await fetch(`/api/expenses?expenseId=${viewModal.expense.id}`).then(r => r.json())
+                                          if (updatedExpense.expenses && updatedExpense.expenses[0]) {
+                                            setViewModal({ isOpen: true, expense: updatedExpense.expenses[0] })
+                                          }
+                                        } else {
+                                          setError(data.error || 'Failed to undo item approval')
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to undo item approval:', error)
+                                        setError('Failed to undo item approval')
+                                      }
+                                    }}
+                                    className="text-xs text-orange-600 border-orange-300 hover:bg-orange-50"
+                                  >
+                                    Undo
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           )}
 
@@ -1624,6 +1572,94 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid By</label>
                   <p className="font-medium">{viewModal.expense.paidBy}</p>
+                </div>
+              )}
+
+              {/* Approval Actions - Admin Only */}
+              {user.role === 'ADMIN' && viewModal.expense && viewModal.expense.status === 'SUBMITTED' && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <label className="text-sm font-medium text-gray-500 mb-3 block">Actions</label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => {
+                        if (!viewModal.expense) return
+                        setApprovalCommentModal({
+                          isOpen: true,
+                          expenseId: viewModal.expense.id,
+                          expenseTitle: viewModal.expense.title,
+                          comment: '',
+                          processing: false
+                        })
+                      }}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Approve Expense
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!viewModal.expense) return
+                        setDenialModal({
+                          isOpen: true,
+                          expenseId: viewModal.expense.id,
+                          expenseTitle: viewModal.expense.title
+                        })
+                      }}
+                      variant="outline"
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Deny Expense
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Undo Approval - Admin Only */}
+              {user.role === 'ADMIN' && viewModal.expense && (viewModal.expense.status === 'APPROVED' || viewModal.expense.status === 'DENIED') && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <label className="text-sm font-medium text-gray-500 mb-3 block">Actions</label>
+                  <Button
+                    onClick={async () => {
+                      if (!viewModal.expense) return
+                      try {
+                        const response = await fetch('/api/expenses/undo-approval', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            expenseId: viewModal.expense.id
+                          }),
+                        })
+
+                        const data = await response.json()
+
+                        if (response.ok) {
+                          setMessage('Approval undone successfully')
+                          await fetchExpenses()
+                          // Refresh the view modal with updated expense
+                          const expenseId = viewModal.expense.id
+                          const updatedExpenses = await fetch('/api/expenses').then(r => r.json())
+                          if (updatedExpenses.expenses) {
+                            const updatedExpense = updatedExpenses.expenses.find((e: Expense) => e.id === expenseId)
+                            if (updatedExpense) {
+                              setViewModal({ isOpen: true, expense: updatedExpense })
+                            }
+                          }
+                        } else {
+                          setError(data.error || 'Failed to undo approval')
+                        }
+                      } catch (error) {
+                        console.error('Failed to undo approval:', error)
+                        setError('Failed to undo approval')
+                      }
+                    }}
+                    variant="outline"
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  >
+                    Undo {viewModal.expense.status === 'APPROVED' ? 'Approval' : 'Denial'}
+                  </Button>
                 </div>
               )}
             </div>
@@ -1788,7 +1824,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <strong>Expense:</strong> {approvalCommentModal.expenseTitle}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Approving this expense will automatically approve all items within it.
+                  Approve this expense request. Items must be approved separately.
                 </p>
               </div>
 
