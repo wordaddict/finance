@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { canViewAllExpenses } from '@/lib/rbac'
 import { 
   FileText,
   Eye,
@@ -108,19 +107,10 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
     })
   }
 
-  if (!canViewAllExpenses(user)) {
-    return (
-      <div className="p-4 sm:p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>You do not have permission to view reports.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  // This check is redundant since the page.tsx already redirects non-admins,
+  // but keeping it as a safety check
+  if (user.role !== 'ADMIN') {
+    return null
   }
 
   return (

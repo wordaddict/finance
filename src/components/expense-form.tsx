@@ -302,7 +302,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium mb-1">
-                Title *
+                Reason for Payment *
               </label>
               <input
                 id="title"
@@ -313,6 +313,122 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                 required
               />
             </div>
+
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium mb-1">
+                Category *
+              </label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => {
+                  const newCategory = e.target.value
+                  setCategory(newCategory)
+                  // Clear event date if category is not Special Events and Programs
+                  if (newCategory !== 'Special Events and Programs') {
+                    setEventDate('')
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select a category</option>
+                {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
+                  <option key={categoryValue} value={categoryValue}>
+                    {categoryValue}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="team" className="block text-sm font-medium mb-1">
+                Team *
+              </label>
+              <select
+                id="team"
+                value={team}
+                onChange={(e) => setTeam(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select a team</option>
+                {Object.entries(TEAM_DISPLAY_NAMES).map(([value, displayName]) => (
+                  <option key={value} value={value}>
+                    {displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="campus" className="block text-sm font-medium mb-1">
+                Campus *
+              </label>
+              <select
+                id="campus"
+                value={campus}
+                onChange={(e) => setCampus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select a campus</option>
+                {Object.entries(CAMPUS_DISPLAY_NAMES).map(([value, displayName]) => (
+                  <option key={value} value={value}>
+                    {displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium mb-1">
+                Description (Give a detailed description of this payment including the purpose and value) *
+              </label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="urgency" className="block text-sm font-medium mb-1">
+                Urgency
+              </label>
+              <select
+                id="urgency"
+                value={urgency}
+                onChange={(e) => setUrgency(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value={1}>Not Urgent (Few months)</option>
+                <option value={2}>Urgent (This Month)</option>
+                <option value={3}>Very Urgent (This week)</option>
+              </select>
+            </div>
+
+            {category === 'Special Events and Programs' && (
+              <div>
+                <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
+                  Event Date *
+                </label>
+                <input
+                  id="eventDate"
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Event date is required for special events and programs
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -338,14 +454,14 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-medium text-gray-500 mb-1">
-                          Description *
+                          Budget item name *
                         </label>
                         <input
                           type="text"
                           value={item.description}
                           onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          placeholder="Item description"
+                          placeholder="Budget item name"
                           required
                         />
                       </div>
@@ -425,124 +541,8 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
             </div>
 
             <div>
-              <label htmlFor="team" className="block text-sm font-medium mb-1">
-                Team *
-              </label>
-              <select
-                id="team"
-                value={team}
-                onChange={(e) => setTeam(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a team</option>
-                {Object.entries(TEAM_DISPLAY_NAMES).map(([value, displayName]) => (
-                  <option key={value} value={value}>
-                    {displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="campus" className="block text-sm font-medium mb-1">
-                Campus *
-              </label>
-              <select
-                id="campus"
-                value={campus}
-                onChange={(e) => setCampus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a campus</option>
-                {Object.entries(CAMPUS_DISPLAY_NAMES).map(([value, displayName]) => (
-                  <option key={value} value={value}>
-                    {displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium mb-1">
-                Description *
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium mb-1">
-                Category *
-              </label>
-              <select
-                id="category"
-                value={category}
-                onChange={(e) => {
-                  const newCategory = e.target.value
-                  setCategory(newCategory)
-                  // Clear event date if category is not Special Events and Programs
-                  if (newCategory !== 'Special Events and Programs') {
-                    setEventDate('')
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Select a category</option>
-                {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
-                  <option key={categoryValue} value={categoryValue}>
-                    {categoryValue}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="urgency" className="block text-sm font-medium mb-1">
-                Urgency
-              </label>
-              <select
-                id="urgency"
-                value={urgency}
-                onChange={(e) => setUrgency(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value={1}>Not Urgent (Few months)</option>
-                <option value={2}>Urgent (This Month)</option>
-                <option value={3}>Very Urgent (This week)</option>
-              </select>
-            </div>
-
-            {category === 'Special Events and Programs' && (
-              <div>
-                <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
-                  Event Date *
-                </label>
-                <input
-                  id="eventDate"
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Event date is required for special events and programs
-                </p>
-              </div>
-            )}
-
-            <div>
               <label htmlFor="attachments" className="block text-sm font-medium mb-1">
-                Attachments (Receipts, etc.)
+                Attachments (Receipts and budget documents, etc.)
               </label>
               <input
                 id="attachments"

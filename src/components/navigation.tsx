@@ -77,12 +77,14 @@ export function Navigation({ user }: NavigationProps) {
               >
                 Dashboard
               </a>
-              <a
-                href="/reports"
-                className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap"
-              >
-                Reports
-              </a>
+              {user.role === 'ADMIN' && (
+                <a
+                  href="/reports"
+                  className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap"
+                >
+                  Reports
+                </a>
+              )}
               {canManageUsers(user) && (
                 <a
                   href="/users"
@@ -219,16 +221,18 @@ export function Navigation({ user }: NavigationProps) {
                       <span className="font-medium">Dashboard</span>
                     </a>
 
-                    <a
-                      href="/reports"
-                      className="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors group"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                        <span className="text-purple-600 font-semibold text-sm">📋</span>
-                      </div>
-                      <span className="font-medium">Reports</span>
-                    </a>
+                    {user.role === 'ADMIN' && (
+                      <a
+                        href="/reports"
+                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors group"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                          <span className="text-purple-600 font-semibold text-sm">📋</span>
+                        </div>
+                        <span className="font-medium">Reports</span>
+                      </a>
+                    )}
 
                     {canManageUsers(user) && (
                       <a

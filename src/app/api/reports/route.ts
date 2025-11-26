@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
-import { canViewAllExpenses } from '@/lib/rbac'
 
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
+    
+    // Only admins can access reports
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+    
     const { searchParams } = new URL(request.url)
     
     const expenseId = searchParams.get('expenseId')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    // Base where clause - users can only see reports for their own expenses unless they have view all permissions
-    const baseWhere = canViewAllExpenses(user) ? {} : {
-      expense: {
-        requesterId: user.id,
-      },
-    }
+    // Admins can see all reports
+    const baseWhere = {}
 
     // Build where clause
     const where: any = { ...baseWhere }
