@@ -4,13 +4,15 @@ import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
 import { sendEmail, generateEmailVerificationEmail } from '@/lib/email'
 import { randomBytes } from 'crypto'
+import { CAMPUS_VALUES } from '@/lib/constants'
+import { Campus } from '@prisma/client'
 
 const registerSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   name: z.string().min(1, 'Full name is required'),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
   role: z.enum(['ADMIN', 'CAMPUS_PASTOR', 'LEADER']).default('LEADER'),
-  campus: z.enum(['DMV', 'DALLAS', 'BOSTON', 'AUSTIN', 'CCI_USA_NASHVILLE', 'CCI_USA_OKLAHOMA', 'CCI_USA_NEWYORK_NEWJERSEY', 'CCI_USA_KNOXVILLE', 'CCI_USA_NORTH_CAROLINA', 'CCI_USA_ATLANTA', 'CCI_USA_BAY_AREA', 'CCI_USA_CHICAGO']),
+  campus: z.enum(CAMPUS_VALUES as [string, ...string[]]),
   zelle: z.string().optional(),
 })
 
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(), // Also trim the name
         password: hashedPassword,
         role,
-        campus,
+        campus: campus as Campus,
         zelle: zelle?.trim() || null, // Add Zelle info if provided
         status: 'PENDING_APPROVAL', // New status for pending approval
       },
