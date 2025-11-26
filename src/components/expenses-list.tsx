@@ -93,13 +93,17 @@ interface Expense {
       publicId: string
       secureUrl: string
       mimeType: string
+      itemId?: string | null
+      isRefundReceipt?: boolean
     }[]
     approvedItems: {
       id: string
       originalItemId: string
       description: string
       approvedAmountCents: number
+      actualAmountCents?: number | null
     }[]
+    totalActualAmount?: number | null
   }[]
 }
 
@@ -602,6 +606,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }
 
   const openReportForm = (expense: Expense) => {
+    // Check if expense is paid before opening the form
+    if (expense.status !== 'PAID') {
+      setError('This expense must be marked as paid before you can create a report. Please mark it as paid first.')
+      setTimeout(() => setError(''), 5000) // Clear error after 5 seconds
+      return
+    }
     setReportForm({
       isOpen: true,
       expense,
@@ -636,11 +646,40 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
     
     const latestReport = expense.reports[0]
-    const reportedAmount = latestReport.totalApprovedAmount || 0
-    const paidAmount = expense.paidAmountCents || 0
     
-    if (reportedAmount > paidAmount) {
-      return { needed: true, amount: reportedAmount - paidAmount }
+    // If report has items, calculate difference from item-level actual vs approved amounts
+    if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
+      let totalDifference = 0
+      
+      for (const item of latestReport.approvedItems) {
+        const approvedAmount = item.approvedAmountCents || 0
+        const actualAmount = item.actualAmountCents ?? approvedAmount
+        const difference = actualAmount - approvedAmount
+        
+        // Only count positive differences (spent more than approved)
+        if (difference > 0) {
+          totalDifference += difference
+        }
+      }
+      
+      if (totalDifference > 0) {
+        return {
+          needed: true,
+          amount: totalDifference
+        }
+      }
+    } else {
+      // For non-itemized expenses, check totalActualAmount vs totalApprovedAmount
+      const totalApproved = latestReport.totalApprovedAmount || 0
+      const totalActual = latestReport.totalActualAmount ?? totalApproved
+      const difference = totalActual - totalApproved
+      
+      if (difference > 0) {
+        return {
+          needed: true,
+          amount: difference
+        }
+      }
     }
     
     return { needed: false, amount: 0 }
@@ -1055,6 +1094,17 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         {expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email ? 'Edit' : 'View'}
                       </span>
                     </Button>
+                    {expense.status === 'PAID' && expense.reportRequired && (!expense.reports || expense.reports.length === 0) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openReportForm(expense)}
+                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        <span>Create Report</span>
+                      </Button>
+                    )}
                     {expense.status === 'SUBMITTED' && (
                       <>
                         {user.role === 'ADMIN' && (
@@ -1105,47 +1155,35 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     )}
                     {expense.status === 'PAID' && (
                       <>
-                        {expense.reportRequired && (!expense.reports || expense.reports.length === 0) ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => openReportForm(expense)}
-                            className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                          >
-                            <FileText className="w-4 h-4 mr-1" />
-                            <span className="hidden sm:inline">Create Report</span>
-                          </Button>
-                        ) : (
-                          expense.reportRequired && expense.reports && expense.reports.length > 0 ? (
-                            <>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
-                                className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                              >
-                                <FileText className="w-4 h-4 mr-1" />
-                                <span className="hidden sm:inline">View Report</span>
-                              </Button>
-                              {user.role === 'ADMIN' && (() => {
-                                const additionalPayment = needsAdditionalPayment(expense)
-                                if (additionalPayment.needed) {
-                                  return (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => openMarkPaidModal(expense, true)}
-                                      className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                                    >
-                                      <DollarSign className="w-4 h-4 mr-1" />
-                                      <span className="hidden sm:inline">Pay Additional ${(additionalPayment.amount / 100).toFixed(2)}</span>
-                                    </Button>
-                                  )
-                                }
-                                return null
-                              })()}
-                            </>
-                          ) : null
+                        {expense.reportRequired && expense.reports && expense.reports.length > 0 && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
+                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            >
+                              <FileText className="w-4 h-4 mr-1" />
+                              <span className="hidden sm:inline">View Report</span>
+                            </Button>
+                            {user.role === 'ADMIN' && (() => {
+                              const additionalPayment = needsAdditionalPayment(expense)
+                              if (additionalPayment.needed) {
+                                return (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => openMarkPaidModal(expense, true)}
+                                    className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                  >
+                                    <DollarSign className="w-4 h-4 mr-1" />
+                                    <span className="hidden sm:inline">Pay Additional ${(additionalPayment.amount / 100).toFixed(2)}</span>
+                                  </Button>
+                                )
+                              }
+                              return null
+                            })()}
+                          </>
                         )}
                       </>
                     )}
@@ -1165,11 +1203,27 @@ export function ExpensesList({ user }: ExpensesListProps) {
         </Card>
       )}
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={() => setError('')}
+            className="text-red-700 hover:text-red-900"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Expense Form Modal */}
       {showExpenseForm && (
         <ExpenseForm
           user={user}
           onClose={() => setShowExpenseForm(false)}
+          onSuccess={() => {
+            setShowExpenseForm(false)
+            fetchExpenses()
+          }}
         />
       )}
 
@@ -1841,6 +1895,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 />
               </div>
 
+
               <div className="flex justify-end space-x-3">
                 <Button
                   variant="outline"
@@ -1970,70 +2025,264 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </p>
               </div>
 
-              {/* Approved Items Details */}
-              {reportViewModal.report.approvedItems && reportViewModal.report.approvedItems.length > 0 && (
+              {/* Money Summary for Non-Itemized Expenses */}
+              {(!reportViewModal.report.approvedItems || reportViewModal.report.approvedItems.length === 0) && (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-sm text-green-800 mb-2">Approved Items</h4>
-                  <div className="space-y-2">
-                    {reportViewModal.report.approvedItems.map((item: any, index: number) => (
-                      <div key={item.id} className="bg-white p-3 rounded border border-green-100">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{item.description}</p>
-                            <p className="text-xs text-gray-500">Item {index + 1}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-green-600">
-                              {formatCurrency(item.approvedAmountCents)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <h4 className="font-semibold text-sm text-green-800 mb-3">Financial Summary</h4>
+                  <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Approved</p>
+                      <p className="text-sm font-semibold text-green-600">
+                        {formatCurrency(reportViewModal.report.totalApprovedAmount || 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Total Actual</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {formatCurrency(reportViewModal.report.totalActualAmount || reportViewModal.report.totalApprovedAmount || 0)}
+                      </p>
+                    </div>
+                    <div className="col-span-2 pt-2 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 mb-1">Difference</p>
+                      {(() => {
+                        const totalApproved = reportViewModal.report.totalApprovedAmount || 0
+                        const totalActual = reportViewModal.report.totalActualAmount || totalApproved
+                        const difference = totalActual - totalApproved
+                        return (
+                          <p className={`text-sm font-bold ${
+                            difference > 0 ? 'text-red-600' : 
+                            difference < 0 ? 'text-blue-600' : 
+                            'text-gray-600'
+                          }`}>
+                            {difference > 0 ? '+' : ''}{formatCurrency(difference)}
+                            {difference > 0 && ' (Additional payment needed)'}
+                            {difference < 0 && ' (Refund required)'}
+                          </p>
+                        )
+                      })()}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Attachments */}
-              {reportViewModal.report.attachments && reportViewModal.report.attachments.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Attachments</label>
-                  <div className="mt-2 space-y-2">
-                    {reportViewModal.report.attachments.map((attachment: any) => (
-                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                        <div className="flex items-center space-x-3">
-                          {attachment.mimeType.startsWith('image/') ? (
-                            <img
-                              src={attachment.secureUrl}
-                              alt="Report attachment"
-                              className="w-12 h-12 object-cover rounded border"
-                              onClick={() => window.open(attachment.secureUrl, '_blank')}
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-red-600" />
+              {/* Approved Items Details with Actual Amounts */}
+              {reportViewModal.report.approvedItems && reportViewModal.report.approvedItems.length > 0 && (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-semibold text-sm text-green-800 mb-3">Report Items</h4>
+                  <div className="space-y-3">
+                    {reportViewModal.report.approvedItems.map((item: any, index: number) => {
+                      const actualAmount = item.actualAmountCents ?? item.approvedAmountCents
+                      const difference = actualAmount - item.approvedAmountCents
+                      const itemAttachments = reportViewModal.report.attachments?.filter((att: any) => att.itemId === item.id && !att.isRefundReceipt) || []
+                      const itemRefundReceipts = reportViewModal.report.attachments?.filter((att: any) => att.itemId === item.id && att.isRefundReceipt) || []
+                      
+                      return (
+                        <div key={item.id} className="bg-white p-4 rounded border border-green-100">
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                            <p className="text-xs text-gray-500">Item {index + 1}</p>
+                          </div>
+                          
+                          {/* Money Details */}
+                          <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-200">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Approved Amount</p>
+                              <p className="text-sm font-semibold text-green-600">
+                                {formatCurrency(item.approvedAmountCents)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Actual Amount Spent</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {formatCurrency(actualAmount)}
+                              </p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-xs text-gray-500 mb-1">Difference</p>
+                              <p className={`text-sm font-bold ${
+                                difference > 0 ? 'text-red-600' : 
+                                difference < 0 ? 'text-blue-600' : 
+                                'text-gray-600'
+                              }`}>
+                                {difference > 0 ? '+' : ''}{formatCurrency(difference)}
+                                {difference > 0 && ' (Additional payment needed)'}
+                                {difference < 0 && ' (Refund required)'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Attachments for this item */}
+                          {itemAttachments.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-medium text-gray-700 mb-2">Attachments for this item:</p>
+                              <div className="space-y-2">
+                                {itemAttachments.map((attachment: any) => (
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                                    <div className="flex items-center space-x-2">
+                                      {attachment.mimeType.startsWith('image/') ? (
+                                        <img
+                                          src={attachment.secureUrl}
+                                          alt="Item attachment"
+                                          className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
+                                          <FileText className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <p className="text-xs font-medium">
+                                          {attachment.mimeType.startsWith('image/') ? 'Image' : 'Document'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      className="text-xs"
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
-                          <div>
-                            <p className="text-sm font-medium">
-                              {attachment.mimeType.startsWith('image/') ? 'Image' : 'PDF Document'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {attachment.mimeType}
-                            </p>
-                          </div>
+
+                          {/* Refund Receipts for this item */}
+                          {itemRefundReceipts.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-blue-700 mb-2">Refund Receipts for this item:</p>
+                              <div className="space-y-2">
+                                {itemRefundReceipts.map((attachment: any) => (
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-md border border-blue-200">
+                                    <div className="flex items-center space-x-2">
+                                      {attachment.mimeType.startsWith('image/') ? (
+                                        <img
+                                          src={attachment.secureUrl}
+                                          alt="Refund receipt"
+                                          className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
+                                          <FileText className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <p className="text-xs font-medium text-blue-700">
+                                          {attachment.mimeType.startsWith('image/') ? 'Refund Receipt (Image)' : 'Refund Receipt (Document)'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      className="text-xs"
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(attachment.secureUrl, '_blank')}
-                        >
-                          View
-                        </Button>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Totals Summary */}
+                  <div className="mt-4 pt-3 border-t border-green-200 bg-white p-3 rounded">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Total Approved</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          {formatCurrency(reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + item.approvedAmountCents, 0))}
+                        </p>
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Total Actual</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0))}
+                        </p>
+                      </div>
+                      <div className="col-span-2 pt-2 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">Total Difference</p>
+                        {(() => {
+                          const totalApproved = reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + item.approvedAmountCents, 0)
+                          const totalActual = reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0)
+                          const totalDifference = totalActual - totalApproved
+                          return (
+                            <p className={`text-sm font-bold ${
+                              totalDifference > 0 ? 'text-red-600' : 
+                              totalDifference < 0 ? 'text-blue-600' : 
+                              'text-gray-600'
+                            }`}>
+                              {totalDifference > 0 ? '+' : ''}{formatCurrency(totalDifference)}
+                              {totalDifference > 0 && ' (Additional payment needed)'}
+                              {totalDifference < 0 && ' (Refund required)'}
+                            </p>
+                          )
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )}
+
+              {/* Non-itemized attachments (if any) */}
+              {reportViewModal.report.attachments && reportViewModal.report.attachments.length > 0 && (
+                (() => {
+                  const nonItemizedAttachments = reportViewModal.report.attachments.filter((att: any) => !att.itemId)
+                  if (nonItemizedAttachments.length > 0) {
+                    return (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">General Attachments</label>
+                        <div className="mt-2 space-y-2">
+                          {nonItemizedAttachments.map((attachment: any) => (
+                            <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                              <div className="flex items-center space-x-3">
+                                {attachment.mimeType.startsWith('image/') ? (
+                                  <img
+                                    src={attachment.secureUrl}
+                                    alt="Report attachment"
+                                    className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                    onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
+                                    <FileText className="w-6 h-6 text-red-600" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {attachment.isRefundReceipt ? 'Refund Receipt - ' : ''}
+                                    {attachment.mimeType.startsWith('image/') ? 'Image' : 'PDF Document'}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {attachment.mimeType}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(attachment.secureUrl, '_blank')}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                })()
               )}
             </div>
           </div>

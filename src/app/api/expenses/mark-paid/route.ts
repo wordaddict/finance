@@ -96,11 +96,34 @@ export async function POST(request: NextRequest) {
     let totalPaidAmountCents: number
     
     if (isRePayment) {
-      // For re-payment, pay the difference between report amount and previously paid amount
+      // For re-payment, calculate the difference from item-level actual vs approved amounts
       const latestReport = expense.reports[0]
-      const reportAmount = latestReport.totalApprovedAmount ?? 0
-      paymentAmountCents = reportAmount - currentPaidAmount
-      totalPaidAmountCents = reportAmount
+      let totalDifference = 0
+      
+      if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
+        // Calculate sum of positive differences (where actual > approved)
+        for (const item of latestReport.approvedItems) {
+          const approvedAmount = item.approvedAmountCents || 0
+          const actualAmount = item.actualAmountCents ?? approvedAmount
+          const difference = actualAmount - approvedAmount
+          
+          // Only count positive differences (spent more than approved)
+          if (difference > 0) {
+            totalDifference += difference
+          }
+        }
+      } else {
+        // For non-itemized expenses, use totalActualAmount vs totalApprovedAmount
+        const totalApproved = latestReport.totalApprovedAmount || 0
+        const totalActual = latestReport.totalActualAmount ?? totalApproved
+        const difference = totalActual - totalApproved
+        if (difference > 0) {
+          totalDifference = difference
+        }
+      }
+      
+      paymentAmountCents = totalDifference
+      totalPaidAmountCents = currentPaidAmount + totalDifference
     } else {
       // Initial payment - calculate approved amount
       paymentAmountCents = expense.amountCents // Default to full amount
@@ -125,10 +148,10 @@ export async function POST(request: NextRequest) {
         status: 'PAID',
         paidAt: isRePayment ? expense.paidAt : new Date(), // Keep original paidAt for re-payments
         paymentDate: paymentDate ? new Date(paymentDate) : null,
-        paidBy: paidBy || null,
+        ...(paidBy && { paidBy }),
         reportRequired: reportRequired,
-        amountCents: totalPaidAmountCents, // Update cumulative paid amount
-      },
+        paidAmountCents: totalPaidAmountCents, // Update cumulative paid amount
+      } as any,
     })
 
     // Create status event

@@ -111,10 +111,44 @@ export async function POST(request: NextRequest) {
 
     // Update expense status if fully approved
     if (newStatus === 'APPROVED') {
-      // Update the main expense status (items are approved separately)
+      // Automatically approve all items when expense is approved
+      if (expense.items && expense.items.length > 0) {
+        for (const item of expense.items) {
+          // Check if item already has an approval from this user
+          const existingItemApproval = item.approvals.find((approval: { approverId: string }) => approval.approverId === user.id)
+          
+          if (!existingItemApproval) {
+            // Create approval for this item - approve full amount
+            await db.expenseItemApproval.create({
+              data: {
+                itemId: item.id,
+                approverId: user.id,
+                status: 'APPROVED',
+                approvedAmountCents: item.amountCents, // Approve full amount
+                comment: comment ? `Auto-approved with expense approval: ${comment}` : 'Auto-approved with expense approval',
+              },
+            })
+          } else if (existingItemApproval.status !== 'APPROVED') {
+            // Update existing approval to approved
+            await db.expenseItemApproval.update({
+              where: { id: existingItemApproval.id },
+              data: {
+                status: 'APPROVED',
+                approvedAmountCents: item.amountCents, // Approve full amount
+                comment: existingItemApproval.comment || (comment ? `Auto-approved with expense approval: ${comment}` : 'Auto-approved with expense approval'),
+                updatedAt: new Date(),
+              },
+            })
+          }
+        }
+      }
+
+      // Update the main expense status (reportRequired is handled in mark-paid)
       await db.expenseRequest.update({
         where: { id: expenseId },
-        data: { status: 'APPROVED' },
+        data: { 
+          status: 'APPROVED',
+        },
       })
     }
 

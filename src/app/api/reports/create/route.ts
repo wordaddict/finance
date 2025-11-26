@@ -14,13 +14,17 @@ const createReportSchema = z.object({
     publicId: z.string(),
     secureUrl: z.string(),
     mimeType: z.string(),
+    itemId: z.string().optional(), // Which item this attachment belongs to
+    isRefundReceipt: z.boolean().optional(), // Whether this is a refund receipt
   })).optional(),
   approvedExpenses: z.object({
     totalApprovedAmount: z.number(),
+    totalActualAmount: z.number().optional(),
     approvedItems: z.array(z.object({
       id: z.string(),
       description: z.string(),
       approvedAmountCents: z.number(),
+      actualAmountCents: z.number().optional(),
     }))
   }).optional(),
 })
@@ -92,13 +96,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate reported amount
-    const reportedAmountCents = data.approvedExpenses?.totalApprovedAmount || expense.amountCents
-    const currentPaidAmount = expense.paidAmountCents || 0
+    // Calculate reported amount (use actual amount if provided, otherwise approved amount)
+    const reportedAmountCents = data.approvedExpenses?.totalActualAmount || data.approvedExpenses?.totalApprovedAmount || expense.amountCents
+    const currentPaidAmount = (expense as any).paidAmountCents || 0
     
     // Check if reported amount exceeds paid amount
     const additionalPaymentNeeded = reportedAmountCents > currentPaidAmount
     const additionalPaymentAmount = additionalPaymentNeeded ? reportedAmountCents - currentPaidAmount : 0
+    
+    // Check if refund is needed (spent less than approved)
+    const approvedAmount = data.approvedExpenses?.totalApprovedAmount || expense.amountCents
+    const refundAmount = reportedAmountCents < approvedAmount ? approvedAmount - reportedAmountCents : 0
 
     // Create the report with approved expenses data
     const report = await db.expenseReport.create({
@@ -113,6 +121,8 @@ export async function POST(request: NextRequest) {
             publicId: attachment.publicId,
             secureUrl: attachment.secureUrl,
             mimeType: attachment.mimeType,
+            itemId: attachment.itemId || null,
+            isRefundReceipt: attachment.isRefundReceipt || false,
           })),
         } : undefined,
         approvedItems: data.approvedExpenses?.approvedItems ? {
@@ -120,6 +130,7 @@ export async function POST(request: NextRequest) {
             originalItemId: item.id,
             description: item.description,
             approvedAmountCents: item.approvedAmountCents,
+            actualAmountCents: item.actualAmountCents || item.approvedAmountCents,
           }))
         } : undefined,
       },
@@ -165,6 +176,7 @@ export async function POST(request: NextRequest) {
       ...report,
       additionalPaymentNeeded,
       additionalPaymentAmount,
+      refundAmount,
       currentPaidAmount,
     })
   } catch (error) {

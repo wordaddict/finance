@@ -245,14 +245,16 @@ model ExpenseReport {
 }
 
 model ReportAttachment {
-  id        String        @id @default(uuid())
-  reportId  String
-  publicId  String
-  secureUrl String
-  mimeType  String
-  createdAt DateTime      @default(now())
+  id              String        @id @default(uuid())
+  reportId        String
+  publicId        String
+  secureUrl       String
+  mimeType        String
+  itemId          String?       // Reference to the item this attachment belongs to (null for non-itemized or general attachments)
+  isRefundReceipt Boolean       @default(false) // Whether this is a refund receipt
+  createdAt       DateTime      @default(now())
 
-  report    ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report          ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }
 
 model ApprovedReportItem {
@@ -261,6 +263,7 @@ model ApprovedReportItem {
   originalItemId      String        // Reference to the original ExpenseItem
   description         String
   approvedAmountCents Int
+  actualAmountCents   Int?          // Actual amount spent (can differ from approved)
   createdAt           DateTime      @default(now())
 
   report              ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
