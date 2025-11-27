@@ -139,11 +139,11 @@ export async function GET(request: NextRequest) {
 
     // Create streaming response with filter info in filename
     const filename = getCSVFilename('expenses', {
-      team,
-      campus,
-      status,
-      startDate,
-      endDate,
+      team: team || undefined,
+      campus: campus || undefined,
+      status: status || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
     })
     
     const response = new Response(
