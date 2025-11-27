@@ -65,16 +65,18 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Send notification to requester
-    const emailTemplate = generateExpenseDeniedEmail(
-      expense.requester.name || expense.requester.email,
-      expense.title,
-      expense.amountCents,
-      process.env.NEXT_PUBLIC_APP_URL!,
-      reason,
-    )
-    emailTemplate.to = expense.requester.email
-    await sendEmail(emailTemplate)
+    // Send notification to requester (only if requester is active)
+    if (expense.requester.status === 'ACTIVE') {
+      const emailTemplate = generateExpenseDeniedEmail(
+        expense.requester.name || expense.requester.email,
+        expense.title,
+        expense.amountCents,
+        process.env.NEXT_PUBLIC_APP_URL!,
+        reason,
+      )
+      emailTemplate.to = expense.requester.email
+      await sendEmail(emailTemplate)
+    }
 
     // SMS notification (if phone number available)
     // const smsTemplate = generateExpenseDeniedSMS(

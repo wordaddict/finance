@@ -83,17 +83,18 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Get admins for notifications
+    // Get admins for notifications (exclude suspended users)
     const admins = await db.user.findMany({
       where: {
         role: 'ADMIN',
+        status: 'ACTIVE', // Only send to active users
       },
     })
 
-    // Prepare recipients list (admins + expense requester)
+    // Prepare recipients list (admins + expense requester, but only active users)
     const recipients = [
       ...admins,
-      expense.requester
+      ...(expense.requester.status === 'ACTIVE' ? [expense.requester] : [])
     ]
 
     // Prepare email templates for all recipients

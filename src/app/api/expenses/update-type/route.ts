@@ -5,17 +5,17 @@ import { requireAuth } from '@/lib/auth'
 
 const updateExpenseTypeSchema = z.object({
   expenseId: z.string().uuid(),
-  expenseType: z.string().min(1, 'Expense type cannot be empty').max(100, 'Expense type must be 100 characters or less').nullable(),
+  expenseType: z.string().min(1, 'Admin category cannot be empty').max(100, 'Admin category must be 100 characters or less').nullable(),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth()
     
-    // Only admins can update expense types
+    // Only admins can update admin categories
     if (user.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Only admins can update expense types' },
+        { error: 'Only admins can update admin categories' },
         { status: 403 }
       )
     }
@@ -35,18 +35,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update the expense type
+    // Update the admin category
     await db.expenseRequest.update({
       where: { id: expenseId },
       data: { expenseType: expenseType?.trim() || null },
     })
 
     return NextResponse.json({ 
-      message: 'Expense type updated successfully',
+      message: 'Admin category updated successfully',
       expenseType 
     })
   } catch (error) {
-    console.error('Update expense type error:', error)
+    console.error('Update admin category error:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to update expense type' },
+      { error: 'Failed to update admin category' },
       { status: 500 }
     )
   }

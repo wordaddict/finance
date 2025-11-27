@@ -65,6 +65,8 @@ model ExpenseRequest {
   paidAmountCents Int?        // Amount that was actually paid (cumulative)
   paidBy        String?       // Person who made the payment (optional)
   eventDate     DateTime?
+  eventName     String?       // Name of the event (required if eventDate is set)
+  fullEventBudgetCents Int?   // Full event budget in cents (required if eventDate is set)
   reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
   account       Account?      // Account that the money came from (tagged by admin)
   expenseType   String?       // Type of expense for reporting (set by admin)
@@ -92,6 +94,7 @@ model ExpenseItem {
   updatedAt     DateTime      @updatedAt
   expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   approvals     ExpenseItemApproval[]
+  attachments   Attachment[]
 }
 
 model ExpenseItemApproval {
@@ -151,11 +154,15 @@ model PastorRemark {
 model Attachment {
   id        String         @id @default(uuid())
   expenseId String
+  itemId    String?       // Which item this attachment belongs to (null for general attachments)
   publicId  String
   secureUrl String
   mimeType  String
   createdAt DateTime       @default(now())
   expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
+  item      ExpenseItem?   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  @@index([itemId])
 }
 
 model Notification {

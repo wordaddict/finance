@@ -163,8 +163,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Send notification to requester if fully approved
-    if (newStatus === 'APPROVED') {
+    // Send notification to requester if fully approved (only if requester is active)
+    if (newStatus === 'APPROVED' && expense.requester.status === 'ACTIVE') {
       const emailTemplate = generateExpenseApprovedEmail(
         expense.requester.name || expense.requester.email,
         expense.title,

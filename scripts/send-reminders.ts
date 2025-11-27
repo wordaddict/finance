@@ -30,12 +30,13 @@ async function sendReminders() {
 
     console.log(`Found ${staleExpenses.length} stale expenses`)
 
-    // Group by approver role
+    // Group by approver role (exclude suspended users)
     const approvers = await db.user.findMany({
       where: {
         role: {
           in: ['ADMIN', 'CAMPUS_PASTOR'],
         },
+        status: 'ACTIVE', // Only send to active users
       },
     })
 

@@ -145,10 +145,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Get admins for notifications
+    // Get admins for notifications (exclude suspended users)
     const admins = await db.user.findMany({
       where: {
         role: 'ADMIN',
+        status: 'ACTIVE', // Only send to active users
       },
     })
 

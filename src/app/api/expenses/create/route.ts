@@ -15,10 +15,13 @@ const createExpenseSchema = z.object({
   category: z.enum(EXPENSE_CATEGORY_VALUES as [string, ...string[]]),
   urgency: z.number().min(1).max(3).default(2),
   eventDate: z.string().optional().nullable(),
+  eventName: z.string().optional().nullable(),
+  fullEventBudgetCents: z.number().nonnegative().optional().nullable(),
   attachments: z.array(z.object({
     publicId: z.string(),
     secureUrl: z.string(),
     mimeType: z.string(),
+    itemId: z.string().optional().nullable(), // Temporary item ID from frontend (like '1', '2')
   })).optional(),
   items: z.array(z.object({
     description: z.string().min(1),
@@ -36,6 +39,27 @@ const createExpenseSchema = z.object({
 }, {
   message: "Event date is required for Special Events and Programs",
   path: ["eventDate"]
+}).refine((data) => {
+  // If eventDate is provided, eventName and fullEventBudgetCents must be provided
+  if (data.eventDate && data.eventDate.trim() !== '') {
+    return data.eventName && data.eventName.trim() !== '' && 
+           data.fullEventBudgetCents !== null && data.fullEventBudgetCents !== undefined && 
+           data.fullEventBudgetCents > 0;
+  }
+  return true;
+}, {
+  message: "Event name and full event budget are required when event date is provided",
+  path: ["eventName"]
+}).refine((data) => {
+  // If eventDate is provided, items total must equal fullEventBudgetCents
+  if (data.eventDate && data.eventDate.trim() !== '' && data.fullEventBudgetCents) {
+    const itemsTotal = data.items.reduce((sum, item) => sum + item.amountCents, 0);
+    return itemsTotal === data.fullEventBudgetCents;
+  }
+  return true;
+}, {
+  message: "Items total must equal the full event budget",
+  path: ["items"]
 })
 
 export async function POST(request: NextRequest) {
@@ -48,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Team validation is now handled by the enum schema
 
-    // Create expense request
+    // Create expense request with items first
     const expense = await db.expenseRequest.create({
       data: {
         title: data.title,
@@ -60,13 +84,8 @@ export async function POST(request: NextRequest) {
         category: data.category,
         urgency: data.urgency,
         eventDate: data.eventDate ? new Date(data.eventDate) : null,
-        attachments: data.attachments ? {
-          create: data.attachments.map(attachment => ({
-            publicId: attachment.publicId,
-            secureUrl: attachment.secureUrl,
-            mimeType: attachment.mimeType,
-          })),
-        } : undefined,
+        eventName: data.eventName || null,
+        fullEventBudgetCents: data.fullEventBudgetCents || null,
         items: {
           create: data.items.map(item => ({
             description: item.description,
@@ -79,8 +98,40 @@ export async function POST(request: NextRequest) {
       },
       include: {
         requester: true,
+        items: true,
       },
     })
+
+    // Create attachments with itemId mapping
+    // The frontend sends temporary item IDs (like '1', '2'), we need to map them to actual item IDs
+    if (data.attachments && data.attachments.length > 0) {
+      // Create attachments with proper itemId
+      // Items are created in the same order as they were sent, so we can map by index
+      const attachmentsToCreate = data.attachments.map(attachment => {
+        let itemId: string | null = null
+        if (attachment.itemId) {
+          // Frontend sends temporary IDs like '1', '2', etc. which correspond to item indices
+          const tempId = attachment.itemId
+          // Try to parse as number and use as index (items are 1-indexed in frontend)
+          const itemIndex = parseInt(tempId) - 1
+          if (itemIndex >= 0 && itemIndex < expense.items.length) {
+            itemId = expense.items[itemIndex].id
+          }
+        }
+        
+        return {
+          expenseId: expense.id,
+          itemId: itemId,
+          publicId: attachment.publicId,
+          secureUrl: attachment.secureUrl,
+          mimeType: attachment.mimeType,
+        }
+      })
+
+      await db.attachment.createMany({
+        data: attachmentsToCreate,
+      })
+    }
 
     // Create initial status event
     await db.statusEvent.create({
@@ -91,12 +142,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Get approvers for notifications
+    // Get approvers for notifications (exclude suspended users)
     const approvers = await db.user.findMany({
       where: {
         role: {
           in: ['ADMIN', 'CAMPUS_PASTOR'],
         },
+        status: 'ACTIVE', // Only send to active users
       },
     })
 

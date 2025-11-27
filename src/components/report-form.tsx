@@ -422,6 +422,9 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       [itemId]: [...(prev[itemId] || []), ...validFiles]
     }))
     setError('') // Clear any previous errors
+    
+    // Reset input value to allow selecting the same file again
+    e.target.value = ''
   }
 
   const handleNonItemizedFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -464,6 +467,9 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
     
     setNonItemizedAttachments(prev => [...prev, ...validFiles])
     setError('') // Clear any previous errors
+    
+    // Reset input value to allow selecting the same file again
+    e.target.value = ''
   }
 
   const removeItemAttachment = (itemId: string, index: number) => {
@@ -520,6 +526,9 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       [itemId]: [...(prev[itemId] || []), ...validFiles]
     }))
     setError('') // Clear any previous errors
+    
+    // Reset input value to allow selecting the same file again
+    e.target.value = ''
   }
 
   const handleNonItemizedRefundReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -562,6 +571,9 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
     
     setNonItemizedRefundReceipts(prev => [...prev, ...validFiles])
     setError('') // Clear any previous errors
+    
+    // Reset input value to allow selecting the same file again
+    e.target.value = ''
   }
 
   const removeItemRefundReceipt = (itemId: string, index: number) => {

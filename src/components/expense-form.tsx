@@ -35,9 +35,12 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
   const [urgency, setUrgency] = useState(2)
   const [isEvent, setIsEvent] = useState(false)
   const [eventDate, setEventDate] = useState('')
+  const [eventName, setEventName] = useState('')
+  const [fullEventBudget, setFullEventBudget] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [attachments, setAttachments] = useState<File[]>([])
+  const [itemAttachments, setItemAttachments] = useState<Record<string, File[]>>({}) // Attachments per item
+  const [nonItemizedAttachments, setNonItemizedAttachments] = useState<File[]>([]) // For expenses without items (backward compatibility)
   const [items, setItems] = useState<ExpenseItem[]>([
     { id: '1', description: '', category: '', quantity: 1, unitPrice: 0, amount: 0 }
   ])
@@ -62,6 +65,8 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
       const hasEventDate = !!editExpense.eventDate
       setIsEvent(hasEventDate)
       setEventDate(editExpense.eventDate || '')
+      setEventName(editExpense.eventName || '')
+      setFullEventBudget((editExpense.fullEventBudgetCents || 0) / 100)
 
       // Populate items if they exist
       if (editExpense.items && editExpense.items.length > 0) {
@@ -182,18 +187,70 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
         return
       }
 
-      // Validate event date if event checkbox is checked
-      if (isEvent && !eventDate) {
-        setError('Event date is required when event is checked')
+      // Validate that all items have at least one attachment
+      const itemsWithoutAttachments = items.filter(item => {
+        const attachments = itemAttachments[item.id] || []
+        return attachments.length === 0
+      })
+      if (itemsWithoutAttachments.length > 0) {
+        const itemNumbers = itemsWithoutAttachments.map((item, index) => {
+          const itemIndex = items.findIndex(i => i.id === item.id) + 1
+          return itemIndex
+        }).join(', ')
+        setError(`Please upload at least one file for item(s): ${itemNumbers}`)
         setLoading(false)
         return
       }
 
-      // Upload attachments
+      // Validate event fields if event checkbox is checked
+      if (isEvent) {
+        if (!eventDate) {
+          setError('Event date is required when event is checked')
+          setLoading(false)
+          return
+        }
+        if (!eventName || eventName.trim() === '') {
+          setError('Event name is required when event is checked')
+          setLoading(false)
+          return
+        }
+        if (!fullEventBudget || fullEventBudget <= 0) {
+          setError('Full event budget is required and must be greater than 0 when event is checked')
+          setLoading(false)
+          return
+        }
+        // Validate that items total equals full event budget
+        const itemsTotalCents = Math.round(totalAmount * 100)
+        const fullEventBudgetCents = Math.round(fullEventBudget * 100)
+        if (itemsTotalCents !== fullEventBudgetCents) {
+          setError(`Items total ($${totalAmount.toFixed(2)}) must equal the full event budget ($${fullEventBudget.toFixed(2)})`)
+          setLoading(false)
+          return
+        }
+      }
+
+      // Upload attachments per item
       const uploadedAttachments = []
-      for (const file of attachments) {
-        const uploadResult = await handleFileUpload(file)
-        uploadedAttachments.push(uploadResult)
+      if (items.length > 0) {
+        for (const item of items) {
+          const files = itemAttachments[item.id] || []
+          for (const file of files) {
+            const uploadResult = await handleFileUpload(file)
+            uploadedAttachments.push({
+              ...uploadResult,
+              itemId: item.id, // Will be set to the actual item ID after creation
+            })
+          }
+        }
+      } else {
+        // Non-itemized expense (backward compatibility)
+        for (const file of nonItemizedAttachments) {
+          const uploadResult = await handleFileUpload(file)
+          uploadedAttachments.push({
+            ...uploadResult,
+            itemId: null, // No item ID for non-itemized
+          })
+        }
       }
 
       // Create or update expense request
@@ -213,6 +270,8 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
         category: expenseCategory,
         urgency,
         eventDate: eventDate || null,
+        eventName: isEvent && eventName ? eventName : null,
+        fullEventBudgetCents: isEvent && fullEventBudget > 0 ? Math.round(fullEventBudget * 100) : null,
         attachments: uploadedAttachments,
         items: items.map(item => ({
           description: item.description,
@@ -256,7 +315,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleItemFileChange = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
     // Validate files
@@ -294,12 +353,70 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
       return
     }
     
-    setAttachments(prev => [...prev, ...validFiles])
+    setItemAttachments(prev => ({
+      ...prev,
+      [itemId]: [...(prev[itemId] || []), ...validFiles]
+    }))
     setError('') // Clear any previous errors
+    
+    // Reset input value to allow selecting the same file again
+    e.target.value = ''
   }
 
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index))
+  const handleNonItemizedFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    
+    // Validate files
+    const allowedTypes = [
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'text/csv', // .csv
+      'application/vnd.oasis.opendocument.spreadsheet' // .ods
+    ]
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    
+    const validFiles: File[] = []
+    const errors: string[] = []
+    
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        errors.push(`${file.name}: Only JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, and OpenDocument (.ods) files are allowed`)
+        continue
+      }
+      
+      if (file.size > maxSize) {
+        errors.push(`${file.name}: File size must be less than 10MB`)
+        continue
+      }
+      
+      validFiles.push(file)
+    }
+    
+    if (errors.length > 0) {
+      setError(errors.join('; '))
+      return
+    }
+    
+    setNonItemizedAttachments(prev => [...prev, ...validFiles])
+    setError('') // Clear any previous errors
+    
+    // Reset input value to allow selecting the same file again
+    e.target.value = ''
+  }
+
+  const removeItemAttachment = (itemId: string, index: number) => {
+    setItemAttachments(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || []).filter((_, i) => i !== index)
+    }))
+  }
+
+  const removeNonItemizedAttachment = (index: number) => {
+    setNonItemizedAttachments(prev => prev.filter((_, i) => i !== index))
   }
 
   return (
@@ -415,6 +532,8 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                     setIsEvent(e.target.checked)
                     if (!e.target.checked) {
                       setEventDate('')
+                      setEventName('')
+                      setFullEventBudget(0)
                     }
                   }}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -424,22 +543,64 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
             </div>
 
             {isEvent && (
-              <div>
-                <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
-                  Event Date *
-                </label>
-                <input
-                  id="eventDate"
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Event date is required for events
-                </p>
-              </div>
+              <>
+                <div>
+                  <label htmlFor="eventDate" className="block text-sm font-medium mb-1">
+                    Event Date *
+                  </label>
+                  <input
+                    id="eventDate"
+                    type="date"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Event date is required for events
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="eventName" className="block text-sm font-medium mb-1">
+                    Event Name *
+                  </label>
+                  <input
+                    id="eventName"
+                    type="text"
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter event name"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Name of the event
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="fullEventBudget" className="block text-sm font-medium mb-1">
+                    Full Event Budget ($) *
+                  </label>
+                  <input
+                    id="fullEventBudget"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={fullEventBudget === 0 ? '' : fullEventBudget.toString()}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const numericValue = value === '' ? 0 : parseFloat(value) || 0
+                      setFullEventBudget(numericValue)
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Total budget for the event. Items total must equal this amount.
+                  </p>
+                </div>
+              </>
             )}
 
             <div>
@@ -447,10 +608,15 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                 Expense Items *
               </label>
               <div className="space-y-4">
-                {items.map((item, index) => (
-                  <div key={item.id} className="border border-gray-200 rounded-md p-4">
+                {items.map((item, index) => {
+                  const hasAttachments = itemAttachments[item.id] && itemAttachments[item.id].length > 0
+                  return (
+                  <div key={item.id} className={`border rounded-md p-4 ${!hasAttachments ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-sm">Item {index + 1}</h4>
+                      <h4 className="font-medium text-sm">
+                        Item {index + 1}
+                        {!hasAttachments && <span className="text-red-500 ml-2 text-xs">(Attachment required)</span>}
+                      </h4>
                       {items.length > 1 && (
                         <Button
                           type="button"
@@ -553,8 +719,51 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                         </span>
                       )}
                     </div>
+                    
+                    {/* Attachments for this item */}
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Attachments for this item <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.oasis.opendocument.spreadsheet,.xlsx,.xls,.csv,.ods"
+                        onChange={(e) => handleItemFileChange(item.id, e)}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
+                          (!itemAttachments[item.id] || itemAttachments[item.id].length === 0) 
+                            ? 'border-red-300 bg-red-50' 
+                            : 'border-gray-300'
+                        }`}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        JPG, PNG, PDF, Excel, CSV, ODS. Max 10MB per file. <span className="text-red-500">At least one file is required.</span>
+                      </p>
+                      {itemAttachments[item.id] && itemAttachments[item.id].length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {itemAttachments[item.id].map((file, fileIndex) => (
+                            <div key={fileIndex} className="flex items-center justify-between bg-gray-50 p-2 rounded text-xs">
+                              <div className="flex items-center space-x-2">
+                                <FileText className="w-3 h-3 text-gray-500" />
+                                <span className="text-xs">{file.name}</span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeItemAttachment(item.id, fileIndex)}
+                                className="h-6 px-2"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
+                  )
+                })}
                 <Button
                   type="button"
                   variant="outline"
@@ -567,49 +776,67 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
               <div className="mt-4 p-3 bg-gray-50 rounded-md">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total Amount:</span>
-                  <span className="text-lg font-bold text-green-600">
+                  <span className={`text-lg font-bold ${isEvent && fullEventBudget > 0 && Math.abs(totalAmount - fullEventBudget) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
                     ${totalAmount.toFixed(2)}
                   </span>
                 </div>
+                {isEvent && fullEventBudget > 0 && (
+                  <div className="mt-2 pt-2 border-t border-gray-300">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Full Event Budget:</span>
+                      <span className={`text-lg font-bold ${Math.abs(totalAmount - fullEventBudget) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
+                        ${fullEventBudget.toFixed(2)}
+                      </span>
+                    </div>
+                    {Math.abs(totalAmount - fullEventBudget) > 0.01 && (
+                      <div className="mt-1 text-sm text-red-600">
+                        Difference: ${Math.abs(totalAmount - fullEventBudget).toFixed(2)} - Items total must equal full event budget
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div>
-              <label htmlFor="attachments" className="block text-sm font-medium mb-1">
-                Attachments (Receipts and budget documents, etc.)
-              </label>
-              <input
-                id="attachments"
-                type="file"
-                multiple
-                accept="image/jpeg,image/jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.oasis.opendocument.spreadsheet,.xlsx,.xls,.csv,.ods"
-                onChange={handleFileChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Allowed formats: JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, OpenDocument (.ods), and Google Sheets (export as Excel or CSV). Maximum size: 10MB per file.
-              </p>
-              {attachments.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm">{file.name}</span>
+            {/* General attachments (for backward compatibility with non-itemized expenses) */}
+            {items.length === 0 && (
+              <div>
+                <label htmlFor="attachments" className="block text-sm font-medium mb-1">
+                  Attachments (Receipts and budget documents, etc.)
+                </label>
+                <input
+                  id="attachments"
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.oasis.opendocument.spreadsheet,.xlsx,.xls,.csv,.ods"
+                  onChange={handleNonItemizedFileChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Allowed formats: JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, OpenDocument (.ods), and Google Sheets (export as Excel or CSV). Maximum size: 10MB per file.
+                </p>
+                {nonItemizedAttachments.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {nonItemizedAttachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm">{file.name}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeNonItemizedAttachment(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeAttachment(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {error && (
               <div className="text-red-600 text-sm">{error}</div>

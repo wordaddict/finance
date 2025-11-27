@@ -39,6 +39,8 @@ interface Expense {
   paidBy?: string | null
   paidAmountCents?: number | null
   eventDate?: string
+  eventName?: string | null
+  fullEventBudgetCents?: number | null
   reportRequired: boolean
   account?: string | null
   expenseType?: string | null
@@ -52,6 +54,7 @@ interface Expense {
     publicId: string
     secureUrl: string
     mimeType: string
+    itemId?: string | null
   }[]
   pastorRemarks?: {
     id: string
@@ -846,7 +849,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     setExpenseTypeModal(prev => ({ ...prev, processing: true }))
     
     try {
-      // Determine the final expense type
+      // Determine the final admin category
       const finalType = expenseTypeModal.currentType === 'CUSTOM' 
         ? expenseTypeModal.customType.trim() || null
         : expenseTypeModal.currentType
@@ -884,11 +887,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
         closeExpenseTypeModal()
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Failed to update expense type')
+        setError(errorData.error || 'Failed to update admin category')
       }
     } catch (error) {
-      console.error('Update expense type error:', error)
-      setError('Failed to update expense type')
+      console.error('Update admin category error:', error)
+      setError('Failed to update admin category')
     } finally {
       setExpenseTypeModal(prev => ({ ...prev, processing: false }))
     }
@@ -1311,10 +1314,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     </div>
                   </div>
                 )}
-                {/* Expense Type Information - Admin Only */}
+                {/* Admin Category Information - Admin Only */}
                 {user.role === 'ADMIN' && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Expense Type</label>
+                    <label className="text-sm font-medium text-gray-500">Admin Category</label>
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-gray-900">
                         {viewModal.expense.expenseType || 'Not tagged'}
@@ -1326,7 +1329,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         className="text-xs"
                       >
                         <Tag className="w-3 h-3 mr-1" />
-                        Set Type
+                        Set Category
                       </Button>
                     </div>
                   </div>
@@ -1364,12 +1367,24 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 {viewModal.expense.eventDate && (
                   <>
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Event</label>
+                      <label className="text-sm font-medium text-gray-500">Event Date</label>
                       <p className="font-medium">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-2">Event</span>
                         {formatDate(viewModal.expense.eventDate)}
                       </p>
                     </div>
+                    {viewModal.expense.eventName && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Event Name</label>
+                        <p className="font-medium">{viewModal.expense.eventName}</p>
+                      </div>
+                    )}
+                    {viewModal.expense.fullEventBudgetCents !== null && viewModal.expense.fullEventBudgetCents !== undefined && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Full Event Budget</label>
+                        <p className="font-medium">{formatCurrency(viewModal.expense.fullEventBudgetCents)}</p>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -1410,6 +1425,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     {viewModal.expense.items.map((item, index) => {
                       const itemApproval = item.approvals?.[0]
                       const approvalStatus = itemApproval?.status || 'PENDING'
+                      // Get attachments for this item
+                      const itemAttachments = (viewModal.expense?.attachments || []).filter((att) => 
+                        att.itemId && att.itemId === item.id
+                      )
                       
                       return (
                         <div key={item.id} className={`p-3 rounded-md border ${
@@ -1449,6 +1468,44 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               </span>
                             </div>
                           </div>
+                          
+                          {/* Attachments for this item */}
+                          {itemAttachments.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-300">
+                              <p className="text-xs font-medium text-gray-600 mb-1">Attachments:</p>
+                              <div className="space-y-1">
+                                {itemAttachments.map((attachment) => (
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-white rounded text-xs">
+                                    <div className="flex items-center space-x-2">
+                                      {attachment.mimeType.startsWith('image/') ? (
+                                        <img
+                                          src={attachment.secureUrl}
+                                          alt="Item attachment"
+                                          className="w-8 h-8 object-cover rounded border cursor-pointer"
+                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                        />
+                                      ) : (
+                                        <div className="w-8 h-8 bg-blue-100 rounded border flex items-center justify-center">
+                                          <FileText className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                      )}
+                                      <span className="text-xs">
+                                        {attachment.mimeType.startsWith('image/') ? 'Image' : 'Document'}
+                                      </span>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      className="h-6 px-2 text-xs"
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           
                           {itemApproval && (
                             <div className="mt-2 p-2 bg-white rounded border">
@@ -1560,11 +1617,16 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </div>
               )}
 
+              {/* General attachments (without itemId) */}
               {viewModal.expense.attachments && viewModal.expense.attachments.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Attachments</label>
-                  <div className="mt-2 space-y-2">
-                    {viewModal.expense.attachments.map((attachment) => (
+                (() => {
+                  const generalAttachments = viewModal.expense.attachments.filter((att) => !att.itemId || att.itemId === null)
+                  if (generalAttachments.length > 0) {
+                    return (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">General Attachments</label>
+                        <div className="mt-2 space-y-2">
+                          {generalAttachments.map((attachment) => (
                       <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                         <div className="flex items-center space-x-3">
                           {attachment.mimeType.startsWith('image/') ? (
@@ -1596,19 +1658,23 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           View
                         </Button>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                })()
               )}
 
-              {viewModal.expense.notes && (
+              {viewModal.expense?.notes && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Admin Notes</label>
                   <p className="mt-1 p-3 bg-yellow-50 rounded-md text-sm sm:text-base">{viewModal.expense.notes}</p>
                 </div>
               )}
 
-              {viewModal.expense.paidAt && (
+              {viewModal.expense?.paidAt && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid At</label>
                   <p className="font-medium">{formatDate(viewModal.expense.paidAt)}</p>
@@ -1616,13 +1682,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
               )}
 
               {/* Payment Date - Admin Only */}
-              {user.role === 'ADMIN' && viewModal.expense.paymentDate && (
+              {user.role === 'ADMIN' && viewModal.expense?.paymentDate && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Payment Date</label>
                   <p className="font-medium text-blue-600">{formatDate(viewModal.expense.paymentDate)}</p>
                 </div>
               )}
-              {viewModal.expense.paidBy && (
+              {viewModal.expense?.paidBy && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Paid By</label>
                   <p className="font-medium">{viewModal.expense.paidBy}</p>
@@ -2537,13 +2603,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
         </div>
       )}
 
-      {/* Expense Type Modal */}
+      {/* Admin Category Modal */}
       {expenseTypeModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Set Expense Type</h2>
+                <h2 className="text-xl font-semibold">Set Admin Category</h2>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2558,13 +2624,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <strong>Expense:</strong> {expenseTypeModal.expenseTitle}
                 </p>
                 <p className="text-sm text-gray-500">
-                  Select or create a type for this expense for reporting purposes.
+                  Select or create a category for this expense for reporting purposes.
                 </p>
               </div>
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expense Type
+                  Admin Category
                 </label>
                 <select
                   value={expenseTypeModal.currentType || ''}
@@ -2575,19 +2641,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select a type...</option>
+                  <option value="">Select a category...</option>
                   {Object.values(EXPENSE_TYPES).map((type) => (
                     <option key={type} value={type}>
                       {type}
                     </option>
                   ))}
-                  <option value="CUSTOM">Custom Type...</option>
+                  <option value="CUSTOM">Custom Category...</option>
                 </select>
                 
                 {expenseTypeModal.currentType === 'CUSTOM' && (
                   <div className="mt-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Custom Type
+                      Custom Category
                     </label>
                     <input
                       type="text"
@@ -2596,7 +2662,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         ...prev, 
                         customType: e.target.value 
                       }))}
-                      placeholder="Enter custom expense type..."
+                      placeholder="Enter custom admin category..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       maxLength={100}
                     />
@@ -2620,7 +2686,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   disabled={expenseTypeModal.processing || (expenseTypeModal.currentType === 'CUSTOM' && !expenseTypeModal.customType.trim())}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
-                  {expenseTypeModal.processing ? 'Updating...' : 'Update Type'}
+                  {expenseTypeModal.processing ? 'Updating...' : 'Update Category'}
                 </Button>
               </div>
             </div>

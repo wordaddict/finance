@@ -14,6 +14,8 @@ const updateExpenseSchema = z.object({
   category: z.enum(EXPENSE_CATEGORY_VALUES as [string, ...string[]]),
   urgency: z.number().min(1).max(3).default(2),
   eventDate: z.string().optional().nullable(),
+  eventName: z.string().optional().nullable(),
+  fullEventBudgetCents: z.number().nonnegative().optional().nullable(),
   attachments: z.array(z.object({
     publicId: z.string(),
     secureUrl: z.string(),
@@ -34,6 +36,27 @@ const updateExpenseSchema = z.object({
 }, {
   message: 'Event date is required for Special Events and Programs',
   path: ['eventDate']
+}).refine((data) => {
+  // If eventDate is provided, eventName and fullEventBudgetCents must be provided
+  if (data.eventDate && data.eventDate.trim() !== '') {
+    return data.eventName && data.eventName.trim() !== '' && 
+           data.fullEventBudgetCents !== null && data.fullEventBudgetCents !== undefined && 
+           data.fullEventBudgetCents > 0;
+  }
+  return true;
+}, {
+  message: "Event name and full event budget are required when event date is provided",
+  path: ["eventName"]
+}).refine((data) => {
+  // If eventDate is provided, items total must equal fullEventBudgetCents
+  if (data.eventDate && data.eventDate.trim() !== '' && data.fullEventBudgetCents) {
+    const itemsTotal = data.items.reduce((sum, item) => sum + item.amountCents, 0);
+    return itemsTotal === data.fullEventBudgetCents;
+  }
+  return true;
+}, {
+  message: "Items total must equal the full event budget",
+  path: ["items"]
 })
 
 export async function PUT(request: NextRequest) {
@@ -84,7 +107,9 @@ export async function PUT(request: NextRequest) {
         description: data.description,
         category: data.category,
         urgency: data.urgency,
-        eventDate: data.eventDate,
+        eventDate: data.eventDate ? new Date(data.eventDate) : null,
+        eventName: data.eventName || null,
+        fullEventBudgetCents: data.fullEventBudgetCents || null,
         status: 'SUBMITTED', // Reset to submitted when updated
         updatedAt: new Date(),
         // Clear existing items and create new ones

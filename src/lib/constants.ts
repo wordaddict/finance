@@ -108,7 +108,7 @@ export const ACCOUNT_VALUES = Object.values(ACCOUNTS)
 // Type for account values
 export type AccountValue = typeof ACCOUNTS[keyof typeof ACCOUNTS]
 
-// Expense Type constants
+// Admin Category constants
 export const EXPENSE_TYPES = {
   DIRECT_PAYMENT: 'Direct Payment',
   INTERNAL_TRANSFER: 'Internal Transfer',
@@ -129,10 +129,10 @@ export const EXPENSE_TYPES = {
   OTHER: 'Other',
 } as const
 
-// Array of expense type values for easy iteration
+// Array of admin category values for easy iteration
 export const EXPENSE_TYPE_VALUES = Object.values(EXPENSE_TYPES)
 
-// Type for expense type values
+// Type for admin category values
 export type ExpenseTypeValue = typeof EXPENSE_TYPES[keyof typeof EXPENSE_TYPES]
 
 // Urgency constants
