@@ -26,6 +26,7 @@ model User {
   itemApprovals   ExpenseItemApproval[] @relation("ItemApprover")
   pastorRemarks  PastorRemark[]
   verificationTokens VerificationToken[]
+  expenseNotes   ExpenseNote[]
 }
 
 model Session {
@@ -80,6 +81,7 @@ model ExpenseRequest {
   statusHistory StatusEvent[]
   reports       ExpenseReport[]
   pastorRemarks PastorRemark[]
+  expenseNotes  ExpenseNote[]
 }
 
 model ExpenseItem {
@@ -274,4 +276,17 @@ model ApprovedReportItem {
   createdAt           DateTime      @default(now())
 
   report              ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model ExpenseNote {
+  id        String         @id @default(uuid())
+  expenseId String
+  authorId  String
+  note      String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  expense   ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  author    User           @relation(fields: [authorId], references: [id])
+  
+  @@index([expenseId])
 }

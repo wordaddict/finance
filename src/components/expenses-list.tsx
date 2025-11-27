@@ -108,6 +108,17 @@ interface Expense {
     }[]
     totalActualAmount?: number | null
   }[]
+  expenseNotes?: {
+    id: string
+    note: string
+    createdAt: string
+    author: {
+      id: string
+      name: string | null
+      email: string
+      role: string
+    }
+  }[]
 }
 
 interface ExpensesListProps {
@@ -166,6 +177,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
     comment: '',
     processing: false
   })
+  const [noteInput, setNoteInput] = useState<Record<string, string>>({}) // Notes being typed per expense
+  const [addingNote, setAddingNote] = useState<Record<string, boolean>>({}) // Loading state per expense
   const [reportViewModal, setReportViewModal] = useState<{
     isOpen: boolean
     report: any | null
@@ -1495,6 +1508,147 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   </div>
                 </div>
               )}
+
+              {/* Notes Section */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-500">Notes</label>
+                </div>
+                
+                {/* Display existing notes */}
+                {viewModal.expense?.expenseNotes && viewModal.expense.expenseNotes.length > 0 && (
+                  <div className="mt-2 space-y-2 mb-4">
+                    {viewModal.expense.expenseNotes.map((note) => {
+                      const isAdmin = note.author.role === 'ADMIN'
+                      const isPastor = note.author.role === 'CAMPUS_PASTOR'
+                      const isRequester = note.author.email === (viewModal.expense?.requester.email || '')
+                      
+                      return (
+                        <div 
+                          key={note.id} 
+                          className={`p-3 rounded-md border ${
+                            isAdmin ? 'bg-purple-50 border-purple-200' :
+                            isPastor ? 'bg-blue-50 border-blue-200' :
+                            'bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className={`text-sm ${
+                                isAdmin ? 'text-purple-800' :
+                                isPastor ? 'text-blue-800' :
+                                'text-gray-800'
+                              }`}>
+                                {note.note}
+                              </p>
+                              <div className={`mt-2 flex items-center gap-2 text-xs ${
+                                isAdmin ? 'text-purple-600' :
+                                isPastor ? 'text-blue-600' :
+                                'text-gray-600'
+                              }`}>
+                                <span>
+                                  {isAdmin ? '👤 Admin' : isPastor ? '👤 Pastor' : '👤 Requester'}: {note.author.name || note.author.email}
+                                </span>
+                                <span>•</span>
+                                <span>{formatDate(note.createdAt)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Add note form */}
+                {(() => {
+                  if (!viewModal.expense) return null
+                  
+                  // Check if user can add notes
+                  const canAddNote = 
+                    viewModal.expense.requester.email === user.email ||
+                    user.role === 'ADMIN' ||
+                    (user.role === 'CAMPUS_PASTOR' && viewModal.expense.campus === user.campus)
+                  
+                  if (!canAddNote) return null
+                  
+                  const expenseId = viewModal.expense.id
+                  const currentNote = noteInput[expenseId] || ''
+                  const isAdding = addingNote[expenseId] || false
+                  
+                  return (
+                    <div className="mt-2">
+                      <textarea
+                        value={currentNote}
+                        onChange={(e) => setNoteInput(prev => ({ ...prev, [expenseId]: e.target.value }))}
+                        placeholder="Add a note..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        rows={3}
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (!currentNote.trim()) return
+                            
+                            setAddingNote(prev => ({ ...prev, [expenseId]: true }))
+                            try {
+                              const response = await fetch('/api/expenses/notes', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  expenseId,
+                                  note: currentNote.trim(),
+                                }),
+                              })
+
+                              const data = await response.json()
+
+                              if (response.ok) {
+                                setNoteInput(prev => ({ ...prev, [expenseId]: '' }))
+                                setMessage('Note added successfully')
+                                
+                                // Refresh expenses list
+                                await fetchExpenses()
+                                
+                                // Fetch the updated expense with notes to update view modal
+                                if (viewModal.expense) {
+                                  try {
+                                    const expenseResponse = await fetch(`/api/expenses`)
+                                    const expenseData = await expenseResponse.json()
+                                    if (expenseData.expenses) {
+                                      const updatedExpense = expenseData.expenses.find((e: Expense) => e.id === expenseId)
+                                      if (updatedExpense) {
+                                        setViewModal({ isOpen: true, expense: updatedExpense })
+                                      }
+                                    }
+                                  } catch (err) {
+                                    console.error('Failed to refresh expense:', err)
+                                    // Still refresh the list even if modal update fails
+                                    fetchExpenses()
+                                  }
+                                }
+                              } else {
+                                setError(data.error || 'Failed to add note')
+                              }
+                            } catch (error) {
+                              console.error('Failed to add note:', error)
+                              setError('Failed to add note')
+                            } finally {
+                              setAddingNote(prev => ({ ...prev, [expenseId]: false }))
+                            }
+                          }}
+                          disabled={isAdding || !currentNote.trim()}
+                        >
+                          {isAdding ? 'Adding...' : 'Add Note'}
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
 
               {viewModal.expense.items && viewModal.expense.items.length > 0 && (
                 <div>
