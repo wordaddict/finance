@@ -159,7 +159,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                     placeholder="Search reports..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                               <p className="text-xs font-medium text-gray-700 mb-2">Attachments for this item:</p>
                               <div className="space-y-2">
                                 {itemAttachments.map((attachment) => (
-                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                                     <div className="flex items-center space-x-2">
                                       {attachment.mimeType.startsWith('image/') ? (
                                         <img
@@ -391,7 +391,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                               <p className="text-xs font-medium text-blue-700 mb-2">Refund Receipts for this item:</p>
                               <div className="space-y-2">
                                 {itemRefundReceipts.map((attachment) => (
-                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-md border border-blue-200">
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200">
                                     <div className="flex items-center space-x-2">
                                       {attachment.mimeType.startsWith('image/') ? (
                                         <img
@@ -471,7 +471,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
               {/* Report Content */}
               <div>
                 <label className="text-sm font-medium text-gray-500">Report Content</label>
-                <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base whitespace-pre-wrap">
+                <p className="mt-1 p-3 bg-gray-50 rounded-lg text-sm sm:text-base whitespace-pre-wrap">
                   {viewModal.report.content}
                 </p>
               </div>
@@ -487,7 +487,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                         <label className="text-sm font-medium text-gray-500">General Attachments</label>
                         <div className="mt-2 space-y-2">
                           {nonItemizedAttachments.map((attachment) => (
-                            <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                            <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                               <div className="flex items-center space-x-3">
                                 {attachment.mimeType.startsWith('image/') ? (
                                   <img

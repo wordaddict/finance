@@ -1072,7 +1072,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="rounded-xl shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Filter className="w-4 h-4 mr-2" />
@@ -1084,7 +1084,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
@@ -1098,7 +1098,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div>
               <label className="text-sm font-medium">Team</label>
               <select
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={filters.team}
                 onChange={(e) => setFilters({ ...filters, team: e.target.value })}
               >
@@ -1113,7 +1113,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div>
               <label className="text-sm font-medium">Campus</label>
               <select
-                className="w-full mt-1 p-2 border rounded-md"
+                className="w-full mt-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={filters.campus}
                 onChange={(e) => setFilters({ ...filters, campus: e.target.value })}
               >
@@ -1132,7 +1132,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <input
                   type="text"
                   placeholder="Search expenses..."
-                  className="w-full pl-8 pr-3 py-2 border rounded-md"
+                  className="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   value={filters.search}
                   onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 />
@@ -1145,7 +1145,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Expenses List */}
       <div className="space-y-4">
         {expenses.map((expense) => (
-          <Card key={expense.id}>
+          <Card key={expense.id} className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex-1">
@@ -1205,7 +1205,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         variant="outline" 
                         size="sm"
                         onClick={() => openReportForm(expense)}
-                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100 rounded-lg"
                       >
                         <FileText className="w-4 h-4 mr-1" />
                         <span>Create Report</span>
@@ -1253,7 +1253,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         variant="outline" 
                         size="sm"
                         onClick={() => openChangeRequestModal(expense.id, expense.title)}
-                        className="flex-1 sm:flex-none bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                        className="flex-1 sm:flex-none bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 rounded-lg"
                       >
                         <FileText className="w-4 h-4 mr-1" />
                         <span className="hidden sm:inline">Request Change</span>
@@ -1278,7 +1278,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               variant="outline" 
                               size="sm"
                               onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
-                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 rounded-lg"
                             >
                               <FileText className="w-4 h-4 mr-1" />
                               <span className="hidden sm:inline">View Report</span>
@@ -1291,7 +1291,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                     variant="outline" 
                                     size="sm"
                                     onClick={() => openMarkPaidModal(expense, true)}
-                                    className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                    className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 rounded-lg"
                                   >
                                     <DollarSign className="w-4 h-4 mr-1" />
                                     <span className="hidden sm:inline">Pay Additional ${(additionalPayment.amount / 100).toFixed(2)}</span>
@@ -1313,7 +1313,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       </div>
 
       {expenses.length === 0 && (
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardContent className="p-12 text-center">
             <p className="text-gray-500">No expenses found matching your criteria.</p>
           </CardContent>
@@ -1321,11 +1321,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4 flex items-center justify-between">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 flex items-center justify-between shadow-sm">
           <span>{error}</span>
           <button
             onClick={() => setError('')}
-            className="text-red-700 hover:text-red-900"
+            className="text-red-700 hover:text-red-900 rounded-lg p-1 hover:bg-red-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1363,7 +1363,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* View Modal */}
       {viewModal.isOpen && viewModal.expense && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg sm:text-xl font-bold">Expense Details</h2>
               <Button
@@ -1506,7 +1506,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
               {viewModal.expense.description && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Description</label>
-                  <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base">{viewModal.expense.description}</p>
+                  <p className="mt-1 p-3 bg-gray-50 rounded-lg text-sm sm:text-base">{viewModal.expense.description}</p>
                 </div>
               )}
 
@@ -1515,7 +1515,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <label className="text-sm font-medium text-gray-500">Pastor Remarks</label>
                   <div className="mt-2 space-y-3">
                     {viewModal.expense.pastorRemarks.map((remark, index) => (
-                      <div key={remark.id} className="p-3 rounded-md border bg-blue-50 border-blue-200">
+                      <div key={remark.id} className="p-3 rounded-lg border bg-blue-50 border-blue-200">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <p className="text-sm text-blue-800">{remark.remark}</p>
@@ -1545,7 +1545,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       )
                       
                       return (
-                        <div key={item.id} className={`p-3 rounded-md border ${
+                        <div key={item.id} className={`p-3 rounded-lg border ${
                           approvalStatus === 'APPROVED' ? 'bg-green-50 border-green-200' :
                           approvalStatus === 'DENIED' ? 'bg-red-50 border-red-200' :
                           'bg-gray-50 border-gray-200'
@@ -1709,7 +1709,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         </div>
                       )
                     })}
-                    <div className="bg-green-50 p-3 rounded-md border-t-2 border-green-200">
+                    <div className="bg-green-50 p-3 rounded-lg border-t-2 border-green-200">
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="font-medium text-green-800">Total Requested:</span>
@@ -1741,7 +1741,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <label className="text-sm font-medium text-gray-500">General Attachments</label>
                         <div className="mt-2 space-y-2">
                           {generalAttachments.map((attachment) => (
-                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
                           {attachment.mimeType.startsWith('image/') ? (
                             <img
@@ -1798,7 +1798,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       return (
                         <div 
                           key={note.id} 
-                          className={`p-3 rounded-md border ${
+                          className={`p-3 rounded-lg border ${
                             isAdmin ? 'bg-purple-50 border-purple-200' :
                             isPastor ? 'bg-blue-50 border-blue-200' :
                             'bg-gray-50 border-gray-200'
@@ -1854,7 +1854,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         value={currentNote}
                         onChange={(e) => setNoteInput(prev => ({ ...prev, [expenseId]: e.target.value }))}
                         placeholder="Add a note..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
                         rows={3}
                       />
                       <div className="mt-2 flex justify-end">
@@ -1925,7 +1925,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
               {viewModal.expense?.notes && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Admin Notes</label>
-                  <p className="mt-1 p-3 bg-yellow-50 rounded-md text-sm sm:text-base">{viewModal.expense.notes}</p>
+                  <p className="mt-1 p-3 bg-yellow-50 rounded-lg text-sm sm:text-base">{viewModal.expense.notes}</p>
                 </div>
               )}
 
@@ -2045,7 +2045,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Item Comment Modal */}
       {itemCommentModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">
                 {itemCommentModal.action === 'APPROVED' ? 'Approve Item' : 
@@ -2068,7 +2068,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       value={itemCommentModal.approvedAmount}
                       onChange={(e) => setItemCommentModal(prev => ({ ...prev, approvedAmount: e.target.value }))}
                       placeholder={(itemCommentModal.itemAmount / 100).toFixed(2)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -2090,7 +2090,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     ? "Please specify what changes are needed..."
                     : "Add an optional comment..."
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   rows={3}
                 />
               </div>
@@ -2140,7 +2140,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </Button>
               </div>
               
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -2176,7 +2176,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Approval Comment Modal */}
       {approvalCommentModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Approve Expense Request</h2>
@@ -2212,7 +2212,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   value={approvalCommentModal.comment}
                   onChange={(e) => setApprovalCommentModal(prev => ({ ...prev, comment: e.target.value }))}
                   placeholder="Add an optional comment for this approval..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   rows={3}
                 />
               </div>
@@ -2248,7 +2248,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Pastor Remark Modal */}
       {pastorRemarkModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Add Pastor Remark</h2>
@@ -2284,7 +2284,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   value={pastorRemarkModal.remark}
                   onChange={(e) => setPastorRemarkModal(prev => ({ ...prev, remark: e.target.value }))}
                   placeholder="Add your remark about this expense request..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   rows={4}
                 />
               </div>
@@ -2342,7 +2342,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
               {/* Report Content */}
               <div>
                 <label className="text-sm font-medium text-gray-500">Report Content</label>
-                <p className="mt-1 p-3 bg-gray-50 rounded-md text-sm sm:text-base whitespace-pre-wrap">
+                <p className="mt-1 p-3 bg-gray-50 rounded-lg text-sm sm:text-base whitespace-pre-wrap">
                   {reportViewModal.report.content}
                 </p>
               </div>
@@ -2445,7 +2445,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               <p className="text-xs font-medium text-gray-700 mb-2">Attachments for this item:</p>
                               <div className="space-y-2">
                                 {itemAttachments.map((attachment: any) => (
-                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                                     <div className="flex items-center space-x-2">
                                       {attachment.mimeType.startsWith('image/') ? (
                                         <img
@@ -2485,7 +2485,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               <p className="text-xs font-medium text-blue-700 mb-2">Refund Receipts for this item:</p>
                               <div className="space-y-2">
                                 {itemRefundReceipts.map((attachment: any) => (
-                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-md border border-blue-200">
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200">
                                     <div className="flex items-center space-x-2">
                                       {attachment.mimeType.startsWith('image/') ? (
                                         <img
@@ -2532,7 +2532,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     
                     if (orphanedAttachments.length > 0) {
                       return (
-                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                           <p className="text-xs font-medium text-yellow-800 mb-2">
                             ⚠️ Orphaned Attachments ({orphanedAttachments.length})
                           </p>
@@ -2541,7 +2541,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           </p>
                           <div className="space-y-2">
                             {orphanedAttachments.map((attachment: any) => (
-                              <div key={attachment.id} className="flex items-center justify-between p-2 bg-white rounded-md border border-yellow-200">
+                              <div key={attachment.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-yellow-200">
                                 <div className="flex items-center space-x-2">
                                   {attachment.mimeType.startsWith('image/') ? (
                                     <img
@@ -2629,7 +2629,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <label className="text-sm font-medium text-gray-500">General Attachments</label>
                         <div className="mt-2 space-y-2">
                           {nonItemizedAttachments.map((attachment: any) => (
-                            <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                            <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                               <div className="flex items-center space-x-3">
                                 {attachment.mimeType.startsWith('image/') ? (
                                   <img
@@ -2672,7 +2672,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
 
               {/* Link to Original Expense Request */}
               {reportViewModal.report.expense && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium text-blue-800 mb-1">Original Expense Request</p>
@@ -2720,7 +2720,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       return (
                         <div 
                           key={note.id} 
-                          className={`p-3 rounded-md border ${
+                          className={`p-3 rounded-lg border ${
                             isAdmin ? 'bg-purple-50 border-purple-200' :
                             isPastor ? 'bg-blue-50 border-blue-200' :
                             'bg-gray-50 border-gray-200'
@@ -2776,7 +2776,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         value={currentNote}
                         onChange={(e) => setReportNoteInput(prev => ({ ...prev, [reportId]: e.target.value }))}
                         placeholder="Add a note..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
                         rows={3}
                       />
                       <div className="mt-2 flex justify-end">
@@ -2844,7 +2844,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Mark Paid Modal */}
       {markPaidModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">
@@ -2864,7 +2864,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <strong>Expense:</strong> {markPaidModal.expenseTitle}
                 </p>
                 {markPaidModal.isAdditionalPayment ? (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
                     <p className="text-sm font-medium text-orange-800 mb-1">
                       Additional Payment Required
                     </p>
@@ -2912,7 +2912,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   type="date"
                   value={markPaidModal.paymentDate}
                   onChange={(e) => setMarkPaidModal(prev => ({ ...prev, paymentDate: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Select the date when the payment was actually made
@@ -2928,7 +2928,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   value={markPaidModal.paidBy}
                   onChange={(e) => setMarkPaidModal(prev => ({ ...prev, paidBy: e.target.value }))}
                   placeholder="Enter name of person making the payment"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Optional: Name of the person who made this payment
@@ -2962,7 +2962,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Account Modal */}
       {accountModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Tag Account</h2>
@@ -2994,7 +2994,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     ...prev, 
                     currentAccount: e.target.value || null 
                   }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
                   <option value="">Select an account...</option>
                   {Object.entries(ACCOUNT_DISPLAY_NAMES).map(([value, label]) => (
@@ -3029,7 +3029,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Admin Category Modal */}
       {expenseTypeModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Set Admin Category</h2>
@@ -3062,7 +3062,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     currentType: e.target.value || null,
                     customType: e.target.value === 'CUSTOM' ? prev.customType : ''
                   }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
                   <option value="">Select a category...</option>
                   {Object.values(EXPENSE_TYPES).map((type) => (
@@ -3086,7 +3086,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         customType: e.target.value 
                       }))}
                       placeholder="Enter custom admin category..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       maxLength={100}
                     />
                     <p className="text-xs text-gray-500 mt-1">
@@ -3120,7 +3120,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       {/* Change Request Modal */}
       {changeRequestModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Request Change</h2>
@@ -3160,7 +3160,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     comment: e.target.value 
                   }))}
                   placeholder="Enter reason for requesting changes..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   rows={4}
                   required
                 />

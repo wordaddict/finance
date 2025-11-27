@@ -316,7 +316,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                     id="status"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   >
                     <option value="">All Statuses</option>
                     <option value="PENDING_APPROVAL">Pending Approval</option>
@@ -479,7 +479,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                   value={approveModal.reason}
                   onChange={(e) => setApproveModal(prev => ({ ...prev, reason: e.target.value }))}
                   placeholder="Add a note for the user..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   rows={3}
                 />
               </div>
@@ -541,7 +541,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                   value={denyModal.reason}
                   onChange={(e) => setDenyModal(prev => ({ ...prev, reason: e.target.value }))}
                   placeholder="Please provide a reason for denying this user registration..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                   rows={3}
                   required
                 />
@@ -604,7 +604,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                   value={suspendModal.reason}
                   onChange={(e) => setSuspendModal(prev => ({ ...prev, reason: e.target.value }))}
                   placeholder="Please provide a reason for suspending this user..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                   rows={3}
                   required
                 />

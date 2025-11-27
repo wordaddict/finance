@@ -87,13 +87,13 @@ export default function VerifyPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {status === 'success' && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
               <p className="text-green-800 text-sm">{message}</p>
             </div>
           )}
           
           {status === 'error' && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}

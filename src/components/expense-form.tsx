@@ -515,7 +515,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               />
             </div>
@@ -528,7 +528,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 id="team"
                 value={team}
                 onChange={(e) => setTeam(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               >
                 <option value="">Select a team</option>
@@ -548,7 +548,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 id="campus"
                 value={campus}
                 onChange={(e) => setCampus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               >
                 <option value="">Select a campus</option>
@@ -569,7 +569,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               />
             </div>
@@ -582,7 +582,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 id="urgency"
                 value={urgency}
                 onChange={(e) => setUrgency(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               >
                 <option value={1}>Not Urgent (Few months)</option>
                 <option value={2}>Urgent (This Month)</option>
@@ -620,7 +620,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                     type="date"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -636,7 +636,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                     type="text"
                     value={eventName}
                     onChange={(e) => setEventName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder="Enter event name"
                     required
                   />
@@ -659,7 +659,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                       const numericValue = value === '' ? 0 : parseFloat(value) || 0
                       setFullEventBudget(numericValue)
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     placeholder="0.00"
                     required
                   />
@@ -680,7 +680,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                   const existingAttachments = existingItemAttachments[item.id] || []
                   const hasAttachments = newAttachments.length > 0 || existingAttachments.length > 0
                   return (
-                  <div key={item.id} className={`border rounded-md p-4 ${!hasAttachments ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+                  <div key={item.id} className={`border rounded-lg p-4 ${!hasAttachments ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-medium text-sm">
                         Item {index + 1}
@@ -708,7 +708,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                             type="text"
                             value={item.description}
                             onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                             placeholder="Budget item name"
                             required
                           />
@@ -720,7 +720,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                           <select
                             value={item.category}
                             onChange={(e) => updateItem(item.id, 'category', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                             required
                           >
                             <option value="">Select a category</option>
@@ -753,7 +753,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                               }
                             }}
                             placeholder="1"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                             required
                           />
                         </div>
@@ -772,7 +772,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                               updateItem(item.id, 'unitPrice', numericValue)
                             }}
                             placeholder="0.00"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                             required
                           />
                         </div>
@@ -799,7 +799,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                         multiple
                         accept="image/jpeg,image/jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.oasis.opendocument.spreadsheet,.xlsx,.xls,.csv,.ods"
                         onChange={(e) => handleItemFileChange(item.id, e)}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm ${
                           (!itemAttachments[item.id] || itemAttachments[item.id].length === 0) 
                             ? 'border-red-300 bg-red-50' 
                             : 'border-gray-300'
@@ -874,7 +874,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                   + Add Another Item
                 </Button>
               </div>
-              <div className="mt-4 p-3 bg-gray-50 rounded-md">
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total Amount:</span>
                   <span className={`text-lg font-bold ${isEvent && fullEventBudget > 0 && Math.abs(totalAmount - fullEventBudget) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
@@ -911,7 +911,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                   multiple
                   accept="image/jpeg,image/jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/vnd.oasis.opendocument.spreadsheet,.xlsx,.xls,.csv,.ods"
                   onChange={handleNonItemizedFileChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Allowed formats: JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, OpenDocument (.ods), and Google Sheets (export as Excel or CSV). Maximum size: 10MB per file.

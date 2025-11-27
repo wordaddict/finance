@@ -39,8 +39,8 @@ export function DenialModal({ isOpen, onClose, onConfirm, expenseTitle }: Denial
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -60,7 +60,7 @@ export function DenialModal({ isOpen, onClose, onConfirm, expenseTitle }: Denial
             <p className="text-sm text-gray-600 mb-2">
               You are about to deny the following expense request:
             </p>
-            <p className="font-medium text-gray-900 bg-gray-50 p-3 rounded-md">
+            <p className="font-medium text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-200">
               {expenseTitle}
             </p>
           </div>
@@ -74,7 +74,7 @@ export function DenialModal({ isOpen, onClose, onConfirm, expenseTitle }: Denial
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Please provide a reason for denying this expense request..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
               rows={4}
               required
             />

@@ -121,7 +121,7 @@ export function Navigation({ user }: NavigationProps) {
               variant="ghost"
               size="sm"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="xl:hidden flex-shrink-0 p-2 hover:bg-gray-100 rounded-xl transition-colors"
             >
               <div className="relative w-6 h-6 flex flex-col justify-center items-center">
                 <span className={`block h-0.5 w-6 bg-gray-600 transition-all duration-300 ${mobileMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`} />
@@ -172,7 +172,7 @@ export function Navigation({ user }: NavigationProps) {
                     variant="ghost"
                     size="sm"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-2 hover:bg-gray-200 rounded-full"
+                    className="p-2 hover:bg-gray-200 rounded-xl transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </Button>

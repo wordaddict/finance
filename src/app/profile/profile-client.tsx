@@ -133,7 +133,7 @@ export function ProfileClient({ user }: ProfileClientProps) {
                   value={zelle}
                   onChange={(e) => setZelle(e.target.value)}
                   placeholder="Enter your email or phone number for Zelle"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                     zelle && !isValidZelle(zelle) ? 'border-red-300' : 'border-gray-300'
                   }`}
                 />
@@ -158,13 +158,13 @@ export function ProfileClient({ user }: ProfileClientProps) {
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
                 {error}
               </div>
             )}
 
             {message && (
-              <div className="text-green-600 text-sm bg-green-50 p-3 rounded-md">
+              <div className="text-green-600 text-sm bg-green-50 p-3 rounded-lg border border-green-200">
                 {message}
               </div>
             )}
@@ -184,7 +184,7 @@ export function ProfileClient({ user }: ProfileClientProps) {
 
       <Card className="mt-6">
         <CardContent className="pt-6">
-          <div className="bg-blue-50 p-4 rounded-md">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h3 className="font-medium text-blue-900 mb-2">About Zelle</h3>
             <p className="text-sm text-blue-800">
               Zelle is a digital payment network used by many banks and credit unions. 

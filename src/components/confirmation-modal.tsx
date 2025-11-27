@@ -56,7 +56,7 @@ export function ConfirmationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className={`w-full max-w-md ${styles.border}`}>
+      <Card className={`w-full max-w-md ${styles.border} rounded-2xl shadow-2xl`}>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">

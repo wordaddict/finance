@@ -116,7 +116,7 @@ export function Dashboard({ user }: DashboardProps) {
 
       {/* Stats Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Approved
@@ -133,7 +133,7 @@ export function Dashboard({ user }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Pending Requests
@@ -150,7 +150,7 @@ export function Dashboard({ user }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               This Month
@@ -167,7 +167,7 @@ export function Dashboard({ user }: DashboardProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Teams
@@ -187,7 +187,7 @@ export function Dashboard({ user }: DashboardProps) {
 
       {/* Team Breakdown */}
       {stats?.teamBreakdown && stats.teamBreakdown.length > 0 && (
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle>Team Breakdown</CardTitle>
             <CardDescription>
@@ -216,7 +216,7 @@ export function Dashboard({ user }: DashboardProps) {
 
       {/* Recent Expenses */}
       {stats?.recentExpenses && stats.recentExpenses.length > 0 && (
-        <Card>
+        <Card className="rounded-xl shadow-sm">
           <CardHeader>
             <CardTitle>Recent Expenses</CardTitle>
             <CardDescription>
