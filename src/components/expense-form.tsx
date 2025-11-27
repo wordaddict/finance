@@ -25,9 +25,10 @@ interface ExpenseFormProps {
   onSuccess?: () => void
   onCancel?: () => void
   editExpense?: any // Expense object for editing
+  noModal?: boolean // If true, don't render the modal wrapper (for use in existing modals)
 }
 
-export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }: ExpenseFormProps) {
+export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, noModal = false }: ExpenseFormProps) {
   const [title, setTitle] = useState('')
   const [team, setTeam] = useState('')
   const [campus, setCampus] = useState('')
@@ -39,8 +40,10 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
   const [fullEventBudget, setFullEventBudget] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [itemAttachments, setItemAttachments] = useState<Record<string, File[]>>({}) // Attachments per item
-  const [nonItemizedAttachments, setNonItemizedAttachments] = useState<File[]>([]) // For expenses without items (backward compatibility)
+  const [itemAttachments, setItemAttachments] = useState<Record<string, File[]>>({}) // New file uploads per item
+  const [nonItemizedAttachments, setNonItemizedAttachments] = useState<File[]>([]) // New file uploads for expenses without items (backward compatibility)
+  const [existingItemAttachments, setExistingItemAttachments] = useState<Record<string, any[]>>({}) // Existing attachments from database per item
+  const [existingNonItemizedAttachments, setExistingNonItemizedAttachments] = useState<any[]>([]) // Existing attachments from database (backward compatibility)
   const [items, setItems] = useState<ExpenseItem[]>([
     { id: '1', description: '', category: '', quantity: 1, unitPrice: 0, amount: 0 }
   ])
@@ -79,6 +82,28 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
           amount: (item.amountCents || 0) / 100,
         }))
         setItems(formattedItems)
+      }
+
+      // Populate existing attachments
+      if (editExpense.attachments && editExpense.attachments.length > 0) {
+        const itemAttachmentsMap: Record<string, any[]> = {}
+        const nonItemized: any[] = []
+
+        editExpense.attachments.forEach((attachment: any) => {
+          if (attachment.itemId) {
+            // Attachment belongs to an item
+            if (!itemAttachmentsMap[attachment.itemId]) {
+              itemAttachmentsMap[attachment.itemId] = []
+            }
+            itemAttachmentsMap[attachment.itemId].push(attachment)
+          } else {
+            // Non-itemized attachment
+            nonItemized.push(attachment)
+          }
+        })
+
+        setExistingItemAttachments(itemAttachmentsMap)
+        setExistingNonItemizedAttachments(nonItemized)
       }
     }
   }, [editExpense])
@@ -187,10 +212,11 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
         return
       }
 
-      // Validate that all items have at least one attachment
+      // Validate that all items have at least one attachment (existing or new)
       const itemsWithoutAttachments = items.filter(item => {
-        const attachments = itemAttachments[item.id] || []
-        return attachments.length === 0
+        const newAttachments = itemAttachments[item.id] || []
+        const existingAttachments = existingItemAttachments[item.id] || []
+        return newAttachments.length === 0 && existingAttachments.length === 0
       })
       if (itemsWithoutAttachments.length > 0) {
         const itemNumbers = itemsWithoutAttachments.map((item, index) => {
@@ -229,7 +255,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
         }
       }
 
-      // Upload attachments per item
+      // Upload new attachments per item
       const uploadedAttachments = []
       if (items.length > 0) {
         for (const item of items) {
@@ -241,6 +267,16 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
               itemId: item.id, // Will be set to the actual item ID after creation
             })
           }
+          // Include existing attachments that weren't removed
+          const existingAtts = existingItemAttachments[item.id] || []
+          for (const existingAtt of existingAtts) {
+            uploadedAttachments.push({
+              publicId: existingAtt.publicId,
+              secureUrl: existingAtt.secureUrl,
+              mimeType: existingAtt.mimeType,
+              itemId: item.id,
+            })
+          }
         }
       } else {
         // Non-itemized expense (backward compatibility)
@@ -249,6 +285,15 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
           uploadedAttachments.push({
             ...uploadResult,
             itemId: null, // No item ID for non-itemized
+          })
+        }
+        // Include existing non-itemized attachments that weren't removed
+        for (const existingAtt of existingNonItemizedAttachments) {
+          uploadedAttachments.push({
+            publicId: existingAtt.publicId,
+            secureUrl: existingAtt.secureUrl,
+            mimeType: existingAtt.mimeType,
+            itemId: null,
           })
         }
       }
@@ -273,13 +318,23 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
         eventName: isEvent && eventName ? eventName : null,
         fullEventBudgetCents: isEvent && fullEventBudget > 0 ? Math.round(fullEventBudget * 100) : null,
         attachments: uploadedAttachments,
-        items: items.map(item => ({
-          description: item.description,
-          category: item.category || null,
-          quantity: item.quantity,
-          unitPriceCents: Math.round(item.unitPrice * 100),
-          amountCents: Math.round(item.amount * 100),
-        })),
+        items: items.map(item => {
+          // Include item ID if it's an existing item (UUID format)
+          // This helps the backend distinguish between existing and new items
+          const itemData: any = {
+            description: item.description,
+            category: item.category || null,
+            quantity: item.quantity,
+            unitPriceCents: Math.round(item.unitPrice * 100),
+            amountCents: Math.round(item.amount * 100),
+          }
+          // If item.id is a UUID (existing item from database), include it
+          // UUIDs are 36 characters with dashes: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+          if (item.id && item.id.length === 36 && item.id.includes('-')) {
+            itemData.id = item.id
+          }
+          return itemData
+        }),
       }
 
       // Add expense ID for updates
@@ -415,13 +470,23 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
     }))
   }
 
+  const removeExistingItemAttachment = (itemId: string, attachmentId: string) => {
+    setExistingItemAttachments(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || []).filter((att: any) => att.id !== attachmentId)
+    }))
+  }
+
   const removeNonItemizedAttachment = (index: number) => {
     setNonItemizedAttachments(prev => prev.filter((_, i) => i !== index))
   }
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+  const removeExistingNonItemizedAttachment = (attachmentId: string) => {
+    setExistingNonItemizedAttachments(prev => prev.filter((att: any) => att.id !== attachmentId))
+  }
+
+  const formContent = (
+    <Card className={`w-full max-w-2xl ${noModal ? '' : 'max-h-[90vh]'} overflow-y-auto`}>
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -432,9 +497,11 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                 {editExpense ? 'Update your expense request' : 'Submit a new expense request for approval'}
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
+            {!noModal && (
+              <Button variant="outline" size="sm" onClick={onClose}>
+                <X className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -609,7 +676,9 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
               </label>
               <div className="space-y-4">
                 {items.map((item, index) => {
-                  const hasAttachments = itemAttachments[item.id] && itemAttachments[item.id].length > 0
+                  const newAttachments = itemAttachments[item.id] || []
+                  const existingAttachments = existingItemAttachments[item.id] || []
+                  const hasAttachments = newAttachments.length > 0 || existingAttachments.length > 0
                   return (
                   <div key={item.id} className={`border rounded-md p-4 ${!hasAttachments ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-3">
@@ -739,6 +808,37 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                       <p className="text-xs text-gray-400 mt-1">
                         JPG, PNG, PDF, Excel, CSV, ODS. Max 10MB per file. <span className="text-red-500">At least one file is required.</span>
                       </p>
+                      {/* Existing attachments */}
+                      {existingItemAttachments[item.id] && existingItemAttachments[item.id].length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {existingItemAttachments[item.id].map((attachment: any) => (
+                            <div key={attachment.id} className="flex items-center justify-between bg-blue-50 p-2 rounded text-xs border border-blue-200">
+                              <div className="flex items-center space-x-2">
+                                <FileText className="w-3 h-3 text-blue-500" />
+                                <a 
+                                  href={attachment.secureUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 hover:underline"
+                                >
+                                  {attachment.secureUrl.split('/').pop() || 'View attachment'}
+                                </a>
+                                <span className="text-xs text-gray-500">(existing)</span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeExistingItemAttachment(item.id, attachment.id)}
+                                className="h-6 px-2"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* New file uploads */}
                       {itemAttachments[item.id] && itemAttachments[item.id].length > 0 && (
                         <div className="mt-2 space-y-1">
                           {itemAttachments[item.id].map((file, fileIndex) => (
@@ -746,6 +846,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                               <div className="flex items-center space-x-2">
                                 <FileText className="w-3 h-3 text-gray-500" />
                                 <span className="text-xs">{file.name}</span>
+                                <span className="text-xs text-gray-500">(new)</span>
                               </div>
                               <Button
                                 type="button"
@@ -815,6 +916,36 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                 <p className="text-xs text-gray-500 mt-1">
                   Allowed formats: JPG, PNG, PDF, Excel (.xlsx, .xls), CSV, OpenDocument (.ods), and Google Sheets (export as Excel or CSV). Maximum size: 10MB per file.
                 </p>
+                {/* Existing non-itemized attachments */}
+                {existingNonItemizedAttachments.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {existingNonItemizedAttachments.map((attachment: any) => (
+                      <div key={attachment.id} className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-200">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-blue-500" />
+                          <a 
+                            href={attachment.secureUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            {attachment.secureUrl.split('/').pop() || 'View attachment'}
+                          </a>
+                          <span className="text-xs text-gray-500">(existing)</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeExistingNonItemizedAttachment(attachment.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* New non-itemized file uploads */}
                 {nonItemizedAttachments.length > 0 && (
                   <div className="mt-2 space-y-2">
                     {nonItemizedAttachments.map((file, index) => (
@@ -822,6 +953,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
                         <div className="flex items-center space-x-2">
                           <FileText className="w-4 h-4 text-gray-500" />
                           <span className="text-sm">{file.name}</span>
+                          <span className="text-xs text-gray-500">(new)</span>
                         </div>
                         <Button
                           type="button"
@@ -853,6 +985,15 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense }:
           </form>
         </CardContent>
       </Card>
+  )
+
+  if (noModal) {
+    return formContent
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      {formContent}
     </div>
   )
 }

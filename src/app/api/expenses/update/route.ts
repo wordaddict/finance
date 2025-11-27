@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
 import { EXPENSE_CATEGORY_VALUES, TEAM_VALUES, CAMPUS_VALUES } from '@/lib/constants'
+import { sendEmailsWithRateLimit, generateExpenseSubmittedEmail } from '@/lib/email'
 
 const updateExpenseSchema = z.object({
   expenseId: z.string().uuid(),
@@ -22,6 +23,7 @@ const updateExpenseSchema = z.object({
     mimeType: z.string(),
   })).optional(),
   items: z.array(z.object({
+    id: z.string().uuid().optional(), // Optional ID for existing items
     description: z.string().min(1),
     category: z.string().optional().nullable(),
     quantity: z.number().positive(),
@@ -96,6 +98,76 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Check if this is a change request for an approved expense (adding items)
+    // We need to check the status history to see if it was previously APPROVED
+    const statusHistory = await db.statusEvent.findFirst({
+      where: {
+        expenseId: data.expenseId,
+        to: 'APPROVED',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    const wasApproved = statusHistory !== null && existingExpense.status === 'CHANGE_REQUESTED'
+    
+    // If this was an approved expense and we're adding items, preserve existing items
+    // Otherwise, replace all items (normal edit flow)
+    let itemsUpdate: any
+    if (wasApproved) {
+      // For change requests on approved expenses: keep existing items, add new ones
+      // The frontend should send all items (existing + new), but we'll identify new ones
+      // by checking if they have IDs that match existing items
+      const existingItemIds = existingExpense.items.map(item => item.id)
+      
+      // Separate items into existing (to keep) and new (to add)
+      const itemsToUpdate = data.items.filter((item: any) => 
+        item.id && existingItemIds.includes(item.id)
+      )
+      const itemsToAdd = data.items.filter((item: any) => 
+        !item.id || !existingItemIds.includes(item.id)
+      )
+
+      // Update existing items if needed, and create new ones
+      // Note: We use updateMany for bulk updates, but Prisma doesn't support updateMany with different data
+      // So we'll update items individually and then create new ones
+      for (const item of itemsToUpdate) {
+        await db.expenseItem.update({
+          where: { id: item.id },
+          data: {
+            description: item.description,
+            category: item.category || null,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            amountCents: item.amountCents,
+          } as any,
+        })
+      }
+
+      itemsUpdate = {
+        create: itemsToAdd.map((item: any) => ({
+          description: item.description,
+          category: item.category || null,
+          quantity: item.quantity,
+          unitPriceCents: item.unitPriceCents,
+          amountCents: item.amountCents,
+        })),
+      }
+    } else {
+      // Normal edit: replace all items
+      itemsUpdate = {
+        deleteMany: {}, // Delete all existing items
+        create: data.items.map((item: any) => ({
+          description: item.description,
+          category: item.category || null,
+          quantity: item.quantity,
+          unitPriceCents: item.unitPriceCents,
+          amountCents: item.amountCents,
+        })),
+      }
+    }
+
     // Update the expense request
     const updatedExpense = await db.expenseRequest.update({
       where: { id: data.expenseId },
@@ -112,17 +184,7 @@ export async function PUT(request: NextRequest) {
         fullEventBudgetCents: data.fullEventBudgetCents || null,
         status: 'SUBMITTED', // Reset to submitted when updated
         updatedAt: new Date(),
-        // Clear existing items and create new ones
-        items: {
-          deleteMany: {}, // Delete all existing items
-          create: data.items.map(item => ({
-            description: item.description,
-            category: item.category || null,
-            quantity: item.quantity,
-            unitPriceCents: item.unitPriceCents,
-            amountCents: item.amountCents,
-          })),
-        },
+        items: itemsUpdate,
         // Update attachments if provided
         attachments: data.attachments ? {
           deleteMany: {}, // Delete existing attachments
@@ -132,7 +194,7 @@ export async function PUT(request: NextRequest) {
             mimeType: attachment.mimeType,
           })),
         } : undefined,
-      },
+      } as any,
       include: {
         requester: true,
         items: true,
@@ -146,9 +208,42 @@ export async function PUT(request: NextRequest) {
         from: existingExpense.status,
         to: 'SUBMITTED',
         actorId: user.id,
-        reason: 'Expense request updated and resubmitted',
+        reason: wasApproved ? 'Expense updated with additional items after change request' : 'Expense request updated and resubmitted',
       },
     })
+
+    // Get approvers for notifications (exclude suspended users)
+    const approvers = await db.user.findMany({
+      where: {
+        role: {
+          in: ['ADMIN', 'CAMPUS_PASTOR'],
+        },
+        status: 'ACTIVE', // Only send to active users
+      },
+    })
+
+    // Prepare email templates for all approvers
+    const emailTemplates = approvers.map((approver: any) => {
+      const emailTemplate = generateExpenseSubmittedEmail(
+        approver.name || approver.email,
+        updatedExpense.title,
+        updatedExpense.amountCents,
+        updatedExpense.requester?.name || updatedExpense.requester?.email || 'Unknown',
+        process.env.NEXT_PUBLIC_APP_URL!
+      )
+      emailTemplate.to = approver.email
+      emailTemplate.subject = wasApproved 
+        ? `Expense Updated with Additional Items: ${updatedExpense.title}`
+        : `Expense Request Updated: ${updatedExpense.title}`
+      return emailTemplate
+    })
+
+    // Send notifications to approvers with rate limiting (500ms delay = 2 emails per second)
+    const emailResults = await sendEmailsWithRateLimit(emailTemplates, 500)
+    
+    if (emailResults.failed > 0) {
+      console.warn(`Failed to send ${emailResults.failed} out of ${approvers.length} notification emails:`, emailResults.errors)
+    }
 
     return NextResponse.json({
       message: 'Expense request updated successfully',

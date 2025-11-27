@@ -153,6 +153,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
     isOpen: false,
     expense: null
   })
+  const [changeRequestModal, setChangeRequestModal] = useState<{
+    isOpen: boolean
+    expenseId: string
+    expenseTitle: string
+    comment: string
+    processing: boolean
+  }>({
+    isOpen: false,
+    expenseId: '',
+    expenseTitle: '',
+    comment: '',
+    processing: false
+  })
   const [reportViewModal, setReportViewModal] = useState<{
     isOpen: boolean
     report: any | null
@@ -486,6 +499,60 @@ export function ExpensesList({ user }: ExpensesListProps) {
       expenseId,
       expenseTitle,
     })
+  }
+
+  const openChangeRequestModal = (expenseId: string, expenseTitle: string) => {
+    setChangeRequestModal({
+      isOpen: true,
+      expenseId,
+      expenseTitle,
+      comment: '',
+      processing: false
+    })
+  }
+
+  const handleRequestChange = async () => {
+    if (!changeRequestModal.comment.trim()) {
+      setError('Please provide a reason for requesting changes')
+      return
+    }
+
+    try {
+      setChangeRequestModal(prev => ({ ...prev, processing: true }))
+      setError('')
+      
+      const response = await fetch('/api/expenses/request-change', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          expenseId: changeRequestModal.expenseId,
+          comment: changeRequestModal.comment.trim()
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage('Change request submitted successfully. You can now add more items to this expense.')
+        setChangeRequestModal({
+          isOpen: false,
+          expenseId: '',
+          expenseTitle: '',
+          comment: '',
+          processing: false
+        })
+        fetchExpenses() // Refresh the list
+      } else {
+        setError(data.error || 'Failed to submit change request')
+      }
+    } catch (error) {
+      console.error('Failed to request change:', error)
+      setError('Failed to submit change request')
+    } finally {
+      setChangeRequestModal(prev => ({ ...prev, processing: false }))
+    }
   }
 
   const openViewModal = (expense: Expense) => {
@@ -1144,6 +1211,17 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           </Button>
                         )}
                       </>
+                    )}
+                    {expense.status === 'APPROVED' && expense.requester.email === user.email && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openChangeRequestModal(expense.id, expense.title)}
+                        className="flex-1 sm:flex-none bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        <span className="hidden sm:inline">Request Change</span>
+                      </Button>
                     )}
                     {(expense.status === 'APPROVED' || expense.status === 'PARTIALLY_APPROVED') && user.role === 'ADMIN' && (
                       <Button 
@@ -1911,6 +1989,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 }}
                 onCancel={() => setEditModal({ isOpen: false, expense: null })}
                 editExpense={editModal.expense}
+                noModal={true}
               />
             </div>
           </div>
@@ -2687,6 +2766,85 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   {expenseTypeModal.processing ? 'Updating...' : 'Update Category'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Request Modal */}
+      {changeRequestModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Request Change</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setChangeRequestModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    comment: '',
+                    processing: false
+                  })}
+                  disabled={changeRequestModal.processing}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {changeRequestModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Please provide a reason for requesting changes to this approved expense. You will be able to add more items after submitting this request.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason/Comment <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={changeRequestModal.comment}
+                  onChange={(e) => setChangeRequestModal(prev => ({ 
+                    ...prev, 
+                    comment: e.target.value 
+                  }))}
+                  placeholder="Enter reason for requesting changes..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="mb-4 text-red-600 text-sm">{error}</div>
+              )}
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setChangeRequestModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    comment: '',
+                    processing: false
+                  })}
+                  disabled={changeRequestModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRequestChange}
+                  disabled={changeRequestModal.processing || !changeRequestModal.comment.trim()}
+                >
+                  {changeRequestModal.processing ? 'Submitting...' : 'Submit Request'}
                 </Button>
               </div>
             </div>

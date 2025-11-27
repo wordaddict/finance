@@ -334,6 +334,47 @@ export function generateExpenseReportCreatedEmail(
   }
 }
 
+export function generateExpenseChangeRequestedEmail(
+  recipientName: string,
+  expenseTitle: string,
+  amount: number,
+  requesterName: string,
+  comment: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+  
+  return {
+    to: '',
+    subject: `Change Requested for Approved Expense: ${expenseTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Change Requested for Approved Expense</h2>
+        <p>Hello ${recipientName},</p>
+        <p>A requester has requested to add more items to an approved expense:</p>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <h3>${expenseTitle}</h3>
+          <p><strong>Current Amount:</strong> $${(amount / 100).toFixed(2)}</p>
+          <p><strong>Requested by:</strong> ${requesterName}</p>
+          <div style="background: #fff; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+            <p><strong>Reason/Comment:</strong></p>
+            <p style="margin: 10px 0; font-style: italic;">"${comment}"</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #ffc107; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Review Change Request
+          </a>
+        </div>
+        <p>The expense status has been changed to "Change Requested" and the requester can now add more items. Please review the updated expense once they submit the changes.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Change Requested for Approved Expense: ${expenseTitle}\n\nCurrent Amount: $${(amount / 100).toFixed(2)}\nRequested by: ${requesterName}\n\nReason/Comment: "${comment}"\n\nThe expense status has been changed to "Change Requested" and the requester can now add more items. Please review the updated expense once they submit the changes.\n\nReview at: ${expenseUrl}`,
+  }
+}
+
 export function generatePastorRemarkAddedEmail(
   recipientName: string,
   expenseTitle: string,
