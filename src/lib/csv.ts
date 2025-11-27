@@ -51,14 +51,14 @@ export interface ExpenseWithDetails {
   }>
   approvals?: Array<{
     id: string
-    status: string
-    approvedAmountCents: number | null
+    stage: number
+    decision: string | null
     comment: string | null
+    decidedAt: Date | null
     approver: {
       name: string | null
       email: string
     }
-    createdAt: Date
   }>
   pastorRemarks?: Array<{
     id: string
@@ -71,7 +71,7 @@ export interface ExpenseWithDetails {
   }>
   reports?: Array<{
     id: string
-    totalAmountCents: number
+    totalApprovedAmount: number | null
     createdAt: Date
     notes?: Array<{
       id: string
@@ -149,7 +149,7 @@ export function generateCSV(expenses: ExpenseWithDetails[]): string {
 
     const approvalsCount = expense.approvals?.length || 0
     const approvalsDetails = expense.approvals?.map(a => 
-      `${a.approver.name || a.approver.email}: ${a.status} ($${(a.approvedAmountCents || 0) / 100})${a.comment ? ` - ${a.comment}` : ''}`
+      `${a.approver.name || a.approver.email}: Stage ${a.stage} - ${a.decision || 'PENDING'}${a.decidedAt ? ` (${a.decidedAt.toISOString().split('T')[0]})` : ''}${a.comment ? ` - ${a.comment}` : ''}`
     ).join(' | ') || ''
 
     const pastorRemarksCount = expense.pastorRemarks?.length || 0
@@ -162,7 +162,8 @@ export function generateCSV(expenses: ExpenseWithDetails[]): string {
       const reportNotes = r.notes?.map(n => 
         `${n.author.name || n.author.email}: ${n.note}`
       ).join('; ') || ''
-      return `Report #${r.id}: $${(r.totalAmountCents / 100).toFixed(2)}${reportNotes ? ` [Notes: ${reportNotes}]` : ''}`
+      const approvedAmount = r.totalApprovedAmount ? (r.totalApprovedAmount / 100).toFixed(2) : '0.00'
+      return `Report #${r.id}: $${approvedAmount}${reportNotes ? ` [Notes: ${reportNotes}]` : ''}`
     }).join(' | ') || ''
 
     const row = [
@@ -276,7 +277,7 @@ export function streamCSV(
     // Format approvals
     const approvalsCount = expense.approvals?.length || 0
     const approvalsDetails = expense.approvals?.map(a => 
-      `${a.approver.name || a.approver.email}: ${a.status} ($${(a.approvedAmountCents || 0) / 100})${a.comment ? ` - ${a.comment}` : ''}`
+      `${a.approver.name || a.approver.email}: Stage ${a.stage} - ${a.decision || 'PENDING'}${a.decidedAt ? ` (${a.decidedAt.toISOString().split('T')[0]})` : ''}${a.comment ? ` - ${a.comment}` : ''}`
     ).join(' | ') || ''
 
     // Format pastor remarks
@@ -291,7 +292,8 @@ export function streamCSV(
       const reportNotes = r.notes?.map(n => 
         `${n.author.name || n.author.email}: ${n.note}`
       ).join('; ') || ''
-      return `Report #${r.id}: $${(r.totalAmountCents / 100).toFixed(2)}${reportNotes ? ` [Notes: ${reportNotes}]` : ''}`
+      const approvedAmount = r.totalApprovedAmount ? (r.totalApprovedAmount / 100).toFixed(2) : '0.00'
+      return `Report #${r.id}: $${approvedAmount}${reportNotes ? ` [Notes: ${reportNotes}]` : ''}`
     }).join(' | ') || ''
 
     const row = [
