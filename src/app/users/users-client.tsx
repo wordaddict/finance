@@ -275,7 +275,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
           <Card>
             <CardContent className="p-6 text-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-              <p className="text-gray-600">You don't have permission to manage users.</p>
+              <p className="text-gray-600">You don&apos;t have permission to manage users.</p>
             </CardContent>
           </Card>
         </div>
@@ -526,7 +526,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                   <strong>User:</strong> {denyModal.userName || 'Unknown User'}
                 </p>
                 <p className="text-sm text-red-600 mb-2">
-                  <strong>Warning:</strong> This action will permanently delete the user's account and cannot be undone.
+                  <strong>Warning:</strong> This action will permanently delete the user&apos;s account and cannot be undone.
                 </p>
                 <p className="text-sm text-gray-500">
                   Please provide a reason for the denial (this will be sent to the user via email).
@@ -589,7 +589,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                   <strong>User:</strong> {suspendModal.userName || 'Unknown User'}
                 </p>
                 <p className="text-sm text-orange-600 mb-2">
-                  <strong>Warning:</strong> This will suspend the user's account and prevent them from accessing the system.
+                  <strong>Warning:</strong> This will suspend the user&apos;s account and prevent them from accessing the system.
                 </p>
                 <p className="text-sm text-gray-500">
                   Please provide a reason for the suspension (this will be sent to the user via email).

@@ -125,7 +125,7 @@ export default function LoginPage() {
           </form>
           <div className="mt-4 text-center">
             <a href="/register" className="text-blue-600 hover:underline text-sm">
-              Don't have an account? Register here
+              Don&apos;t have an account? Register here
             </a>
           </div>
         </CardContent>

@@ -70,6 +70,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
     isOpen: false,
     report: null,
   })
+  const selectedReport = viewModal.report ?? null
 
   useEffect(() => {
     fetchReports()
@@ -242,7 +243,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
       </div>
 
       {/* View Modal */}
-      {viewModal.isOpen && viewModal.report && (
+      {viewModal.isOpen && selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-4 sm:p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
@@ -258,9 +259,9 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
             
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-base sm:text-lg">{viewModal.report.title}</h3>
+                <h3 className="font-semibold text-base sm:text-lg">{selectedReport.title}</h3>
                 <p className="text-sm text-gray-500">
-                  Report Date: {formatDate(viewModal.report.reportDate)}
+                  Report Date: {formatDate(selectedReport.reportDate)}
                 </p>
               </div>
 
@@ -269,44 +270,44 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                 <h4 className="font-semibold text-sm text-gray-700 mb-2">Related Expense</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-gray-500">Title:</span> {viewModal.report.expense.title}
+                    <span className="text-gray-500">Title:</span> {selectedReport.expense.title}
                   </div>
                   <div>
-                    <span className="text-gray-500">Requested Amount:</span> {formatCurrency(viewModal.report.expense.amountCents)}
+                    <span className="text-gray-500">Requested Amount:</span> {formatCurrency(selectedReport.expense.amountCents)}
                   </div>
                   <div>
-                    <span className="text-gray-500">Approved Amount:</span> <span className="font-semibold text-green-600">{formatCurrency(viewModal.report.totalApprovedAmount || viewModal.report.expense.amountCents)}</span>
+                    <span className="text-gray-500">Approved Amount:</span> <span className="font-semibold text-green-600">{formatCurrency(selectedReport.totalApprovedAmount || selectedReport.expense.amountCents)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Team:</span> {viewModal.report.expense.team}
+                    <span className="text-gray-500">Team:</span> {selectedReport.expense.team}
                   </div>
                   <div>
-                    <span className="text-gray-500">Campus:</span> {viewModal.report.expense.campus}
+                    <span className="text-gray-500">Campus:</span> {selectedReport.expense.campus}
                   </div>
-                  {viewModal.report.expense.eventDate && (
+                  {selectedReport.expense.eventDate && (
                     <div>
-                      <span className="text-gray-500">Event Date:</span> {formatDate(viewModal.report.expense.eventDate)}
+                      <span className="text-gray-500">Event Date:</span> {formatDate(selectedReport.expense.eventDate)}
                     </div>
                   )}
                   <div>
-                    <span className="text-gray-500">Requester:</span> {viewModal.report.expense.requester.name || viewModal.report.expense.requester.email}
+                    <span className="text-gray-500">Requester:</span> {selectedReport.expense.requester.name || selectedReport.expense.requester.email}
                   </div>
                 </div>
               </div>
 
               {/* Approved Items Details with Actual Amounts and Attachments */}
-              {viewModal.report.approvedItems && viewModal.report.approvedItems.length > 0 && (
+              {selectedReport.approvedItems && selectedReport.approvedItems.length > 0 && (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <h4 className="font-semibold text-sm text-green-800 mb-3">Report Items</h4>
                   <div className="space-y-3">
-                    {viewModal.report.approvedItems.map((item, index) => {
+                    {selectedReport.approvedItems.map((item, index) => {
                       const actualAmount = item.actualAmountCents ?? item.approvedAmountCents
                       const difference = actualAmount - item.approvedAmountCents
                       // Match attachments using originalItemId (the itemId stored in attachments matches the originalItemId)
-                      const itemAttachments = viewModal.report.attachments?.filter((att) => 
+                      const itemAttachments = selectedReport.attachments?.filter((att) => 
                         att.itemId && att.itemId === item.originalItemId && !att.isRefundReceipt
                       ) || []
-                      const itemRefundReceipts = viewModal.report.attachments?.filter((att) => 
+                      const itemRefundReceipts = selectedReport.attachments?.filter((att) => 
                         att.itemId && att.itemId === item.originalItemId && att.isRefundReceipt
                       ) || []
                       
@@ -435,20 +436,20 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Total Approved</p>
                         <p className="text-sm font-semibold text-green-600">
-                          {formatCurrency(viewModal.report.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0))}
+                          {formatCurrency(selectedReport.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0))}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Total Actual</p>
                         <p className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(viewModal.report.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0))}
+                          {formatCurrency(selectedReport.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0))}
                         </p>
                       </div>
                       <div className="col-span-2 pt-2 border-t border-gray-200">
                         <p className="text-xs text-gray-500 mb-1">Total Difference</p>
                         {(() => {
-                          const totalApproved = viewModal.report.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0)
-                          const totalActual = viewModal.report.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0)
+                          const totalApproved = selectedReport.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0)
+                          const totalActual = selectedReport.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0)
                           const totalDifference = totalActual - totalApproved
                           return (
                             <p className={`text-sm font-bold ${
@@ -472,15 +473,15 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
               <div>
                 <label className="text-sm font-medium text-gray-500">Report Content</label>
                 <p className="mt-1 p-3 bg-gray-50 rounded-lg text-sm sm:text-base whitespace-pre-wrap">
-                  {viewModal.report.content}
+                  {selectedReport.content}
                 </p>
               </div>
 
               {/* Non-itemized attachments (if any) - only show if there are no items or attachments without itemId */}
-              {viewModal.report.attachments && viewModal.report.attachments.length > 0 && (
+              {selectedReport.attachments && selectedReport.attachments.length > 0 && (
                 (() => {
                   // Only show as non-itemized if itemId is null/undefined (not set)
-                  const nonItemizedAttachments = viewModal.report.attachments.filter((att) => !att.itemId || att.itemId === null)
+                  const nonItemizedAttachments = selectedReport.attachments.filter((att) => !att.itemId || att.itemId === null)
                   if (nonItemizedAttachments.length > 0) {
                     return (
                       <div>
