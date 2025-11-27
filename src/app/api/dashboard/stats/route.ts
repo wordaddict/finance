@@ -6,6 +6,18 @@ import { canViewAllExpenses } from '@/lib/rbac'
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
+    const { searchParams } = new URL(request.url)
+
+    // Get filter parameters
+    const status = searchParams.get('status')
+    const team = searchParams.get('team')
+    const campus = searchParams.get('campus')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const urgency = searchParams.get('urgency')
+    const account = searchParams.get('account')
+    const expenseType = searchParams.get('expenseType')
+    const category = searchParams.get('category')
 
     // Get current month start and end dates
     const now = new Date()
@@ -17,55 +29,127 @@ export async function GET(request: NextRequest) {
       requesterId: user.id,
     }
 
-    // Get total approved expenses
+    // Build filter where clause
+    const filterWhere: any = { ...baseWhere }
+
+    if (status) {
+      filterWhere.status = status
+    }
+    if (team) {
+      filterWhere.team = team
+    }
+    if (campus) {
+      filterWhere.campus = campus
+    }
+    if (urgency) {
+      filterWhere.urgency = parseInt(urgency)
+    }
+    if (account) {
+      filterWhere.account = account
+    }
+    if (expenseType) {
+      filterWhere.expenseType = expenseType
+    }
+    if (category) {
+      filterWhere.category = category
+    }
+    // Date filter - only apply if dates are provided, otherwise use current month for monthly stats
+    const dateFilter: any = {}
+    if (startDate) {
+      dateFilter.gte = new Date(startDate)
+    } else {
+      // Default to current month start if no start date
+      dateFilter.gte = currentMonthStart
+    }
+    if (endDate) {
+      const end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+      dateFilter.lte = end
+    } else {
+      // Default to current month end if no end date
+      dateFilter.lte = currentMonthEnd
+    }
+    filterWhere.createdAt = dateFilter
+
+    // Get total approved expenses (with filters)
+    const approvedWhere = { ...filterWhere, status: 'APPROVED' }
     const totalApproved = await db.expenseRequest.aggregate({
-      where: {
-        ...baseWhere,
-        status: 'APPROVED',
-      },
+      where: approvedWhere,
       _sum: {
         amountCents: true,
       },
     })
 
-    // Get pending count
+    // Get pending count (with filters, but status override)
+    const pendingWhere = { ...filterWhere, status: 'SUBMITTED' }
     const pendingCount = await db.expenseRequest.count({
-      where: {
-        ...baseWhere,
-        status: 'SUBMITTED',
-      },
+      where: pendingWhere,
     })
 
-    // Get monthly spend
-    const monthlySpend = await db.expenseRequest.aggregate({
-      where: {
-        ...baseWhere,
-        status: {
-          in: ['APPROVED', 'PAID'],
-        },
-        createdAt: {
-          gte: currentMonthStart,
-          lte: currentMonthEnd,
-        },
+    // Get monthly spend (with filters)
+    const monthlySpendWhere = {
+      ...filterWhere,
+      status: {
+        in: ['APPROVED', 'PAID'],
       },
+    }
+    const monthlySpend = await db.expenseRequest.aggregate({
+      where: monthlySpendWhere,
       _sum: {
         amountCents: true,
       },
     })
 
-    // Get team breakdown for current month
+    // Get total paid amount
+    const totalPaid = await db.expenseRequest.aggregate({
+      where: {
+        ...filterWhere,
+        status: 'PAID',
+      },
+      _sum: {
+        paidAmountCents: true,
+      },
+    })
+
+    // Get total expenses count
+    const totalExpensesCount = await db.expenseRequest.count({
+      where: filterWhere,
+    })
+
+    // Get team breakdown (with filters)
+    const teamBreakdownWhere = {
+      ...filterWhere,
+      status: {
+        in: ['APPROVED', 'PAID'],
+      },
+    }
     const teamBreakdown = await db.expenseRequest.groupBy({
       by: ['team'],
-      where: {
-        ...baseWhere,
-        status: {
-          in: ['APPROVED', 'PAID'],
-        },
-        createdAt: {
-          gte: currentMonthStart,
-          lte: currentMonthEnd,
-        },
+      where: teamBreakdownWhere,
+      _sum: {
+        amountCents: true,
       },
+      _count: {
+        id: true,
+      },
+    })
+
+    // Get campus breakdown
+    const campusBreakdown = await db.expenseRequest.groupBy({
+      by: ['campus'],
+      where: teamBreakdownWhere,
+      _sum: {
+        amountCents: true,
+      },
+      _count: {
+        id: true,
+      },
+    })
+
+    // Get status breakdown
+    const statusBreakdown = await db.expenseRequest.groupBy({
+      by: ['status'],
+      where: filterWhere,
       _sum: {
         amountCents: true,
       },
@@ -83,9 +167,27 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Get recent expenses
+    // Get campus breakdown with names
+    const campusBreakdownWithNames = campusBreakdown.map(breakdown => {
+      return {
+        campusName: breakdown.campus,
+        total: breakdown._sum?.amountCents || 0,
+        count: breakdown._count?.id || 0,
+      }
+    })
+
+    // Get status breakdown
+    const statusBreakdownWithNames = statusBreakdown.map(breakdown => {
+      return {
+        statusName: breakdown.status,
+        total: breakdown._sum?.amountCents || 0,
+        count: breakdown._count?.id || 0,
+      }
+    })
+
+    // Get recent expenses (with filters)
     const recentExpenses = await db.expenseRequest.findMany({
-      where: baseWhere,
+      where: filterWhere,
       include: {
         requester: true,
       },
@@ -99,7 +201,11 @@ export async function GET(request: NextRequest) {
       totalApproved: totalApproved._sum.amountCents || 0,
       pendingCount,
       monthlySpend: monthlySpend._sum.amountCents || 0,
+      totalPaid: totalPaid._sum.paidAmountCents || 0,
+      totalExpensesCount,
       teamBreakdown: teamBreakdownWithNames,
+      campusBreakdown: campusBreakdownWithNames,
+      statusBreakdown: statusBreakdownWithNames,
       recentExpenses: recentExpenses.map(expense => ({
         id: expense.id,
         title: expense.title,
@@ -107,6 +213,7 @@ export async function GET(request: NextRequest) {
         status: expense.status,
         createdAt: expense.createdAt.toISOString(),
         teamName: expense.team,
+        campus: expense.campus,
       })),
     })
   } catch (error) {

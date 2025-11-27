@@ -17,20 +17,45 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const teamId = searchParams.get('teamId')
+    const team = searchParams.get('team')
+    const campus = searchParams.get('campus')
     const status = searchParams.get('status')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const urgency = searchParams.get('urgency')
+    const account = searchParams.get('account')
+    const expenseType = searchParams.get('expenseType')
+    const category = searchParams.get('category')
 
     // Build where clause
     const where: any = {}
     
-    if (teamId) {
-      where.teamId = teamId
+    if (team) {
+      where.team = team
+    }
+    
+    if (campus) {
+      where.campus = campus
     }
     
     if (status) {
       where.status = status
+    }
+    
+    if (urgency) {
+      where.urgency = parseInt(urgency)
+    }
+    
+    if (account) {
+      where.account = account
+    }
+    
+    if (expenseType) {
+      where.expenseType = expenseType
+    }
+    
+    if (category) {
+      where.category = category
     }
     
     if (startDate || endDate) {
@@ -39,23 +64,87 @@ export async function GET(request: NextRequest) {
         where.createdAt.gte = new Date(startDate)
       }
       if (endDate) {
-        where.createdAt.lte = new Date(endDate)
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        where.createdAt.lte = end
       }
     }
 
-    // Get expenses with related data
+    // Get expenses with all related data for rich CSV
     const expenses = await db.expenseRequest.findMany({
       where,
       include: {
-        requester: true,
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            zelle: true,
+          },
+        },
+        items: {
+          include: {
+            approvals: {
+              include: {
+                approver: {
+                  select: {
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        approvals: {
+          include: {
+            approver: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        pastorRemarks: {
+          include: {
+            pastor: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        reports: {
+          include: {
+            notes: {
+              include: {
+                author: {
+                  select: {
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        attachments: true,
       },
       orderBy: {
         createdAt: 'desc',
       },
     }) as ExpenseWithDetails[]
 
-    // Create streaming response
-    const filename = getCSVFilename('expenses')
+    // Create streaming response with filter info in filename
+    const filename = getCSVFilename('expenses', {
+      team,
+      campus,
+      status,
+      startDate,
+      endDate,
+    })
     
     const response = new Response(
       new ReadableStream({
