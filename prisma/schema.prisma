@@ -27,6 +27,7 @@ model User {
   pastorRemarks  PastorRemark[]
   verificationTokens VerificationToken[]
   expenseNotes   ExpenseNote[]
+  reportNotes    ReportNote[]
 }
 
 model Session {
@@ -251,6 +252,7 @@ model ExpenseReport {
   expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   attachments   ReportAttachment[]
   approvedItems ApprovedReportItem[]
+  notes         ReportNote[]
 }
 
 model ReportAttachment {
@@ -289,4 +291,17 @@ model ExpenseNote {
   author    User           @relation(fields: [authorId], references: [id])
   
   @@index([expenseId])
+}
+
+model ReportNote {
+  id        String         @id @default(uuid())
+  reportId  String
+  authorId  String
+  note      String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  report    ExpenseReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  author    User           @relation(fields: [authorId], references: [id])
+  
+  @@index([reportId])
 }

@@ -71,8 +71,34 @@ export async function GET(request: NextRequest) {
           },
           reports: {
             include: {
+              expense: {
+                include: {
+                  requester: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
               attachments: true,
               approvedItems: true,
+              notes: {
+                include: {
+                  author: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      role: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  createdAt: 'asc',
+                },
+              },
             },
           },
           expenseNotes: {
