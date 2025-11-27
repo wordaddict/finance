@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { requireAuth } from '@/lib/auth'
 import { sendEmailsWithRateLimit, generateExpenseSubmittedEmail } from '@/lib/email'
 import { sendSMS, generateExpenseSubmittedSMS } from '@/lib/sms'
@@ -72,35 +73,43 @@ export async function POST(request: NextRequest) {
 
     // Team validation is now handled by the enum schema
 
-    // Create expense request with items first
+    const expenseData = {
+      title: data.title,
+      amountCents: data.amountCents,
+      team: data.team,
+      requesterId: user.id,
+      campus: data.campus as any,
+      description: data.description,
+      category: data.category,
+      urgency: data.urgency,
+      eventDate: data.eventDate ? new Date(data.eventDate) : null,
+      eventName: data.eventName || null,
+      fullEventBudgetCents: data.fullEventBudgetCents || null,
+    } as Prisma.ExpenseRequestUncheckedCreateInput
+
+    // Create expense request first
     const expense = await db.expenseRequest.create({
-      data: {
-        title: data.title,
-        amountCents: data.amountCents,
-        team: data.team,
-        requesterId: user.id,
-        campus: data.campus as any,
-        description: data.description,
-        category: data.category,
-        urgency: data.urgency,
-        eventDate: data.eventDate ? new Date(data.eventDate) : null,
-        eventName: data.eventName || null,
-        fullEventBudgetCents: data.fullEventBudgetCents || null,
-        items: {
-          create: data.items.map(item => ({
+      data: expenseData,
+      include: {
+        requester: true,
+      },
+    })
+
+    // Create items separately so we can capture their IDs for attachments
+    const expenseItems = await Promise.all(
+      data.items.map(item =>
+        db.expenseItem.create({
+          data: {
+            expenseId: expense.id,
             description: item.description,
             category: item.category || null,
             quantity: item.quantity,
             unitPriceCents: item.unitPriceCents,
             amountCents: item.amountCents,
-          })),
-        },
-      },
-      include: {
-        requester: true,
-        items: true,
-      },
-    })
+          } as Prisma.ExpenseItemUncheckedCreateInput,
+        })
+      )
+    )
 
     // Create attachments with itemId mapping
     // The frontend sends temporary item IDs (like '1', '2'), we need to map them to actual item IDs
@@ -114,8 +123,8 @@ export async function POST(request: NextRequest) {
           const tempId = attachment.itemId
           // Try to parse as number and use as index (items are 1-indexed in frontend)
           const itemIndex = parseInt(tempId) - 1
-          if (itemIndex >= 0 && itemIndex < expense.items.length) {
-            itemId = expense.items[itemIndex].id
+          if (itemIndex >= 0 && itemIndex < expenseItems.length) {
+            itemId = expenseItems[itemIndex].id
           }
         }
         
@@ -183,7 +192,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Expense request created successfully',
-      expense,
+      expense: {
+        ...expense,
+        items: expenseItems,
+      },
     })
   } catch (error) {
     console.error('Create expense error:', error)
