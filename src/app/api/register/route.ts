@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
-import { sendEmail, generateEmailVerificationEmail } from '@/lib/email'
+import { sendEmail, generateEmailVerificationEmail, sendEmailsWithRateLimit, generatePendingAccountApprovalEmail } from '@/lib/email'
 import { randomBytes } from 'crypto'
-import { CAMPUS_VALUES } from '@/lib/constants'
+import { CAMPUS_VALUES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
 import { Campus } from '@prisma/client'
 
 const registerSchema = z.object({
@@ -81,6 +81,40 @@ export async function POST(request: NextRequest) {
     emailTemplate.to = normalizedEmail
 
     await sendEmail(emailTemplate)
+
+    // Notify all admins about the pending account approval
+    try {
+      const admins = await db.user.findMany({
+        where: {
+          role: 'ADMIN',
+          status: 'ACTIVE', // Only send to active admins
+        },
+      })
+
+      // Prepare email templates for all admins
+      const emailTemplates = admins.map((admin: any) => {
+        const emailTemplate = generatePendingAccountApprovalEmail(
+          admin.name || admin.email,
+          name.trim(),
+          normalizedEmail,
+          role === 'ADMIN' ? 'Admin' : role === 'CAMPUS_PASTOR' ? 'Campus Pastor' : 'Leader',
+          CAMPUS_DISPLAY_NAMES[campus as keyof typeof CAMPUS_DISPLAY_NAMES] || campus,
+          process.env.NEXT_PUBLIC_APP_URL!
+        )
+        emailTemplate.to = admin.email
+        return emailTemplate
+      })
+
+      // Send notifications to admins with rate limiting (500ms delay = 2 emails per second)
+      const emailResults = await sendEmailsWithRateLimit(emailTemplates, 500)
+      
+      if (emailResults.failed > 0) {
+        console.warn(`Failed to send ${emailResults.failed} out of ${admins.length} admin notification emails:`, emailResults.errors)
+      }
+    } catch (emailError) {
+      console.error('Failed to send admin notification emails:', emailError)
+      // Don't fail the registration if admin notification fails
+    }
 
     return NextResponse.json({
       message: 'Registration successful. Please check your email to verify your account before it can be approved by an administrator.',

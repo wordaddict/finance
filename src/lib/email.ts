@@ -271,6 +271,45 @@ export function generateUserApprovedEmail(
   }
 }
 
+export function generatePendingAccountApprovalEmail(
+  recipientName: string,
+  newUserName: string,
+  newUserEmail: string,
+  newUserRole: string,
+  newUserCampus: string,
+  baseUrl: string
+): EmailTemplate {
+  const usersUrl = `${baseUrl}/users`
+  
+  return {
+    to: '', // Will be set by caller
+    subject: `New Account Pending Approval: ${newUserName}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>New Account Pending Approval</h2>
+        <p>Hello ${recipientName},</p>
+        <p>A new user has registered and is waiting for approval:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>New User Details</h3>
+          <p><strong>Name:</strong> ${newUserName}</p>
+          <p><strong>Email:</strong> ${newUserEmail}</p>
+          <p><strong>Role:</strong> ${newUserRole}</p>
+          <p><strong>Campus:</strong> ${newUserCampus}</p>
+          <p><strong>Status:</strong> Pending Approval</p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${usersUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Review Pending Accounts
+          </a>
+        </div>
+        <p>Please log in to review and approve or deny this account request.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `New Account Pending Approval\n\nHello ${recipientName},\n\nA new user has registered and is waiting for approval:\n\nName: ${newUserName}\nEmail: ${newUserEmail}\nRole: ${newUserRole}\nCampus: ${newUserCampus}\nStatus: Pending Approval\n\nPlease log in to review and approve or deny this account request at: ${usersUrl}`,
+  }
+}
+
 export function generateUserDeniedEmail(
   recipientName: string,
   recipientEmail: string,
