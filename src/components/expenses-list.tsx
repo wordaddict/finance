@@ -2073,8 +2073,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     {reportViewModal.report.approvedItems.map((item: any, index: number) => {
                       const actualAmount = item.actualAmountCents ?? item.approvedAmountCents
                       const difference = actualAmount - item.approvedAmountCents
-                      const itemAttachments = reportViewModal.report.attachments?.filter((att: any) => att.itemId === item.id && !att.isRefundReceipt) || []
-                      const itemRefundReceipts = reportViewModal.report.attachments?.filter((att: any) => att.itemId === item.id && att.isRefundReceipt) || []
+                      // Match attachments using originalItemId (the itemId stored in attachments matches the originalItemId)
+                      // Ensure we only match attachments that have an itemId set (not null/undefined)
+                      const itemAttachments = reportViewModal.report.attachments?.filter((att: any) => 
+                        att.itemId && att.itemId === item.originalItemId && !att.isRefundReceipt
+                      ) || []
+                      const itemRefundReceipts = reportViewModal.report.attachments?.filter((att: any) => 
+                        att.itemId && att.itemId === item.originalItemId && att.isRefundReceipt
+                      ) || []
                       
                       return (
                         <div key={item.id} className="bg-white p-4 rounded border border-green-100">
@@ -2195,6 +2201,62 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     })}
                   </div>
                   
+                  {/* Check for orphaned attachments (attachments with itemId that don't match any item) */}
+                  {(() => {
+                    const allItemIds = new Set(reportViewModal.report.approvedItems.map((item: any) => item.originalItemId))
+                    const orphanedAttachments = reportViewModal.report.attachments?.filter((att: any) => 
+                      att.itemId && !allItemIds.has(att.itemId)
+                    ) || []
+                    
+                    if (orphanedAttachments.length > 0) {
+                      return (
+                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                          <p className="text-xs font-medium text-yellow-800 mb-2">
+                            ⚠️ Orphaned Attachments ({orphanedAttachments.length})
+                          </p>
+                          <p className="text-xs text-yellow-700 mb-2">
+                            These attachments are linked to items that are no longer in this report:
+                          </p>
+                          <div className="space-y-2">
+                            {orphanedAttachments.map((attachment: any) => (
+                              <div key={attachment.id} className="flex items-center justify-between p-2 bg-white rounded-md border border-yellow-200">
+                                <div className="flex items-center space-x-2">
+                                  {attachment.mimeType.startsWith('image/') ? (
+                                    <img
+                                      src={attachment.secureUrl}
+                                      alt="Orphaned attachment"
+                                      className="w-8 h-8 object-cover rounded border cursor-pointer"
+                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 bg-yellow-100 rounded border flex items-center justify-center">
+                                      <FileText className="w-4 h-4 text-yellow-600" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-xs font-medium">
+                                      {attachment.mimeType.startsWith('image/') ? 'Image' : 'Document'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">Item ID: {attachment.itemId}</p>
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                  className="text-xs"
+                                >
+                                  View
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
+                  
                   {/* Totals Summary */}
                   <div className="mt-4 pt-3 border-t border-green-200 bg-white p-3 rounded">
                     <div className="grid grid-cols-2 gap-3">
@@ -2237,7 +2299,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
               {/* Non-itemized attachments (if any) */}
               {reportViewModal.report.attachments && reportViewModal.report.attachments.length > 0 && (
                 (() => {
-                  const nonItemizedAttachments = reportViewModal.report.attachments.filter((att: any) => !att.itemId)
+                  // Only show as non-itemized if itemId is null/undefined (not set)
+                  const nonItemizedAttachments = reportViewModal.report.attachments.filter((att: any) => !att.itemId || att.itemId === null)
                   if (nonItemizedAttachments.length > 0) {
                     return (
                       <div>

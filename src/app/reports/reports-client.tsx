@@ -39,13 +39,17 @@ interface Report {
     publicId: string
     secureUrl: string
     mimeType: string
+    itemId?: string | null
+    isRefundReceipt?: boolean
   }[]
   approvedItems: {
     id: string
     originalItemId: string
     description: string
     approvedAmountCents: number
+    actualAmountCents?: number | null
   }[]
+  totalActualAmount?: number
 }
 
 interface ReportsPageClientProps {
@@ -290,26 +294,176 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                 </div>
               </div>
 
-              {/* Approved Items Details */}
+              {/* Approved Items Details with Actual Amounts and Attachments */}
               {viewModal.report.approvedItems && viewModal.report.approvedItems.length > 0 && (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-semibold text-sm text-green-800 mb-2">Approved Items</h4>
-                  <div className="space-y-2">
-                    {viewModal.report.approvedItems.map((item, index) => (
-                      <div key={item.id} className="bg-white p-3 rounded border border-green-100">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
+                  <h4 className="font-semibold text-sm text-green-800 mb-3">Report Items</h4>
+                  <div className="space-y-3">
+                    {viewModal.report.approvedItems.map((item, index) => {
+                      const actualAmount = item.actualAmountCents ?? item.approvedAmountCents
+                      const difference = actualAmount - item.approvedAmountCents
+                      // Match attachments using originalItemId (the itemId stored in attachments matches the originalItemId)
+                      const itemAttachments = viewModal.report.attachments?.filter((att) => 
+                        att.itemId && att.itemId === item.originalItemId && !att.isRefundReceipt
+                      ) || []
+                      const itemRefundReceipts = viewModal.report.attachments?.filter((att) => 
+                        att.itemId && att.itemId === item.originalItemId && att.isRefundReceipt
+                      ) || []
+                      
+                      return (
+                        <div key={item.id} className="bg-white p-4 rounded border border-green-100">
+                          <div className="mb-3">
                             <p className="text-sm font-medium text-gray-900">{item.description}</p>
                             <p className="text-xs text-gray-500">Item {index + 1}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-green-600">
-                              {formatCurrency(item.approvedAmountCents)}
-                            </p>
+                          
+                          {/* Money Details */}
+                          <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-200">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Approved Amount</p>
+                              <p className="text-sm font-semibold text-green-600">
+                                {formatCurrency(item.approvedAmountCents)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Actual Amount Spent</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {formatCurrency(actualAmount)}
+                              </p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-xs text-gray-500 mb-1">Difference</p>
+                              <p className={`text-sm font-bold ${
+                                difference > 0 ? 'text-red-600' : 
+                                difference < 0 ? 'text-blue-600' : 
+                                'text-gray-600'
+                              }`}>
+                                {difference > 0 ? '+' : ''}{formatCurrency(difference)}
+                                {difference > 0 && ' (Additional payment needed)'}
+                                {difference < 0 && ' (Refund required)'}
+                              </p>
+                            </div>
                           </div>
+
+                          {/* Attachments for this item */}
+                          {itemAttachments.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs font-medium text-gray-700 mb-2">Attachments for this item:</p>
+                              <div className="space-y-2">
+                                {itemAttachments.map((attachment) => (
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                                    <div className="flex items-center space-x-2">
+                                      {attachment.mimeType.startsWith('image/') ? (
+                                        <img
+                                          src={attachment.secureUrl}
+                                          alt="Item attachment"
+                                          className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
+                                          <FileText className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <p className="text-xs font-medium">
+                                          {attachment.mimeType.startsWith('image/') ? 'Image' : 'Document'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      className="text-xs"
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Refund Receipts for this item */}
+                          {itemRefundReceipts.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-blue-700 mb-2">Refund Receipts for this item:</p>
+                              <div className="space-y-2">
+                                {itemRefundReceipts.map((attachment) => (
+                                  <div key={attachment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded-md border border-blue-200">
+                                    <div className="flex items-center space-x-2">
+                                      {attachment.mimeType.startsWith('image/') ? (
+                                        <img
+                                          src={attachment.secureUrl}
+                                          alt="Refund receipt"
+                                          className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
+                                          <FileText className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <p className="text-xs font-medium text-blue-700">
+                                          {attachment.mimeType.startsWith('image/') ? 'Refund Receipt (Image)' : 'Refund Receipt (Document)'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      className="text-xs"
+                                    >
+                                      View
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Totals Summary */}
+                  <div className="mt-4 pt-3 border-t border-green-200 bg-white p-3 rounded">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Total Approved</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          {formatCurrency(viewModal.report.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0))}
+                        </p>
                       </div>
-                    ))}
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Total Actual</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(viewModal.report.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0))}
+                        </p>
+                      </div>
+                      <div className="col-span-2 pt-2 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">Total Difference</p>
+                        {(() => {
+                          const totalApproved = viewModal.report.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0)
+                          const totalActual = viewModal.report.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0)
+                          const totalDifference = totalActual - totalApproved
+                          return (
+                            <p className={`text-sm font-bold ${
+                              totalDifference > 0 ? 'text-red-600' : 
+                              totalDifference < 0 ? 'text-blue-600' : 
+                              'text-gray-600'
+                            }`}>
+                              {totalDifference > 0 ? '+' : ''}{formatCurrency(totalDifference)}
+                              {totalDifference > 0 && ' (Additional payment needed)'}
+                              {totalDifference < 0 && ' (Refund required)'}
+                            </p>
+                          )
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -322,46 +476,56 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                 </p>
               </div>
 
-              {/* Attachments */}
+              {/* Non-itemized attachments (if any) - only show if there are no items or attachments without itemId */}
               {viewModal.report.attachments && viewModal.report.attachments.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Attachments</label>
-                  <div className="mt-2 space-y-2">
-                    {viewModal.report.attachments.map((attachment) => (
-                      <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                        <div className="flex items-center space-x-3">
-                          {attachment.mimeType.startsWith('image/') ? (
-                            <img
-                              src={attachment.secureUrl}
-                              alt="Report attachment"
-                              className="w-12 h-12 object-cover rounded border"
-                              onClick={() => window.open(attachment.secureUrl, '_blank')}
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-red-600" />
+                (() => {
+                  // Only show as non-itemized if itemId is null/undefined (not set)
+                  const nonItemizedAttachments = viewModal.report.attachments.filter((att) => !att.itemId || att.itemId === null)
+                  if (nonItemizedAttachments.length > 0) {
+                    return (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">General Attachments</label>
+                        <div className="mt-2 space-y-2">
+                          {nonItemizedAttachments.map((attachment) => (
+                            <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                              <div className="flex items-center space-x-3">
+                                {attachment.mimeType.startsWith('image/') ? (
+                                  <img
+                                    src={attachment.secureUrl}
+                                    alt="Report attachment"
+                                    className="w-12 h-12 object-cover rounded border cursor-pointer"
+                                    onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
+                                    <FileText className="w-6 h-6 text-red-600" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {attachment.isRefundReceipt ? 'Refund Receipt - ' : ''}
+                                    {attachment.mimeType.startsWith('image/') ? 'Image' : 'PDF Document'}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {attachment.mimeType}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(attachment.secureUrl, '_blank')}
+                              >
+                                View
+                              </Button>
                             </div>
-                          )}
-                          <div>
-                            <p className="text-sm font-medium">
-                              {attachment.mimeType.startsWith('image/') ? 'Image' : 'PDF Document'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {attachment.mimeType}
-                            </p>
-                          </div>
+                          ))}
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(attachment.secureUrl, '_blank')}
-                        >
-                          View
-                        </Button>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    )
+                  }
+                  return null
+                })()
               )}
             </div>
           </div>

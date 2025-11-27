@@ -313,11 +313,12 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
           }
         }
       } else {
-        // Non-itemized expense
+        // Non-itemized expense - itemId should be null/undefined for general attachments
         for (const file of nonItemizedAttachments) {
           const uploadResult = await handleFileUpload(file)
           uploadedAttachments.push({
             ...uploadResult,
+            itemId: undefined, // Explicitly set to undefined for non-itemized attachments
             isRefundReceipt: false,
           })
         }
@@ -327,6 +328,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
           const uploadResult = await handleFileUpload(file)
           uploadedAttachments.push({
             ...uploadResult,
+            itemId: undefined, // Explicitly set to undefined for non-itemized refund receipts
             isRefundReceipt: true,
           })
         }
