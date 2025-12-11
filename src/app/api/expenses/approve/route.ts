@@ -165,13 +165,51 @@ export async function POST(request: NextRequest) {
 
     // Send notification to requester if fully approved (only if requester is active)
     if (newStatus === 'APPROVED' && expense.requester.status === 'ACTIVE') {
+      // Refetch expense with updated item approvals to get accurate approved amounts
+      const expenseForEmail = await db.expenseRequest.findUnique({
+        where: { id: expenseId },
+        include: {
+          requester: true,
+          items: {
+            include: {
+              approvals: {
+                where: { status: 'APPROVED' },
+              },
+            },
+          },
+        },
+      })
+      
+      if (!expenseForEmail) {
+        return NextResponse.json(
+          { error: 'Expense request not found' },
+          { status: 404 }
+        )
+      }
+      
+      // Calculate the actual approved amount
+      let approvedAmountCents = expenseForEmail.amountCents
+      
+      // If expense has items, calculate total approved amount from item approvals
+      if (expenseForEmail.items && expenseForEmail.items.length > 0) {
+        approvedAmountCents = expenseForEmail.items.reduce((total, item) => {
+          // Find approved item approval (use the first one if multiple exist)
+          const itemApproval = item.approvals.find((approval: any) => approval.status === 'APPROVED')
+          if (itemApproval && itemApproval.approvedAmountCents !== null && itemApproval.approvedAmountCents !== undefined) {
+            return total + itemApproval.approvedAmountCents
+          }
+          // If no approval found or amount is null, use full item amount (shouldn't happen if fully approved)
+          return total + item.amountCents
+        }, 0)
+      }
+      
       const emailTemplate = generateExpenseApprovedEmail(
-        expense.requester.name || expense.requester.email,
-        expense.title,
-        expense.amountCents,
+        expenseForEmail.requester.name || expenseForEmail.requester.email,
+        expenseForEmail.title,
+        approvedAmountCents,
         process.env.NEXT_PUBLIC_APP_URL!
       )
-      emailTemplate.to = expense.requester.email
+      emailTemplate.to = expenseForEmail.requester.email
       await sendEmail(emailTemplate)
 
       // SMS notification (if phone number available)
