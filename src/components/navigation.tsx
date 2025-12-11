@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmationModal } from '@/components/confirmation-modal'
 import { SessionUser } from '@/lib/auth'
 import { canManageUsers } from '@/lib/rbac'
+import { formatRoleName } from '@/lib/utils'
 import { LogOut, User, Settings, Menu, X, UserCircle } from 'lucide-react'
 import Image from 'next/image'
 
@@ -112,7 +113,7 @@ export function Navigation({ user }: NavigationProps) {
                 {user.name || user.email}
               </span>
               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                {user.role}
+                {formatRoleName(user.role)}
               </span>
             </div>
             
@@ -190,7 +191,7 @@ export function Navigation({ user }: NavigationProps) {
                       </p>
                       <p className="text-sm text-gray-600 truncate">{user.email}</p>
                       <span className="inline-flex items-center px-2 py-1 mt-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                        {user.role}
+                        {formatRoleName(user.role)}
                       </span>
                     </div>
                   </div>

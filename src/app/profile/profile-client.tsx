@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { SessionUser } from '@/lib/auth'
+import { formatRoleName } from '@/lib/utils'
 import { User, Mail, Phone, DollarSign } from 'lucide-react'
 
 interface ProfileClientProps {
@@ -100,7 +101,7 @@ export function ProfileClient({ user }: ProfileClientProps) {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Role</label>
-              <p className="text-lg font-medium">{user.role}</p>
+              <p className="text-lg font-medium">{formatRoleName(user.role)}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Status</label>

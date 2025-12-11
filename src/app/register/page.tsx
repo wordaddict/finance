@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { Eye, EyeOff } from 'lucide-react'
 import { CAMPUSES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
+import { formatRoleName } from '@/lib/utils'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -249,9 +250,9 @@ export default function RegisterPage() {
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               >
-                <option value="LEADER">Leader</option>
-                <option value="CAMPUS_PASTOR">Campus Pastor</option>
-                <option value="ADMIN">Admin</option>
+                <option value="LEADER">{formatRoleName('LEADER')}</option>
+                <option value="CAMPUS_PASTOR">{formatRoleName('CAMPUS_PASTOR')}</option>
+                <option value="ADMIN">{formatRoleName('ADMIN')}</option>
               </select>
             </div>
             {error && (

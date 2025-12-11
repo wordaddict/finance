@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { db } from './db'
+import { formatRoleName } from './utils'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -293,7 +294,7 @@ export function generatePendingAccountApprovalEmail(
           <h3>New User Details</h3>
           <p><strong>Name:</strong> ${newUserName}</p>
           <p><strong>Email:</strong> ${newUserEmail}</p>
-          <p><strong>Role:</strong> ${newUserRole}</p>
+          <p><strong>Role:</strong> ${formatRoleName(newUserRole)}</p>
           <p><strong>Campus:</strong> ${newUserCampus}</p>
           <p><strong>Status:</strong> Pending Approval</p>
         </div>
@@ -306,7 +307,7 @@ export function generatePendingAccountApprovalEmail(
         <p>Best regards,<br>Church Expense System</p>
       </div>
     `,
-    text: `New Account Pending Approval\n\nHello ${recipientName},\n\nA new user has registered and is waiting for approval:\n\nName: ${newUserName}\nEmail: ${newUserEmail}\nRole: ${newUserRole}\nCampus: ${newUserCampus}\nStatus: Pending Approval\n\nPlease log in to review and approve or deny this account request at: ${usersUrl}`,
+    text: `New Account Pending Approval\n\nHello ${recipientName},\n\nA new user has registered and is waiting for approval:\n\nName: ${newUserName}\nEmail: ${newUserEmail}\nRole: ${formatRoleName(newUserRole)}\nCampus: ${newUserCampus}\nStatus: Pending Approval\n\nPlease log in to review and approve or deny this account request at: ${usersUrl}`,
   }
 }
 

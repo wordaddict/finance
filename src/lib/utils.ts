@@ -29,3 +29,16 @@ export function formatDateTime(date: Date | string): string {
     minute: '2-digit',
   }).format(new Date(date))
 }
+
+export function formatRoleName(role: string): string {
+  switch (role) {
+    case 'ADMIN':
+      return 'Super Admin/Finance team'
+    case 'CAMPUS_PASTOR':
+      return 'Resident/Associate pastor'
+    case 'LEADER':
+      return 'Team Lead'
+    default:
+      return role.replace('_', ' ')
+  }
+}

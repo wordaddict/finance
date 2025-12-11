@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { canManageUsers } from '@/lib/rbac'
+import { formatRoleName } from '@/lib/utils'
 import { Check, X, UserX, Eye, EyeOff, Filter } from 'lucide-react'
 import { ConfirmationModal } from '@/components/confirmation-modal'
 
@@ -377,7 +378,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                               {userItem.status.replace('_', ' ')}
                             </span>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(userItem.role)}`}>
-                              {userItem.role.replace('_', ' ')}
+                              {formatRoleName(userItem.role)}
                             </span>
                           </div>
                         </div>
