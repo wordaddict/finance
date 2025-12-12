@@ -1,11 +1,25 @@
 // Team constants - centralized definition of all available teams
 export const TEAMS = {
+  // Photography and Storytelling
+  PHOTOGRAPHY_AND_STORYTELLING: 'PHOTOGRAPHY_AND_STORYTELLING',
+
+
+  FOLLOW_UP: 'FOLLOW_UP',
+
+ 
+
+  
+  // CCW
   CCW: 'CCW',
-  ADMIN: 'ADMIN', 
+  
+  // Ambience
+  AMBIENCE: 'AMBIENCE',
+  
+  // Legacy teams (keeping for backward compatibility)
+  ADMIN: 'ADMIN',
   SOCIAL_MEDIA: 'SOCIAL_MEDIA',
   VISION_AND_VOLUME: 'VISION_AND_VOLUME',
   CREATIVE: 'CREATIVE',
-  AMBIENCE: 'AMBIENCE',
   REACH_OUT: 'REACH_OUT',
   CELEB_KIDS: 'CELEB_KIDS',
   PROTOCOL: 'PROTOCOL',
@@ -13,12 +27,28 @@ export const TEAMS = {
 
 // Team display names for UI
 export const TEAM_DISPLAY_NAMES = {
+  // Photography and Storytelling
+  [TEAMS.PHOTOGRAPHY_AND_STORYTELLING]: 'Photography and Storytelling',
+
+
+  
+  // Follow Up
+  [TEAMS.FOLLOW_UP]: 'Follow Up',
+
+  
+  // CCW
   [TEAMS.CCW]: 'CCW',
+
+  
+  // Ambience
+  [TEAMS.AMBIENCE]: 'Ambience',
+
+  
+  // Legacy teams
   [TEAMS.ADMIN]: 'Admin',
   [TEAMS.SOCIAL_MEDIA]: 'Social Media',
   [TEAMS.VISION_AND_VOLUME]: 'Vision and Volume',
   [TEAMS.CREATIVE]: 'Creative',
-  [TEAMS.AMBIENCE]: 'Ambience',
   [TEAMS.REACH_OUT]: 'Reach Out',
   [TEAMS.CELEB_KIDS]: 'Celeb Kids',
   [TEAMS.PROTOCOL]: 'Protocol',
