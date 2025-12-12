@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if expense is paid or expense report requested
-    if (expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') {
+    const expenseStatus = expense.status as string
+    if (expenseStatus !== 'PAID' && expenseStatus !== 'EXPENSE_REPORT_REQUESTED') {
       return NextResponse.json(
         { error: 'Reports can only be created for paid expenses' },
         { status: 400 }
@@ -115,7 +116,8 @@ export async function POST(request: NextRequest) {
         expenseId: data.expenseId,
         title: data.title,
         content: data.content,
-        notes: data.notes || null,
+        notes: (data.notes || undefined) as any, // String field, not relation
+        status: 'PENDING' as any, // Reports start as pending until approved/denied
         reportDate: data.reportDate ? new Date(data.reportDate) : new Date(),
         totalApprovedAmount: reportedAmountCents,
         attachments: data.attachments ? {
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest) {
             actualAmountCents: item.actualAmountCents || item.approvedAmountCents,
           }))
         } : undefined,
-      },
+      } as any,
       include: {
         expense: {
           include: {
@@ -159,23 +161,23 @@ export async function POST(request: NextRequest) {
             createdAt: 'asc',
           },
         },
-      },
+      } as any,
     })
 
     // Update expense status to PAID if it was EXPENSE_REPORT_REQUESTED
     // (since a report has been created, the requirement is fulfilled)
-    if (expense.status === 'EXPENSE_REPORT_REQUESTED') {
+    if (expenseStatus === 'EXPENSE_REPORT_REQUESTED') {
       await db.expenseRequest.update({
         where: { id: data.expenseId },
-        data: { status: 'PAID' },
+        data: { status: 'PAID' as any },
       })
 
       // Create status event
       await db.statusEvent.create({
         data: {
           expenseId: data.expenseId,
-          from: 'EXPENSE_REPORT_REQUESTED',
-          to: 'PAID',
+          from: 'EXPENSE_REPORT_REQUESTED' as any,
+          to: 'PAID' as any,
           actorId: user.id,
           reason: 'Expense report created',
         },

@@ -28,6 +28,7 @@ model User {
   verificationTokens VerificationToken[]
   expenseNotes   ExpenseNote[]
   reportNotes    ReportNote[]
+  reportApprovals ReportApproval[]
 }
 
 model Session {
@@ -248,6 +249,7 @@ model ExpenseReport {
   title         String
   content       String
   notes         String?       // Notes added when creating the report
+  status        ReportStatus  @default(PENDING) // Approval status of the report
   reportDate    DateTime      @default(now())
   totalApprovedAmount Int?    // Store the total approved amount for this report
   createdAt     DateTime      @default(now())
@@ -257,6 +259,27 @@ model ExpenseReport {
   attachments   ReportAttachment[]
   approvedItems ApprovedReportItem[]
   reportNotes   ReportNote[]
+  approvals     ReportApproval[]
+}
+
+model ReportApproval {
+  id        String        @id @default(uuid())
+  reportId  String
+  approverId String
+  status    String        // APPROVED, DENIED
+  comment   String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  report    ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  approver  User          @relation(fields: [approverId], references: [id])
+  
+  @@unique([reportId, approverId])
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  DENIED
 }
 
 model ReportAttachment {

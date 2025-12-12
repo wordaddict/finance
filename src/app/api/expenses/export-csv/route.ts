@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
-    }) as ExpenseWithDetails[]
+    }) as any as ExpenseWithDetails[]
 
     // Create streaming response with filter info in filename
     const filename = getCSVFilename('expenses', {

@@ -9,6 +9,7 @@ import { ExpenseForm } from './expense-form'
 import { DenialModal } from './denial-modal'
 import { ReportForm } from './report-form'
 import { ConfirmationModal } from './confirmation-modal'
+import { ReportDenialModal } from './report-denial-modal'
 import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
 import { 
   Plus,
@@ -271,6 +272,16 @@ export function ExpensesList({ user }: ExpensesListProps) {
     isOpen: false,
     expenseId: null,
   })
+  const [reportDenialModal, setReportDenialModal] = useState<{
+    isOpen: boolean
+    reportId: string
+    reportTitle: string
+  }>({
+    isOpen: false,
+    reportId: '',
+    reportTitle: '',
+  })
+  const [processingReportApproval, setProcessingReportApproval] = useState(false)
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
     isOpen: boolean
     expenseId: string
@@ -930,6 +941,103 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
+  const openReportDenialModal = (reportId: string, reportTitle: string) => {
+    setReportDenialModal({
+      isOpen: true,
+      reportId,
+      reportTitle,
+    })
+  }
+
+  const closeReportDenialModal = () => {
+    setReportDenialModal({
+      isOpen: false,
+      reportId: '',
+      reportTitle: '',
+    })
+  }
+
+  const handleApproveReport = async (reportId: string) => {
+    try {
+      setProcessingReportApproval(true)
+      const response = await fetch('/api/reports/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId }),
+      })
+
+      if (response.ok) {
+        // Refresh the report to get updated status
+        if (reportViewModal.report && reportViewModal.report.expense) {
+          try {
+            const reportResponse = await fetch(`/api/reports?expenseId=${reportViewModal.report.expense.id}`)
+            const reportData = await reportResponse.json()
+            if (reportData.reports && reportData.reports.length > 0) {
+              const updatedReport = reportData.reports.find((r: any) => r.id === reportId)
+              if (updatedReport) {
+                setReportViewModal({ isOpen: true, report: updatedReport })
+              }
+            }
+          } catch (err) {
+            console.error('Failed to refresh report:', err)
+          }
+        }
+        fetchExpenses() // Refresh the expenses list
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to approve report')
+      }
+    } catch (error) {
+      console.error('Failed to approve report:', error)
+      setError('Failed to approve report')
+    } finally {
+      setProcessingReportApproval(false)
+    }
+  }
+
+  const handleDenyReport = async (comment: string) => {
+    try {
+      setProcessingReportApproval(true)
+      const response = await fetch('/api/reports/deny', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId: reportDenialModal.reportId, comment }),
+      })
+
+      if (response.ok) {
+        // Refresh the report to get updated status
+        if (reportViewModal.report && reportViewModal.report.expense) {
+          try {
+            const reportResponse = await fetch(`/api/reports?expenseId=${reportViewModal.report.expense.id}`)
+            const reportData = await reportResponse.json()
+            if (reportData.reports && reportData.reports.length > 0) {
+              const updatedReport = reportData.reports.find((r: any) => r.id === reportDenialModal.reportId)
+              if (updatedReport) {
+                setReportViewModal({ isOpen: true, report: updatedReport })
+              }
+            }
+          } catch (err) {
+            console.error('Failed to refresh report:', err)
+          }
+        }
+        fetchExpenses() // Refresh the expenses list
+        closeReportDenialModal()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to deny report')
+      }
+    } catch (error) {
+      console.error('Failed to deny report:', error)
+      setError('Failed to deny report')
+    } finally {
+      setProcessingReportApproval(false)
+    }
+  }
+
   const handleCloseExpense = async () => {
     if (!closeConfirmModal.expenseId) return
 
@@ -1438,6 +1546,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
         expenseTitle={denialModal.expenseTitle}
         onClose={closeDenialModal}
         onConfirm={handleDeny}
+      />
+
+      {/* Report Denial Modal */}
+      <ReportDenialModal
+        isOpen={reportDenialModal.isOpen}
+        reportTitle={reportDenialModal.reportTitle}
+        onClose={closeReportDenialModal}
+        onConfirm={handleDenyReport}
       />
 
       {/* Report Form */}
@@ -2948,6 +3064,46 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     </div>
                   )
                 })()}
+              </div>
+
+              {/* Approve/Deny Actions for Admins */}
+              {user.role === 'ADMIN' && reportViewModal.report && (!reportViewModal.report.status || reportViewModal.report.status === 'PENDING') && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex justify-end space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => openReportDenialModal(reportViewModal.report.id, reportViewModal.report.title)}
+                      className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Deny Report
+                    </Button>
+                    <Button
+                      onClick={() => handleApproveReport(reportViewModal.report.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      disabled={processingReportApproval}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      {processingReportApproval ? 'Approving...' : 'Approve Report'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Report Status Badge */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-500">Report Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    (reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'text-green-600 bg-green-50' :
+                    (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'text-red-600 bg-red-50' :
+                    'text-yellow-600 bg-yellow-50'
+                  }`}>
+                    {(reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'Approved' :
+                     (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'Denied' :
+                     'Pending'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

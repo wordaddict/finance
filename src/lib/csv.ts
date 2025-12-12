@@ -73,6 +73,16 @@ export interface ExpenseWithDetails {
     id: string
     totalApprovedAmount: number | null
     createdAt: Date
+    status?: string | null
+    reportNotes?: Array<{
+      id: string
+      note: string
+      author: {
+        name: string | null
+        email: string
+      }
+      createdAt: Date
+    }>
     notes?: Array<{
       id: string
       note: string
@@ -159,7 +169,7 @@ export function generateCSV(expenses: ExpenseWithDetails[]): string {
 
     const reportsCount = expense.reports?.length || 0
     const reportsDetails = expense.reports?.map(r => {
-      const reportNotes = r.reportNotes?.map(n => 
+      const reportNotes = (r.reportNotes || r.notes)?.map((n: any) => 
         `${n.author.name || n.author.email}: ${n.note}`
       ).join('; ') || ''
       const approvedAmount = r.totalApprovedAmount ? (r.totalApprovedAmount / 100).toFixed(2) : '0.00'
@@ -289,7 +299,7 @@ export function streamCSV(
     // Format reports
     const reportsCount = expense.reports?.length || 0
     const reportsDetails = expense.reports?.map(r => {
-      const reportNotes = r.reportNotes?.map(n => 
+      const reportNotes = (r.reportNotes || r.notes)?.map((n: any) => 
         `${n.author.name || n.author.email}: ${n.note}`
       ).join('; ') || ''
       const approvedAmount = r.totalApprovedAmount ? (r.totalApprovedAmount / 100).toFixed(2) : '0.00'
