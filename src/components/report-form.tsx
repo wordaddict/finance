@@ -51,6 +51,7 @@ interface ReportItem {
 export function ReportForm({ expense, onClose }: ReportFormProps) {
   const [title, setTitle] = useState(`Report for ${expense.title}`)
   const [content, setContent] = useState('')
+  const [notes, setNotes] = useState('')
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0])
   const [itemAttachments, setItemAttachments] = useState<Record<string, File[]>>({}) // Attachments per item
   const [itemRefundReceipts, setItemRefundReceipts] = useState<Record<string, File[]>>({}) // Refund receipts per item
@@ -344,6 +345,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
           expenseId: expense.id,
           title,
           content,
+          notes: notes || null,
           reportDate,
           attachments: uploadedAttachments,
           approvedExpenses: reportItems.length > 0 ? {
@@ -687,6 +689,20 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 placeholder="Describe the outcome, results, or details of the expense..."
                 required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium mb-1">
+                Notes (Optional)
+              </label>
+              <textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                placeholder="Add any additional notes or comments about this expense report..."
               />
             </div>
 

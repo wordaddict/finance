@@ -565,6 +565,7 @@ export function Dashboard({ user }: DashboardProps) {
                       expense.status === 'APPROVED' ? 'text-green-600' :
                       expense.status === 'DENIED' ? 'text-red-600' :
                       expense.status === 'PAID' ? 'text-blue-600' :
+                      expense.status === 'EXPENSE_REPORT_REQUESTED' ? 'text-indigo-600' :
                       'text-yellow-600'
                     }`}>
                       {STATUS_DISPLAY_NAMES[expense.status as keyof typeof STATUS_DISPLAY_NAMES] || expense.status}

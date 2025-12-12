@@ -207,6 +207,7 @@ enum Status {
   PARTIALLY_APPROVED
   CHANGE_REQUESTED
   PAID
+  EXPENSE_REPORT_REQUESTED
 }
 
 enum Campus {
@@ -245,6 +246,7 @@ model ExpenseReport {
   expenseId     String
   title         String
   content       String
+  notes         String?       // Notes added when creating the report
   reportDate    DateTime      @default(now())
   totalApprovedAmount Int?    // Store the total approved amount for this report
   createdAt     DateTime      @default(now())
@@ -253,7 +255,7 @@ model ExpenseReport {
   expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   attachments   ReportAttachment[]
   approvedItems ApprovedReportItem[]
-  notes         ReportNote[]
+  reportNotes   ReportNote[]
 }
 
 model ReportAttachment {

@@ -159,7 +159,7 @@ export function generateCSV(expenses: ExpenseWithDetails[]): string {
 
     const reportsCount = expense.reports?.length || 0
     const reportsDetails = expense.reports?.map(r => {
-      const reportNotes = r.notes?.map(n => 
+      const reportNotes = r.reportNotes?.map(n => 
         `${n.author.name || n.author.email}: ${n.note}`
       ).join('; ') || ''
       const approvedAmount = r.totalApprovedAmount ? (r.totalApprovedAmount / 100).toFixed(2) : '0.00'
@@ -289,7 +289,7 @@ export function streamCSV(
     // Format reports
     const reportsCount = expense.reports?.length || 0
     const reportsDetails = expense.reports?.map(r => {
-      const reportNotes = r.notes?.map(n => 
+      const reportNotes = r.reportNotes?.map(n => 
         `${n.author.name || n.author.email}: ${n.note}`
       ).join('; ') || ''
       const approvedAmount = r.totalApprovedAmount ? (r.totalApprovedAmount / 100).toFixed(2) : '0.00'

@@ -100,11 +100,13 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Get total paid amount
+    // Get total paid amount (includes both PAID and EXPENSE_REPORT_REQUESTED since both have been paid)
     const totalPaid = await db.expenseRequest.aggregate({
       where: {
         ...filterWhere,
-        status: 'PAID',
+        status: {
+          in: ['PAID', 'EXPENSE_REPORT_REQUESTED'],
+        },
       },
       _sum: {
         paidAmountCents: true,

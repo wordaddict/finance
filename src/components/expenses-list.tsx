@@ -715,9 +715,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }
 
   const openReportForm = (expense: Expense) => {
-    // Check if expense is paid before opening the form
-    if (expense.status !== 'PAID') {
-      setError('This expense must be marked as paid before you can create a report. Please mark it as paid first.')
+    // Check if expense is paid or expense report requested before opening the form
+    if (expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') {
+      setError('This expense must be marked as paid before you can create a report.')
       setTimeout(() => setError(''), 5000) // Clear error after 5 seconds
       return
     }
@@ -750,7 +750,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
 
   // Helper function to check if additional payment is needed
   const needsAdditionalPayment = (expense: Expense): { needed: boolean; amount: number } => {
-    if (expense.status !== 'PAID' || !expense.reports || expense.reports.length === 0) {
+    if ((expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') || !expense.reports || expense.reports.length === 0) {
       return { needed: false, amount: 0 }
     }
     
@@ -1032,6 +1032,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
         return 'text-purple-600 bg-purple-50'
       case 'PAID':
         return 'text-blue-600 bg-blue-50'
+      case 'EXPENSE_REPORT_REQUESTED':
+        return 'text-indigo-600 bg-indigo-50'
       case 'SUBMITTED':
         return 'text-yellow-600 bg-yellow-50'
       default:
@@ -1220,7 +1222,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         {expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email ? 'Edit' : 'View'}
                       </span>
                     </Button>
-                    {expense.status === 'PAID' && expense.reportRequired && (!expense.reports || expense.reports.length === 0) && (
+                    {(expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && expense.reportRequired && (!expense.reports || expense.reports.length === 0) && (
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -1290,7 +1292,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <span className="hidden sm:inline">Mark Paid</span>
                       </Button>
                     )}
-                    {expense.status === 'PAID' && (
+                    {(expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && (
                       <>
                         {expense.reportRequired && expense.reports && expense.reports.length > 0 && (
                           <>
@@ -2742,9 +2744,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </div>
                 
                 {/* Display existing notes */}
-                {reportViewModal.report.notes && reportViewModal.report.notes.length > 0 && (
+                {reportViewModal.report.reportNotes && reportViewModal.report.reportNotes.length > 0 && (
                   <div className="mt-2 space-y-2 mb-4">
-                    {reportViewModal.report.notes.map((note: any) => {
+                    {reportViewModal.report.reportNotes.map((note: any) => {
                       const isAdmin = note.author.role === 'ADMIN'
                       const isPastor = note.author.role === 'CAMPUS_PASTOR'
                       const isRequester = note.author.email === (reportViewModal.report.expense?.requester?.email || '')

@@ -205,6 +205,7 @@ export const STATUS = {
   PARTIALLY_APPROVED: 'PARTIALLY_APPROVED',
   CHANGE_REQUESTED: 'CHANGE_REQUESTED',
   PAID: 'PAID',
+  EXPENSE_REPORT_REQUESTED: 'EXPENSE_REPORT_REQUESTED',
 } as const
 
 // Status display names for UI
@@ -215,6 +216,7 @@ export const STATUS_DISPLAY_NAMES = {
   [STATUS.PARTIALLY_APPROVED]: 'Partially Approved',
   [STATUS.CHANGE_REQUESTED]: 'Change Requested',
   [STATUS.PAID]: 'Paid',
+  [STATUS.EXPENSE_REPORT_REQUESTED]: 'Expense Report Requested',
 } as const
 
 // Array of status values

@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
         },
         reports: {
           include: {
-            notes: {
+            reportNotes: {
               include: {
                 author: {
                   select: {

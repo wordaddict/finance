@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
           },
           attachments: true,
           approvedItems: true,
-          notes: {
+          reportNotes: {
             include: {
               author: {
                 select: {

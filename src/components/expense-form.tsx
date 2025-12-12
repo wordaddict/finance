@@ -33,6 +33,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
   const [team, setTeam] = useState('')
   const [campus, setCampus] = useState('')
   const [description, setDescription] = useState('')
+  const [notes, setNotes] = useState('')
   const [urgency, setUrgency] = useState(2)
   const [isEvent, setIsEvent] = useState(false)
   const [eventDate, setEventDate] = useState('')
@@ -64,6 +65,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
       setTeam(editExpense.team || '')
       setCampus(editExpense.campus || '')
       setDescription(editExpense.description || '')
+      setNotes(editExpense.notes || '')
       setUrgency(editExpense.urgency || 2)
       const hasEventDate = !!editExpense.eventDate
       setIsEvent(hasEventDate)
@@ -312,6 +314,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
         team,
         campus,
         description,
+        notes: notes || null,
         category: expenseCategory,
         urgency,
         eventDate: eventDate || null,
@@ -571,6 +574,20 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium mb-1">
+                Notes (Optional)
+              </label>
+              <textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                placeholder="Add any additional notes or comments about this expense..."
               />
             </div>
 

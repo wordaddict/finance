@@ -9,6 +9,7 @@ const createReportSchema = z.object({
   expenseId: z.string().uuid(),
   title: z.string().min(1),
   content: z.string().min(1),
+  notes: z.string().optional().nullable(),
   reportDate: z.string().optional(),
   attachments: z.array(z.object({
     publicId: z.string(),
@@ -63,8 +64,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if expense is paid
-    if (expense.status !== 'PAID') {
+    // Check if expense is paid or expense report requested
+    if (expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') {
       return NextResponse.json(
         { error: 'Reports can only be created for paid expenses' },
         { status: 400 }
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
         expenseId: data.expenseId,
         title: data.title,
         content: data.content,
+        notes: data.notes || null,
         reportDate: data.reportDate ? new Date(data.reportDate) : new Date(),
         totalApprovedAmount: reportedAmountCents,
         attachments: data.attachments ? {
@@ -142,7 +144,7 @@ export async function POST(request: NextRequest) {
         },
         attachments: true,
         approvedItems: true,
-        notes: {
+        reportNotes: {
           include: {
             author: {
               select: {
@@ -159,6 +161,26 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Update expense status to PAID if it was EXPENSE_REPORT_REQUESTED
+    // (since a report has been created, the requirement is fulfilled)
+    if (expense.status === 'EXPENSE_REPORT_REQUESTED') {
+      await db.expenseRequest.update({
+        where: { id: data.expenseId },
+        data: { status: 'PAID' },
+      })
+
+      // Create status event
+      await db.statusEvent.create({
+        data: {
+          expenseId: data.expenseId,
+          from: 'EXPENSE_REPORT_REQUESTED',
+          to: 'PAID',
+          actorId: user.id,
+          reason: 'Expense report created',
+        },
+      })
+    }
 
     // Get admins for notifications (exclude suspended users)
     const admins = await db.user.findMany({

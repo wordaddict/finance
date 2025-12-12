@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if this is a re-payment scenario (expense is PAID and has a report with higher amount)
-    const isRePayment = expense.status === 'PAID' && expense.paidAt
+    // Check if this is a re-payment scenario (expense is PAID or EXPENSE_REPORT_REQUESTED and has a report with higher amount)
+    const isRePayment = (expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && expense.paidAt
     const currentPaidAmount = expense.paidAmountCents || 0
     
     if (isRePayment) {
@@ -141,11 +141,14 @@ export async function POST(request: NextRequest) {
       totalPaidAmountCents = paymentAmountCents
     }
 
+    // Determine the new status based on reportRequired
+    const newStatus = reportRequired ? 'EXPENSE_REPORT_REQUESTED' : 'PAID'
+
     // Update expense status and paid amount
     await db.expenseRequest.update({
       where: { id: expenseId },
       data: { 
-        status: 'PAID',
+        status: newStatus,
         paidAt: isRePayment ? expense.paidAt : new Date(), // Keep original paidAt for re-payments
         paymentDate: paymentDate ? new Date(paymentDate) : null,
         ...(paidBy && { paidBy }),
@@ -159,7 +162,7 @@ export async function POST(request: NextRequest) {
       data: {
         expenseId,
         from: expense.status,
-        to: 'PAID',
+        to: newStatus,
         actorId: user.id,
       },
     })
