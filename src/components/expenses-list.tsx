@@ -44,6 +44,7 @@ interface Expense {
   reportRequired: boolean
   account?: string | null
   expenseType?: string | null
+  destinationAccount?: string | null
   requester: {
     name: string | null
     email: string
@@ -251,6 +252,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseTitle: string
     currentType: string | null
     customType: string
+    destinationAccount: string | null
     processing: boolean
   }>({
     isOpen: false,
@@ -258,6 +260,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseTitle: '',
     currentType: null,
     customType: '',
+    destinationAccount: null,
     processing: false,
   })
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
@@ -850,6 +853,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       expenseTitle: expense.title,
       currentType: expense.expenseType || null,
       customType: '',
+      destinationAccount: (expense as any).destinationAccount || null,
       processing: false,
     })
   }
@@ -861,6 +865,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
       expenseTitle: '',
       currentType: null,
       customType: '',
+      destinationAccount: null,
       processing: false,
     })
   }
@@ -964,7 +969,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
         },
         body: JSON.stringify({ 
           expenseId: expenseTypeModal.expenseId,
-          expenseType: finalType
+          expenseType: finalType,
+          destinationAccount: finalType === EXPENSE_TYPES.INTERNAL_TRANSFER 
+            ? expenseTypeModal.destinationAccount 
+            : null
         }),
       })
 
@@ -975,7 +983,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
         // Update the expense in the list
         setExpenses(prev => prev.map(expense => 
           expense.id === expenseTypeModal.expenseId 
-            ? { ...expense, expenseType: finalType }
+            ? { 
+                ...expense, 
+                expenseType: finalType,
+                destinationAccount: finalType === EXPENSE_TYPES.INTERNAL_TRANSFER 
+                  ? expenseTypeModal.destinationAccount 
+                  : null
+              }
             : expense
         ))
         
@@ -983,7 +997,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
         if (viewModal.expense && viewModal.expense.id === expenseTypeModal.expenseId) {
           setViewModal(prev => ({
             ...prev,
-            expense: prev.expense ? { ...prev.expense, expenseType: finalType } : null
+            expense: prev.expense ? { 
+              ...prev.expense, 
+              expenseType: finalType,
+              destinationAccount: finalType === EXPENSE_TYPES.INTERNAL_TRANSFER 
+                ? expenseTypeModal.destinationAccount 
+                : null
+            } : null
           }))
         }
         
@@ -1446,6 +1466,18 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         Set Category
                       </Button>
                     </div>
+                    {/* Destination Account - Only show for Internal Transfer */}
+                    {viewModal.expense.expenseType === EXPENSE_TYPES.INTERNAL_TRANSFER && (
+                      <div className="mt-2">
+                        <label className="text-sm font-medium text-gray-500">Destination Account</label>
+                        <p className="font-medium text-gray-900">
+                          {(viewModal.expense as any).destinationAccount 
+                            ? ACCOUNT_DISPLAY_NAMES[(viewModal.expense as any).destinationAccount as keyof typeof ACCOUNT_DISPLAY_NAMES] || (viewModal.expense as any).destinationAccount
+                            : 'Not set'
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div>
@@ -3094,6 +3126,30 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     </p>
                   </div>
                 )}
+                
+                {(expenseTypeModal.currentType === EXPENSE_TYPES.INTERNAL_TRANSFER || 
+                  (expenseTypeModal.currentType === 'CUSTOM' && expenseTypeModal.customType.trim() === EXPENSE_TYPES.INTERNAL_TRANSFER)) && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Destination Account
+                    </label>
+                    <select
+                      value={expenseTypeModal.destinationAccount || ''}
+                      onChange={(e) => setExpenseTypeModal(prev => ({ 
+                        ...prev, 
+                        destinationAccount: e.target.value || null 
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    >
+                      <option value="">Select destination account...</option>
+                      {Object.entries(ACCOUNT_DISPLAY_NAMES).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end space-x-3">
@@ -3106,7 +3162,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </Button>
                 <Button
                   onClick={handleExpenseTypeUpdate}
-                  disabled={expenseTypeModal.processing || (expenseTypeModal.currentType === 'CUSTOM' && !expenseTypeModal.customType.trim())}
+                  disabled={
+                    expenseTypeModal.processing || 
+                    (expenseTypeModal.currentType === 'CUSTOM' && !expenseTypeModal.customType.trim()) ||
+                    ((expenseTypeModal.currentType === EXPENSE_TYPES.INTERNAL_TRANSFER || 
+                      (expenseTypeModal.currentType === 'CUSTOM' && expenseTypeModal.customType.trim() === EXPENSE_TYPES.INTERNAL_TRANSFER)) && 
+                     !expenseTypeModal.destinationAccount)
+                  }
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   {expenseTypeModal.processing ? 'Updating...' : 'Update Category'}

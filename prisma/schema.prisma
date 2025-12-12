@@ -72,6 +72,7 @@ model ExpenseRequest {
   reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
   account       Account?      // Account that the money came from (tagged by admin)
   expenseType   String?       // Type of expense for reporting (set by admin)
+  destinationAccount Account? // Destination account for internal transfers (set by admin)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   campus        Campus

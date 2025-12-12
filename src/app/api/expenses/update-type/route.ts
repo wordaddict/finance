@@ -6,6 +6,20 @@ import { requireAuth } from '@/lib/auth'
 const updateExpenseTypeSchema = z.object({
   expenseId: z.string().uuid(),
   expenseType: z.string().min(1, 'Admin category cannot be empty').max(100, 'Admin category must be 100 characters or less').nullable(),
+  destinationAccount: z.enum([
+    'CCI_DMV_CHECKINGS',
+    'CCI_USA_CHECKINGS',
+    'CCI_DALLAS_CHECKING',
+    'CCI_BOSTON_CHECKINGS',
+    'CCI_AUSTIN_CHECKINGS',
+    'CCI_DMV_SAVINGS',
+    'CCI_DALLAS_SAVINGS',
+    'CCI_BOSTON_SAVINGS',
+    'CCI_AUSTIN_SAVINGS',
+    'CCI_GLOBAL',
+    'CCI_SEED_CHURCH_CHECKINGS',
+    'CCI_SPECIAL_EVENT_CHECKINGS',
+  ]).nullable().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -21,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { expenseId, expenseType } = updateExpenseTypeSchema.parse(body)
+    const { expenseId, expenseType, destinationAccount } = updateExpenseTypeSchema.parse(body)
 
     // Verify the expense exists
     const expense = await db.expenseRequest.findUnique({
@@ -35,10 +49,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update the admin category
+    // Update the admin category and destination account
     await db.expenseRequest.update({
       where: { id: expenseId },
-      data: { expenseType: expenseType?.trim() || null },
+      data: { 
+        expenseType: expenseType?.trim() || null,
+        ...(destinationAccount !== undefined && { destinationAccount: destinationAccount || null }),
+      },
     })
 
     return NextResponse.json({ 
