@@ -8,6 +8,7 @@ import { SessionUser } from '@/lib/auth'
 import { ExpenseForm } from './expense-form'
 import { DenialModal } from './denial-modal'
 import { ReportForm } from './report-form'
+import { ConfirmationModal } from './confirmation-modal'
 import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
 import { 
   Plus,
@@ -262,6 +263,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
     customType: '',
     destinationAccount: null,
     processing: false,
+  })
+  const [closeConfirmModal, setCloseConfirmModal] = useState<{
+    isOpen: boolean
+    expenseId: string | null
+  }>({
+    isOpen: false,
+    expenseId: null,
   })
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
     isOpen: boolean
@@ -803,7 +811,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
       isOpen: true,
       expenseId: expense.id,
       expenseTitle: expense.title,
-      reportRequired: !isAdditionalPayment, // Don't require report for additional payments
+      // For additional payments, don't require report. Otherwise, use the expense's current reportRequired value
+      // This allows admins to change it even if the expense was previously set to require a report
+      reportRequired: isAdditionalPayment ? false : (expense.reportRequired ?? true),
       paymentDate: today,
       paidBy: '',
       processing: false,
@@ -905,6 +915,49 @@ export function ExpensesList({ user }: ExpensesListProps) {
       setMarkPaidModal(prev => ({ ...prev, processing: false }))
     }
   }
+
+  const openCloseConfirmModal = (expenseId: string) => {
+    setCloseConfirmModal({
+      isOpen: true,
+      expenseId,
+    })
+  }
+
+  const closeCloseConfirmModal = () => {
+    setCloseConfirmModal({
+      isOpen: false,
+      expenseId: null,
+    })
+  }
+
+  const handleCloseExpense = async () => {
+    if (!closeConfirmModal.expenseId) return
+
+    try {
+      setLoading(true)
+      const response = await fetch('/api/expenses/close', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ expenseId: closeConfirmModal.expenseId }),
+      })
+
+      if (response.ok) {
+        fetchExpenses() // Refresh the list
+        closeCloseConfirmModal()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to close expense')
+      }
+    } catch (error) {
+      console.error('Failed to close expense:', error)
+      setError('Failed to close expense')
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   const handleAccountUpdate = async (newAccount: string | null) => {
     setAccountModal(prev => ({ ...prev, processing: true }))
@@ -1034,6 +1087,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
         return 'text-blue-600 bg-blue-50'
       case 'EXPENSE_REPORT_REQUESTED':
         return 'text-indigo-600 bg-indigo-50'
+      case 'CLOSED':
+        return 'text-gray-600 bg-gray-50'
       case 'SUBMITTED':
         return 'text-yellow-600 bg-yellow-50'
       default:
@@ -1282,15 +1337,26 @@ export function ExpensesList({ user }: ExpensesListProps) {
                       </Button>
                     )}
                     {(expense.status === 'APPROVED' || expense.status === 'PARTIALLY_APPROVED') && user.role === 'ADMIN' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openMarkPaidModal(expense)}
-                        className="flex-1 sm:flex-none"
-                      >
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        <span className="hidden sm:inline">Mark Paid</span>
-                      </Button>
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => openMarkPaidModal(expense)}
+                          className="flex-1 sm:flex-none"
+                        >
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          <span className="hidden sm:inline">Mark Paid</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => openCloseConfirmModal(expense.id)}
+                          className="flex-1 sm:flex-none bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          <span className="hidden sm:inline">Close</span>
+                        </Button>
+                      </>
                     )}
                     {(expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && (
                       <>
@@ -1381,6 +1447,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
           onClose={closeReportForm}
         />
       )}
+
+      {/* Close Expense Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={closeConfirmModal.isOpen}
+        onClose={closeCloseConfirmModal}
+        onConfirm={handleCloseExpense}
+        title="Close Expense Request"
+        message="Are you sure you want to close this expense? This will mark it as closed without requiring an expense report."
+        confirmText="Close Expense"
+        cancelText="Cancel"
+        variant="warning"
+        loading={loading}
+      />
 
       {/* View Modal */}
       {viewModal.isOpen && viewModal.expense && (

@@ -206,6 +206,7 @@ export const STATUS = {
   CHANGE_REQUESTED: 'CHANGE_REQUESTED',
   PAID: 'PAID',
   EXPENSE_REPORT_REQUESTED: 'EXPENSE_REPORT_REQUESTED',
+  CLOSED: 'CLOSED',
 } as const
 
 // Status display names for UI
@@ -217,6 +218,7 @@ export const STATUS_DISPLAY_NAMES = {
   [STATUS.CHANGE_REQUESTED]: 'Change Requested',
   [STATUS.PAID]: 'Paid',
   [STATUS.EXPENSE_REPORT_REQUESTED]: 'Expense Report Requested',
+  [STATUS.CLOSED]: 'Closed',
 } as const
 
 // Array of status values

@@ -208,6 +208,7 @@ enum Status {
   CHANGE_REQUESTED
   PAID
   EXPENSE_REPORT_REQUESTED
+  CLOSED
 }
 
 enum Campus {
