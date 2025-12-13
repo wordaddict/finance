@@ -1807,7 +1807,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 {/* Admin Category Information - Admin Only */}
                 {user.role === 'ADMIN' && (
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Admin Category</label>
+                    <label className="text-sm font-medium text-gray-500">Chart of Account</label>
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-gray-900">
                         {viewModal.expense.expenseType || 'Not tagged'}

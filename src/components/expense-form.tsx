@@ -52,6 +52,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
     { id: '1', description: '', category: '', quantity: 1, unitPrice: 0, amount: 0 }
   ])
   const [totalAmount, setTotalAmount] = useState(0)
+  const [categorySearch, setCategorySearch] = useState<Record<string, string>>({})
 
   // Teams are now enums, no need to fetch them
 
@@ -232,6 +233,18 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
           setLoading(false)
           return
         }
+      }
+
+      // Validate that all items use a valid category from the list
+      const invalidCategories = items.filter(item => {
+        const categoryValue = item.category || ''
+        return !(EXPENSE_CATEGORY_VALUES as readonly string[]).includes(categoryValue)
+      })
+      if (invalidCategories.length > 0) {
+        const itemNumbers = invalidCategories.map((item) => items.findIndex(i => i.id === item.id) + 1).join(', ')
+        setError(`Please choose a valid category from the list for item(s): ${itemNumbers}`)
+        setLoading(false)
+        return
       }
 
       // Validate that all items have at least one attachment (existing or new)
@@ -720,6 +733,11 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                   const newAttachments = itemAttachments[item.id] || []
                   const existingAttachments = existingItemAttachments[item.id] || []
                   const hasAttachments = newAttachments.length > 0 || existingAttachments.length > 0
+                  const categoryInput = categorySearch[item.id] ?? item.category ?? ''
+                  const categoryFilter = categoryInput.toLowerCase()
+                  const filteredCategories = EXPENSE_CATEGORY_VALUES.filter((categoryValue) =>
+                    categoryValue.toLowerCase().includes(categoryFilter)
+                  )
                   return (
                   <div key={item.id} className={`border rounded-lg p-4 ${!hasAttachments ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-3">
@@ -756,21 +774,29 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-500 mb-1">
-                            Category *
+                            Budget Item category *
                           </label>
-                          <select
-                            value={item.category}
-                            onChange={(e) => updateItem(item.id, 'category', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                          <input
+                            type="text"
+                            list={`category-options-${item.id}`}
+                            value={categoryInput}
+                            onChange={(e) => {
+                              const value = e.target.value
+                              setCategorySearch((prev) => ({ ...prev, [item.id]: value }))
+                              updateItem(item.id, 'category', value)
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+                            placeholder="Search and select a category"
                             required
-                          >
-                            <option value="">Select a category</option>
-                            {EXPENSE_CATEGORY_VALUES.map((categoryValue) => (
-                              <option key={categoryValue} value={categoryValue}>
-                                {categoryValue}
-                              </option>
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Type to filter; choose one of the listed categories (only listed values are allowed).
+                          </p>
+                          <datalist id={`category-options-${item.id}`}>
+                            {filteredCategories.map((categoryValue) => (
+                              <option key={categoryValue} value={categoryValue} />
                             ))}
-                          </select>
+                          </datalist>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
