@@ -53,23 +53,19 @@ export async function GET(request: NextRequest) {
     if (category) {
       filterWhere.category = category
     }
-    // Date filter - only apply if dates are provided, otherwise use current month for monthly stats
-    const dateFilter: any = {}
-    if (startDate) {
-      dateFilter.gte = new Date(startDate)
-    } else {
-      // Default to current month start if no start date
-      dateFilter.gte = currentMonthStart
+    // Date filter - apply only if provided
+    if (startDate || endDate) {
+      const dateFilter: any = {}
+      if (startDate) {
+        dateFilter.gte = new Date(startDate)
+      }
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        dateFilter.lte = end
+      }
+      filterWhere.createdAt = dateFilter
     }
-    if (endDate) {
-      const end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
-      dateFilter.lte = end
-    } else {
-      // Default to current month end if no end date
-      dateFilter.lte = currentMonthEnd
-    }
-    filterWhere.createdAt = dateFilter
 
     // Get total approved expenses (with filters)
     const approvedWhere = { ...filterWhere, status: 'APPROVED' }
@@ -86,7 +82,7 @@ export async function GET(request: NextRequest) {
       where: pendingWhere,
     })
 
-    // Get monthly spend (with filters)
+    // Get monthly/all spend (approved or paid amounts)
     const monthlySpendWhere = {
       ...filterWhere,
       status: {
@@ -100,18 +96,23 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Get total paid amount (includes both PAID and EXPENSE_REPORT_REQUESTED since both have been paid)
-    const totalPaid = await db.expenseRequest.aggregate({
+    // Get total paid amount (PAID and EXPENSE_REPORT_REQUESTED) using paidAmountCents fallback to amountCents
+    const paidExpenses = await db.expenseRequest.findMany({
       where: {
         ...filterWhere,
         status: {
           in: ['PAID', 'EXPENSE_REPORT_REQUESTED'],
         },
       },
-      _sum: {
+      select: {
+        amountCents: true,
         paidAmountCents: true,
       },
     })
+    const totalPaidCents = paidExpenses.reduce((sum, exp) => {
+      const paid = exp.paidAmountCents ?? exp.amountCents ?? 0
+      return sum + paid
+    }, 0)
 
     // Get total expenses count
     const totalExpensesCount = await db.expenseRequest.count({
@@ -203,7 +204,7 @@ export async function GET(request: NextRequest) {
       totalApproved: totalApproved._sum.amountCents || 0,
       pendingCount,
       monthlySpend: monthlySpend._sum.amountCents || 0,
-      totalPaid: totalPaid._sum.paidAmountCents || 0,
+      totalPaid: totalPaidCents,
       totalExpensesCount,
       teamBreakdown: teamBreakdownWithNames,
       campusBreakdown: campusBreakdownWithNames,
