@@ -71,6 +71,9 @@ model ExpenseRequest {
   eventName     String?       // Name of the event (required if eventDate is set)
   fullEventBudgetCents Int?   // Full event budget in cents (required if eventDate is set)
   reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
+  payToExternal Boolean      @default(false) // If true, pay an external payee instead of requester
+  payeeName     String?
+  payeeZelle    String?
   account       Account?      // Account that the money came from (tagged by admin)
   expenseType   String?       // Type of expense for reporting (set by admin)
   destinationAccount Account? // Destination account for internal transfers (set by admin)

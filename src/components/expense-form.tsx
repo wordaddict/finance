@@ -39,6 +39,9 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
   const [eventDate, setEventDate] = useState('')
   const [eventName, setEventName] = useState('')
   const [fullEventBudget, setFullEventBudget] = useState(0)
+  const [payToExternal, setPayToExternal] = useState(false)
+  const [payeeName, setPayeeName] = useState('')
+  const [payeeZelle, setPayeeZelle] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [itemAttachments, setItemAttachments] = useState<Record<string, File[]>>({}) // New file uploads per item
@@ -67,6 +70,9 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
       setDescription(editExpense.description || '')
       setNotes(editExpense.notes || '')
       setUrgency(editExpense.urgency || 2)
+      setPayToExternal(editExpense.payToExternal || false)
+      setPayeeName(editExpense.payeeName || '')
+      setPayeeZelle(editExpense.payeeZelle || '')
       const hasEventDate = !!editExpense.eventDate
       setIsEvent(hasEventDate)
       setEventDate(editExpense.eventDate || '')
@@ -214,6 +220,20 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
         return
       }
 
+      // Validate external payee details when enabled
+      if (payToExternal) {
+        if (!payeeName.trim()) {
+          setError('Payee name is required when paying someone else')
+          setLoading(false)
+          return
+        }
+        if (!payeeZelle.trim()) {
+          setError('Payee Zelle (email or phone) is required when paying someone else')
+          setLoading(false)
+          return
+        }
+      }
+
       // Validate that all items have at least one attachment (existing or new)
       const itemsWithoutAttachments = items.filter(item => {
         const newAttachments = itemAttachments[item.id] || []
@@ -320,6 +340,9 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
         eventDate: eventDate || null,
         eventName: isEvent && eventName ? eventName : null,
         fullEventBudgetCents: isEvent && fullEventBudget > 0 ? Math.round(fullEventBudget * 100) : null,
+        payToExternal,
+        payeeName: payToExternal ? (payeeName || null) : null,
+        payeeZelle: payToExternal ? (payeeZelle || null) : null,
         attachments: uploadedAttachments,
         items: items.map(item => {
           // Include item ID if it's an existing item (UUID format)
@@ -518,7 +541,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               />
             </div>
@@ -531,7 +554,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 id="team"
                 value={team}
                 onChange={(e) => setTeam(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               >
                 <option value="">Select a team</option>
@@ -551,7 +574,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 id="campus"
                 value={campus}
                 onChange={(e) => setCampus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               >
                 <option value="">Select a campus</option>
@@ -572,7 +595,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 required
               />
             </div>
@@ -586,9 +609,52 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 placeholder="Add any additional notes or comments about this expense..."
               />
+            </div>
+
+            <div className="space-y-3 border border-gray-200 rounded-xl p-4 bg-gray-50">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={payToExternal}
+                  onChange={(e) => setPayToExternal(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-base font-medium">Pay someone else (external) instead of me</span>
+              </label>
+
+              {payToExternal && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Payee Name
+                    </label>
+                    <input
+                      type="text"
+                      value={payeeName}
+                      onChange={(e) => setPayeeName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      placeholder="Name of the person to be paid"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Payee Zelle (email or phone)
+                    </label>
+                    <input
+                      type="text"
+                      value={payeeZelle}
+                      onChange={(e) => setPayeeZelle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      placeholder="Zelle email or phone"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -599,7 +665,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                 id="urgency"
                 value={urgency}
                 onChange={(e) => setUrgency(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
               >
                 <option value={1}>Not Urgent (Few months)</option>
                 <option value={2}>Urgent (This Month)</option>

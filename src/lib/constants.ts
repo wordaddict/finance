@@ -79,11 +79,11 @@ export const CAMPUSES = {
 
 // Campus display names for UI
 export const CAMPUS_DISPLAY_NAMES = {
-  [CAMPUSES.DMV]: 'DMV',
+  [CAMPUSES.DMV]: 'CCI DMV',
   [CAMPUSES.CCI_VIRTUAL]: 'CCI Virtual',
-  [CAMPUSES.DALLAS]: 'Dallas',
-  [CAMPUSES.BOSTON]: 'Boston', 
-  [CAMPUSES.AUSTIN]: 'Austin',
+  [CAMPUSES.DALLAS]: 'CCI Dallas',
+  [CAMPUSES.BOSTON]: 'CCI Boston', 
+  [CAMPUSES.AUSTIN]: 'CCI Austin',
   [CAMPUSES.CCI_USA_NASHVILLE]: 'CCI-USA Nashville',
   [CAMPUSES.CCI_USA_OKLAHOMA]: 'CCI-USA Oklahoma',
   [CAMPUSES.CCI_USA_NEWYORK_NEWJERSEY]: 'CCI-USA New York/New Jersey',

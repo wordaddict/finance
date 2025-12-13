@@ -19,6 +19,9 @@ const createExpenseSchema = z.object({
   eventDate: z.string().optional().nullable(),
   eventName: z.string().optional().nullable(),
   fullEventBudgetCents: z.number().nonnegative().optional().nullable(),
+  payToExternal: z.boolean().optional().default(false),
+  payeeName: z.string().optional().nullable(),
+  payeeZelle: z.string().optional().nullable(),
   attachments: z.array(z.object({
     publicId: z.string(),
     secureUrl: z.string(),
@@ -87,6 +90,9 @@ export async function POST(request: NextRequest) {
       eventDate: data.eventDate ? new Date(data.eventDate) : null,
       eventName: data.eventName || null,
       fullEventBudgetCents: data.fullEventBudgetCents || null,
+      payToExternal: data.payToExternal || false,
+      payeeName: data.payToExternal ? (data.payeeName || null) : null,
+      payeeZelle: data.payToExternal ? (data.payeeZelle || null) : null,
     } as Prisma.ExpenseRequestUncheckedCreateInput
 
     // Create expense request first

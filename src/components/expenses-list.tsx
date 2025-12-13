@@ -47,6 +47,9 @@ interface Expense {
   account?: string | null
   expenseType?: string | null
   destinationAccount?: string | null
+  payToExternal?: boolean
+  payeeName?: string | null
+  payeeZelle?: string | null
   requester: {
     name: string | null
     email: string
@@ -1759,6 +1762,22 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <p className={`font-medium ${getUrgencyColor(viewModal.expense.urgency)}`}>
                     {URGENCY_DISPLAY_NAMES[viewModal.expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${viewModal.expense.urgency}`}
                   </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-sm font-medium text-gray-500">Payment Recipient</label>
+                  {viewModal.expense.payToExternal ? (
+                    <div className="mt-1 space-y-1">
+                      <p className="font-medium text-gray-900">External payee</p>
+                      {viewModal.expense.payeeName && (
+                        <p className="text-sm text-gray-700">Name: {viewModal.expense.payeeName}</p>
+                      )}
+                      {viewModal.expense.payeeZelle && (
+                        <p className="text-sm text-gray-700">Zelle: {viewModal.expense.payeeZelle}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-1 font-medium text-gray-900">Requester (internal)</p>
+                  )}
                 </div>
                 {/* Account Information - Visible to Admins and Pastors */}
                 {(user.role === 'ADMIN' || user.role === 'CAMPUS_PASTOR') && (

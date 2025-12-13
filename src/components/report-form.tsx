@@ -15,6 +15,9 @@ interface ReportFormProps {
     description?: string
     eventDate?: string
     status: string
+    payToExternal?: boolean
+    payeeName?: string | null
+    payeeZelle?: string | null
     requester: {
       name: string | null
       email: string
@@ -631,6 +634,18 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                 </div>
                 <div>
                   <span className="text-gray-500">Campus:</span> {expense.campus}
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-gray-500">Payment Recipient:</span>{' '}
+                  {expense.payToExternal ? (
+                    <span className="text-gray-900">
+                      External payee
+                      {expense.payeeName && ` • ${expense.payeeName}`}
+                      {expense.payeeZelle && ` • Zelle: ${expense.payeeZelle}`}
+                    </span>
+                  ) : (
+                    <span className="text-gray-900">Requester (internal)</span>
+                  )}
                 </div>
                 {expense.eventDate && (
                   <div>
