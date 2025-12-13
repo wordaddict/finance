@@ -950,13 +950,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
     const expense = expenses.find(e => e.id === expenseId)
     if (expense) {
       const reportCount = expense.reports?.length || 0
-      setCloseConfirmModal({
-        isOpen: true,
-        expenseId,
+    setCloseConfirmModal({
+      isOpen: true,
+      expenseId,
         expenseTitle: expense.title,
         hasReports: reportCount > 0,
         reportCount,
-      })
+    })
     }
   }
 
@@ -1376,7 +1376,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div>
               <label className="text-sm font-medium">Status</label>
               <select
-                className="w-full mt-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full mt-1 p-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
@@ -1391,7 +1391,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div>
               <label className="text-sm font-medium">Team</label>
               <select
-                className="w-full mt-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full mt-1 p-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={filters.team}
                 onChange={(e) => setFilters({ ...filters, team: e.target.value })}
               >
@@ -1406,7 +1406,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div>
               <label className="text-sm font-medium">Campus</label>
               <select
-                className="w-full mt-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="w-full mt-1 p-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={filters.campus}
                 onChange={(e) => setFilters({ ...filters, campus: e.target.value })}
               >
@@ -1425,7 +1425,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <input
                   type="text"
                   placeholder="Search expenses..."
-                  className="w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full pl-8 pr-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   value={filters.search}
                   onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 />
@@ -1498,7 +1498,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         variant="outline" 
                         size="sm"
                         onClick={() => openReportForm(expense)}
-                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100 rounded-lg"
+                        className="flex-1 sm:flex-none bg-green-50 border-green-200 text-green-700 hover:bg-green-100 rounded-xl"
                       >
                         <FileText className="w-4 h-4 mr-1" />
                         <span>Create Report</span>
@@ -1546,7 +1546,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         variant="outline" 
                         size="sm"
                         onClick={() => openChangeRequestModal(expense.id, expense.title)}
-                        className="flex-1 sm:flex-none bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 rounded-lg"
+                        className="flex-1 sm:flex-none bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 rounded-xl"
                       >
                         <FileText className="w-4 h-4 mr-1" />
                         <span className="hidden sm:inline">Request Change</span>
@@ -1567,7 +1567,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           variant="outline" 
                           size="sm"
                           onClick={() => openCloseConfirmModal(expense.id)}
-                          className="flex-1 sm:flex-none bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg"
+                          className="flex-1 sm:flex-none bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl"
                         >
                           <X className="w-4 h-4 mr-1" />
                           <span className="hidden sm:inline">Close</span>
@@ -1582,7 +1582,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               variant="outline" 
                               size="sm"
                               onClick={() => expense.reports && openReportViewModal(expense.reports[0])}
-                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 rounded-lg"
+                              className="flex-1 sm:flex-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 rounded-xl"
                             >
                               <FileText className="w-4 h-4 mr-1" />
                               <span className="hidden sm:inline">View Report</span>
@@ -1595,7 +1595,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                     variant="outline" 
                                     size="sm"
                                     onClick={() => openMarkPaidModal(expense, true)}
-                                    className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 rounded-lg"
+                                    className="flex-1 sm:flex-none bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 rounded-xl"
                                   >
                                     <DollarSign className="w-4 h-4 mr-1" />
                                     <span className="hidden sm:inline">Pay Additional ${(additionalPayment.amount / 100).toFixed(2)}</span>
@@ -1611,7 +1611,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             variant="outline" 
                             size="sm"
                             onClick={() => openCloseConfirmModal(expense.id)}
-                            className="flex-1 sm:flex-none bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg"
+                            className="flex-1 sm:flex-none bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl"
                           >
                             <X className="w-4 h-4 mr-1" />
                             <span className="hidden sm:inline">Close</span>
@@ -3235,17 +3235,17 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-500">Report Status:</span>
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      (reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'text-green-600 bg-green-50' :
-                      (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'text-red-600 bg-red-50' :
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    (reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'text-green-600 bg-green-50' :
+                    (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'text-red-600 bg-red-50' :
                       (reportViewModal.report.status || 'PENDING') === 'CLOSED' ? 'text-gray-600 bg-gray-50' :
-                      'text-yellow-600 bg-yellow-50'
-                    }`}>
-                      {(reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'Approved' :
-                       (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'Denied' :
+                    'text-yellow-600 bg-yellow-50'
+                  }`}>
+                    {(reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'Approved' :
+                     (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'Denied' :
                        (reportViewModal.report.status || 'PENDING') === 'CLOSED' ? 'Closed' :
-                       'Pending'}
-                    </span>
+                     'Pending'}
+                  </span>
                     {user.role === 'ADMIN' && (reportViewModal.report.status === 'APPROVED' || reportViewModal.report.status === 'PENDING') && (
                       <Button
                         variant="outline"

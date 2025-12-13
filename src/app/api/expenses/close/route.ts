@@ -85,31 +85,31 @@ export async function POST(request: NextRequest) {
           },
           data: { status: 'CLOSED' },
         })
-      }
+    }
 
-      // Update expense status to CLOSED
-      // Set reportRequired to false since we're closing it without requiring a report
+    // Update expense status to CLOSED
+    // Set reportRequired to false since we're closing it without requiring a report
       await tx.expenseRequest.update({
-        where: { id: expenseId },
-        data: { 
-          status: 'CLOSED' as any,
-          reportRequired: false, // Close without requiring a report
-          paidAt: expense.paidAt || new Date(), // Set paidAt if not already set
-          paidAmountCents: totalPaidAmountCents, // Update paid amount if not already set
-        },
-      })
+      where: { id: expenseId },
+      data: { 
+        status: 'CLOSED' as any,
+        reportRequired: false, // Close without requiring a report
+        paidAt: expense.paidAt || new Date(), // Set paidAt if not already set
+        paidAmountCents: totalPaidAmountCents, // Update paid amount if not already set
+      },
+    })
 
-      // Create status event
+    // Create status event
       await tx.statusEvent.create({
-        data: {
-          expenseId,
-          from: expense.status as any,
-          to: 'CLOSED' as any,
-          actorId: user.id,
+      data: {
+        expenseId,
+        from: expense.status as any,
+        to: 'CLOSED' as any,
+        actorId: user.id,
           reason: reportsToClose.length > 0 
             ? 'Expense closed by admin - all associated reports also closed'
             : 'Expense closed by admin (report requirement bypassed)',
-        },
+      },
       })
     })
 

@@ -281,7 +281,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                     placeholder="Search reports..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -289,7 +289,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                 <label htmlFor="status" className="block text-sm font-medium mb-1">Status</label>
                 <select
                   id="status"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   value={filters.status}
                   onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                 >
@@ -332,7 +332,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-base sm:text-lg font-semibold">{report.title}</h3>
+                            <h3 className="text-base sm:text-lg font-semibold">{report.title}</h3>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(report.status)}`}>
                                 {getStatusIcon(report.status)}
                                 {report.status}
