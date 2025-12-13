@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     
     const expenseId = searchParams.get('expenseId')
+    const status = searchParams.get('status')
+    const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
@@ -28,6 +30,30 @@ export async function GET(request: NextRequest) {
     
     if (expenseId) {
       where.expenseId = expenseId
+    }
+
+    if (status) {
+      where.status = status
+    }
+
+    if (search) {
+      const searchConditions: any[] = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+      ]
+      
+      // If searching in expense title, we need to handle it differently
+      // since it's a relation, we'll search in the expense relation
+      if (!expenseId) {
+        // Only add expense title search if we're not already filtering by expenseId
+        searchConditions.push({
+          expense: {
+            title: { contains: search, mode: 'insensitive' }
+          }
+        })
+      }
+      
+      where.OR = searchConditions
     }
 
     // Get reports with pagination

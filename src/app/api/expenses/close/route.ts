@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { expenseId } = closeExpenseSchema.parse(body)
 
-    // Get expense with current status
+    // Get expense with current status and reports
     const expense = await db.expenseRequest.findUnique({
       where: { id: expenseId },
       include: {
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
             approvals: true,
           },
         },
+        reports: true,
       },
     })
 
@@ -73,27 +74,43 @@ export async function POST(request: NextRequest) {
       totalPaidAmountCents = paymentAmountCents
     }
 
-    // Update expense status to CLOSED
-    // Set reportRequired to false since we're closing it without requiring a report
-    await db.expenseRequest.update({
-      where: { id: expenseId },
-      data: { 
-        status: 'CLOSED' as any,
-        reportRequired: false, // Close without requiring a report
-        paidAt: expense.paidAt || new Date(), // Set paidAt if not already set
-        paidAmountCents: totalPaidAmountCents, // Update paid amount if not already set
-      },
-    })
+    // Use a transaction to close expense and all associated reports
+    await db.$transaction(async (tx) => {
+      // Close all associated reports that aren't already closed
+      const reportsToClose = expense.reports.filter(r => r.status !== 'CLOSED')
+      if (reportsToClose.length > 0) {
+        await tx.expenseReport.updateMany({
+          where: {
+            id: { in: reportsToClose.map(r => r.id) },
+          },
+          data: { status: 'CLOSED' },
+        })
+      }
 
-    // Create status event
-    await db.statusEvent.create({
-      data: {
-        expenseId,
-        from: expense.status as any,
-        to: 'CLOSED' as any,
-        actorId: user.id,
-        reason: 'Expense closed by admin (report requirement bypassed)',
-      },
+      // Update expense status to CLOSED
+      // Set reportRequired to false since we're closing it without requiring a report
+      await tx.expenseRequest.update({
+        where: { id: expenseId },
+        data: { 
+          status: 'CLOSED' as any,
+          reportRequired: false, // Close without requiring a report
+          paidAt: expense.paidAt || new Date(), // Set paidAt if not already set
+          paidAmountCents: totalPaidAmountCents, // Update paid amount if not already set
+        },
+      })
+
+      // Create status event
+      await tx.statusEvent.create({
+        data: {
+          expenseId,
+          from: expense.status as any,
+          to: 'CLOSED' as any,
+          actorId: user.id,
+          reason: reportsToClose.length > 0 
+            ? 'Expense closed by admin - all associated reports also closed'
+            : 'Expense closed by admin (report requirement bypassed)',
+        },
+      })
     })
 
     return NextResponse.json({

@@ -280,6 +280,7 @@ enum ReportStatus {
   PENDING
   APPROVED
   DENIED
+  CLOSED
 }
 
 model ReportAttachment {

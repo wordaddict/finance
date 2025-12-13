@@ -10,7 +10,7 @@ import { DenialModal } from './denial-modal'
 import { ReportForm } from './report-form'
 import { ConfirmationModal } from './confirmation-modal'
 import { ReportDenialModal } from './report-denial-modal'
-import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
+import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, STATUS_VALUES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
 import { 
   Plus,
   Filter,
@@ -268,9 +268,28 @@ export function ExpensesList({ user }: ExpensesListProps) {
   const [closeConfirmModal, setCloseConfirmModal] = useState<{
     isOpen: boolean
     expenseId: string | null
+    expenseTitle: string
+    hasReports: boolean
+    reportCount: number
   }>({
     isOpen: false,
     expenseId: null,
+    expenseTitle: '',
+    hasReports: false,
+    reportCount: 0,
+  })
+  const [closeReportConfirmModal, setCloseReportConfirmModal] = useState<{
+    isOpen: boolean
+    reportId: string
+    reportTitle: string
+    expenseId: string
+    isLastReport: boolean
+  }>({
+    isOpen: false,
+    reportId: '',
+    reportTitle: '',
+    expenseId: '',
+    isLastReport: false,
   })
   const [reportDenialModal, setReportDenialModal] = useState<{
     isOpen: boolean
@@ -928,17 +947,105 @@ export function ExpensesList({ user }: ExpensesListProps) {
   }
 
   const openCloseConfirmModal = (expenseId: string) => {
-    setCloseConfirmModal({
-      isOpen: true,
-      expenseId,
-    })
+    const expense = expenses.find(e => e.id === expenseId)
+    if (expense) {
+      const reportCount = expense.reports?.length || 0
+      setCloseConfirmModal({
+        isOpen: true,
+        expenseId,
+        expenseTitle: expense.title,
+        hasReports: reportCount > 0,
+        reportCount,
+      })
+    }
   }
 
   const closeCloseConfirmModal = () => {
     setCloseConfirmModal({
       isOpen: false,
       expenseId: null,
+      expenseTitle: '',
+      hasReports: false,
+      reportCount: 0,
     })
+  }
+
+  const openCloseReportConfirmModal = (reportId: string, reportTitle: string) => {
+    // Find the report and check if it's the last one for the expense
+    const expense = expenses.find(e => 
+      e.reports && e.reports.some((r: any) => r.id === reportId)
+    )
+    
+    let isLastReport = false
+    let expenseId = ''
+    
+    if (expense && expense.reports) {
+      expenseId = expense.id
+      // Count non-closed reports
+      const nonClosedReports = expense.reports.filter((r: any) => r.status !== 'CLOSED')
+      isLastReport = nonClosedReports.length === 1 && nonClosedReports[0].id === reportId
+    }
+    
+    setCloseReportConfirmModal({
+      isOpen: true,
+      reportId,
+      reportTitle,
+      expenseId,
+      isLastReport,
+    })
+  }
+
+  const closeCloseReportConfirmModal = () => {
+    setCloseReportConfirmModal({
+      isOpen: false,
+      reportId: '',
+      reportTitle: '',
+      expenseId: '',
+      isLastReport: false,
+    })
+  }
+
+  const handleCloseReport = async () => {
+    if (!closeReportConfirmModal.reportId) return
+
+    try {
+      setLoading(true)
+      const response = await fetch('/api/reports/close', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId: closeReportConfirmModal.reportId }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage('Report closed successfully')
+        closeCloseReportConfirmModal()
+        // Refresh the report data
+        if (reportViewModal.report && reportViewModal.report.expense) {
+          const reportResponse = await fetch(`/api/reports?expenseId=${reportViewModal.report.expense.id}`)
+          if (reportResponse.ok) {
+            const reportData = await reportResponse.json()
+            const updatedReport = reportData.reports.find((r: any) => r.id === closeReportConfirmModal.reportId)
+            if (updatedReport) {
+              setReportViewModal({ isOpen: true, report: updatedReport })
+            }
+          }
+        }
+        fetchExpenses() // Refresh expenses list
+      } else {
+        setError(data.error || 'Failed to close report')
+        closeCloseReportConfirmModal()
+      }
+    } catch (error) {
+      console.error('Failed to close report:', error)
+      setError('Failed to close report')
+      closeCloseReportConfirmModal()
+    } finally {
+      setLoading(false)
+    }
   }
 
   const openReportDenialModal = (reportId: string, reportTitle: string) => {
@@ -1274,10 +1381,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
                 <option value="">All Statuses</option>
-                <option value="SUBMITTED">Submitted</option>
-                <option value="APPROVED">Approved</option>
-                <option value="DENIED">Denied</option>
-                <option value="PAID">Paid</option>
+                {STATUS_VALUES.map(status => (
+                  <option key={status} value={status}>
+                    {STATUS_DISPLAY_NAMES[status as keyof typeof STATUS_DISPLAY_NAMES]}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -1498,6 +1606,17 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             })()}
                           </>
                         )}
+                        {user.role === 'ADMIN' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openCloseConfirmModal(expense.id)}
+                            className="flex-1 sm:flex-none bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 rounded-lg"
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Close</span>
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
@@ -1570,8 +1689,29 @@ export function ExpensesList({ user }: ExpensesListProps) {
         onClose={closeCloseConfirmModal}
         onConfirm={handleCloseExpense}
         title="Close Expense Request"
-        message="Are you sure you want to close this expense? This will mark it as closed without requiring an expense report."
+        message={
+          closeConfirmModal.hasReports
+            ? `Are you sure you want to close "${closeConfirmModal.expenseTitle}"? This will mark the expense as closed and will also close ${closeConfirmModal.reportCount} associated expense report${closeConfirmModal.reportCount > 1 ? 's' : ''}.`
+            : `Are you sure you want to close "${closeConfirmModal.expenseTitle}"? This will mark it as closed without requiring an expense report.`
+        }
         confirmText="Close Expense"
+        cancelText="Cancel"
+        variant="warning"
+        loading={loading}
+      />
+
+      {/* Close Report Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={closeReportConfirmModal.isOpen}
+        onClose={closeCloseReportConfirmModal}
+        onConfirm={handleCloseReport}
+        title="Close Report"
+        message={
+          closeReportConfirmModal.isLastReport
+            ? `Are you sure you want to close "${closeReportConfirmModal.reportTitle}"? This will mark the report as closed and will also close the associated expense request since this is the last report.`
+            : `Are you sure you want to close "${closeReportConfirmModal.reportTitle}"? This will mark the report as closed.`
+        }
+        confirmText="Close Report"
         cancelText="Cancel"
         variant="warning"
         loading={loading}
@@ -3094,15 +3234,30 @@ export function ExpensesList({ user }: ExpensesListProps) {
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-500">Report Status:</span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    (reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'text-green-600 bg-green-50' :
-                    (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'text-red-600 bg-red-50' :
-                    'text-yellow-600 bg-yellow-50'
-                  }`}>
-                    {(reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'Approved' :
-                     (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'Denied' :
-                     'Pending'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      (reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'text-green-600 bg-green-50' :
+                      (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'text-red-600 bg-red-50' :
+                      (reportViewModal.report.status || 'PENDING') === 'CLOSED' ? 'text-gray-600 bg-gray-50' :
+                      'text-yellow-600 bg-yellow-50'
+                    }`}>
+                      {(reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'Approved' :
+                       (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'Denied' :
+                       (reportViewModal.report.status || 'PENDING') === 'CLOSED' ? 'Closed' :
+                       'Pending'}
+                    </span>
+                    {user.role === 'ADMIN' && (reportViewModal.report.status === 'APPROVED' || reportViewModal.report.status === 'PENDING') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCloseReportConfirmModal(reportViewModal.report.id, reportViewModal.report.title)}
+                        className="bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Close Report
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

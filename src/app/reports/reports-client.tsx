@@ -12,8 +12,13 @@ import {
   Search,
   Calendar,
   User,
-  X
+  X,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Lock
 } from 'lucide-react'
+import { ConfirmationModal } from '@/components/confirmation-modal'
 
 interface Report {
   id: string
@@ -21,6 +26,7 @@ interface Report {
   content: string
   reportDate: string
   createdAt: string
+  status: 'PENDING' | 'APPROVED' | 'DENIED' | 'CLOSED'
   totalApprovedAmount?: number
   expense: {
     id: string
@@ -62,6 +68,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
   const [error, setError] = useState('')
   const [filters, setFilters] = useState({
     search: '',
+    status: '',
   })
   const [viewModal, setViewModal] = useState<{
     isOpen: boolean
@@ -70,6 +77,21 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
     isOpen: false,
     report: null,
   })
+  const [closeConfirmModal, setCloseConfirmModal] = useState<{
+    isOpen: boolean
+    reportId: string
+    reportTitle: string
+    expenseId: string
+    isLastReport: boolean
+  }>({
+    isOpen: false,
+    reportId: '',
+    reportTitle: '',
+    expenseId: '',
+    isLastReport: false,
+  })
+  const [message, setMessage] = useState('')
+  const [processingClose, setProcessingClose] = useState(false)
   const selectedReport = viewModal.report ?? null
 
   useEffect(() => {
@@ -80,6 +102,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
     try {
       const params = new URLSearchParams()
       if (filters.search) params.append('search', filters.search)
+      if (filters.status) params.append('status', filters.status)
 
       const response = await fetch(`/api/reports?${params}`)
       
@@ -112,6 +135,97 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
     })
   }
 
+  const openCloseConfirmModal = (reportId: string, reportTitle: string, expenseId: string) => {
+    // Check if this is the last non-closed report for the expense
+    const expenseReports = reports.filter(r => r.expense.id === expenseId)
+    const nonClosedReports = expenseReports.filter(r => r.status !== 'CLOSED')
+    const isLastReport = nonClosedReports.length === 1 && nonClosedReports[0].id === reportId
+
+    setCloseConfirmModal({
+      isOpen: true,
+      reportId,
+      reportTitle,
+      expenseId,
+      isLastReport,
+    })
+  }
+
+  const closeCloseConfirmModal = () => {
+    setCloseConfirmModal({
+      isOpen: false,
+      reportId: '',
+      reportTitle: '',
+      expenseId: '',
+      isLastReport: false,
+    })
+  }
+
+  const handleCloseReport = async () => {
+    if (!closeConfirmModal.reportId) return
+
+    try {
+      setProcessingClose(true)
+      const response = await fetch('/api/reports/close', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId: closeConfirmModal.reportId }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage(
+          closeConfirmModal.isLastReport
+            ? 'Report closed successfully. The associated expense request has also been closed.'
+            : 'Report closed successfully'
+        )
+        closeCloseConfirmModal()
+        fetchReports() // Refresh the list
+      } else {
+        setError(data.error || 'Failed to close report')
+        closeCloseConfirmModal()
+      }
+    } catch (error) {
+      console.error('Failed to close report:', error)
+      setError('Failed to close report')
+      closeCloseConfirmModal()
+    } finally {
+      setProcessingClose(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return 'text-green-600 bg-green-50'
+      case 'DENIED':
+        return 'text-red-600 bg-red-50'
+      case 'PENDING':
+        return 'text-yellow-600 bg-yellow-50'
+      case 'CLOSED':
+        return 'text-gray-600 bg-gray-50'
+      default:
+        return 'text-gray-600 bg-gray-50'
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <CheckCircle className="w-4 h-4" />
+      case 'DENIED':
+        return <XCircle className="w-4 h-4" />
+      case 'PENDING':
+        return <Clock className="w-4 h-4" />
+      case 'CLOSED':
+        return <Lock className="w-4 h-4" />
+      default:
+        return null
+    }
+  }
+
   // This check is redundant since the page.tsx already redirects non-admins,
   // but keeping it as a safety check
   if (user.role !== 'ADMIN') {
@@ -140,6 +254,13 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
           </div>
         )}
 
+        {message && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Success!</strong>
+            <span className="block sm:inline"> {message}</span>
+          </div>
+        )}
+
         {/* Filters */}
         <Card>
           <CardHeader>
@@ -163,6 +284,21 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium mb-1">Status</label>
+                <select
+                  id="status"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  value={filters.status}
+                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="DENIED">Denied</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
               </div>
             </div>
           </CardContent>
@@ -195,7 +331,13 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                       <div className="flex-1">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                           <div>
-                            <h3 className="text-base sm:text-lg font-semibold">{report.title}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-base sm:text-lg font-semibold">{report.title}</h3>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(report.status)}`}>
+                                {getStatusIcon(report.status)}
+                                {report.status}
+                              </span>
+                            </div>
                             <p className="text-sm text-gray-600 line-clamp-2">{report.content}</p>
                           </div>
                         </div>
@@ -232,6 +374,17 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                           <Eye className="w-4 h-4" />
                           <span className="hidden sm:inline">View</span>
                         </Button>
+                        {user.role === 'ADMIN' && (report.status === 'APPROVED' || report.status === 'PENDING') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openCloseConfirmModal(report.id, report.title, report.expense.id)}
+                            className="flex items-center space-x-2 bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+                          >
+                            <Lock className="w-4 h-4" />
+                            <span className="hidden sm:inline">Close</span>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -532,6 +685,23 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
           </div>
         </div>
       )}
+
+      {/* Close Report Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={closeConfirmModal.isOpen}
+        onClose={closeCloseConfirmModal}
+        onConfirm={handleCloseReport}
+        title="Close Report"
+        message={
+          closeConfirmModal.isLastReport
+            ? `Are you sure you want to close "${closeConfirmModal.reportTitle}"? This will mark the report as closed and will also close the associated expense request since this is the last report.`
+            : `Are you sure you want to close "${closeConfirmModal.reportTitle}"? This will mark the report as closed.`
+        }
+        confirmText="Close Report"
+        cancelText="Cancel"
+        variant="warning"
+        loading={processingClose}
+      />
     </div>
   )
 }
