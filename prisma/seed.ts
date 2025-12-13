@@ -69,22 +69,6 @@ async function main() {
   // Team memberships are no longer needed since teams are enums
 
   // Create sample expense requests for testing
-  await prisma.expenseRequest.upsert({
-    where: { id: '550e8400-e29b-41d4-a716-446655440001' },
-    update: {},
-    create: {
-      id: '550e8400-e29b-41d4-a716-446655440001',
-      title: 'Youth Ministry Supplies',
-      amountCents: 15000, // $150.00
-      status: 'SUBMITTED',
-      urgency: 2,
-      campus: 'DALLAS',
-      description: 'Purchase of craft supplies for youth group activities',
-      category: 'Outreach',
-      requesterId: leader.id,
-      team: 'REACH_OUT',
-    },
-  })
 
   await prisma.expenseRequest.upsert({
     where: { id: '550e8400-e29b-41d4-a716-446655440002' },

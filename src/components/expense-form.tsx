@@ -614,48 +614,6 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
               />
             </div>
 
-            <div className="space-y-3 border border-gray-200 rounded-xl p-4 bg-gray-50">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={payToExternal}
-                  onChange={(e) => setPayToExternal(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-base font-medium">Pay someone else (external) instead of me</span>
-              </label>
-
-              {payToExternal && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Payee Name
-                    </label>
-                    <input
-                      type="text"
-                      value={payeeName}
-                      onChange={(e) => setPayeeName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="Name of the person to be paid"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Payee Zelle (email or phone)
-                    </label>
-                    <input
-                      type="text"
-                      value={payeeZelle}
-                      onChange={(e) => setPayeeZelle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                      placeholder="Zelle email or phone"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
 
             <div>
               <label htmlFor="urgency" className="block text-sm font-medium mb-1">
@@ -980,6 +938,49 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-3 border border-gray-200 rounded-xl p-4 bg-gray-50">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={payToExternal}
+                  onChange={(e) => setPayToExternal(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-base font-medium">Pay someone else (external) instead of me</span>
+              </label>
+
+              {payToExternal && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Payee Name
+                    </label>
+                    <input
+                      type="text"
+                      value={payeeName}
+                      onChange={(e) => setPayeeName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      placeholder="Name of the person to be paid"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Payee Zelle (email or phone)
+                    </label>
+                    <input
+                      type="text"
+                      value={payeeZelle}
+                      onChange={(e) => setPayeeZelle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      placeholder="Zelle email or phone"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* General attachments (for backward compatibility with non-itemized expenses) */}
