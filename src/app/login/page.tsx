@@ -21,6 +21,8 @@ export default function LoginPage() {
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.get('verified') === 'true') {
       setSuccessMessage('Email verified successfully! Your account is now verified and pending administrator approval.')
+    } else if (urlParams.get('reset') === 'success') {
+      setSuccessMessage('Password reset successful! You can now log in with your new password.')
     }
   }, [])
 
@@ -123,10 +125,17 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <a href="/register" className="text-blue-600 hover:underline text-sm">
-              Don&apos;t have an account? Register here
-            </a>
+          <div className="mt-4 space-y-2 text-center">
+            <div>
+              <a href="/forgot-password" className="text-blue-600 hover:underline text-sm">
+                Forgot your password?
+              </a>
+            </div>
+            <div>
+              <a href="/register" className="text-blue-600 hover:underline text-sm">
+                Don&apos;t have an account? Register here
+              </a>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -513,3 +513,34 @@ export function generateUserSuspendedEmail(
     text: `Account Suspended\n\nHello ${recipientName},\n\nYour account has been suspended and you no longer have access to the Church Expense System.\n\nAccount Details:\nEmail: ${recipientEmail}\nStatus: Suspended\nReason: ${reason}\n\nIf you have questions about this suspension or wish to appeal this decision, please contact the church administration immediately.\n\nBest regards,\nChurch Expense System`,
   }
 }
+
+export function generatePasswordResetEmail(
+  recipientName: string,
+  resetUrl: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  
+  return {
+    to: '',
+    subject: 'Reset Your Password - Church Expense System',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset Request</h2>
+        <p>Hello ${recipientName},</p>
+        <p>We received a request to reset your password for your Church Expense System account. Click the button below to reset your password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Reset Password
+          </a>
+        </div>
+        <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #666; font-size: 14px;">${resetUrl}</p>
+        <p><strong>Important:</strong> This reset link will expire in 1 hour for security reasons.</p>
+        <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Password Reset Request\n\nHello ${recipientName},\n\nWe received a request to reset your password for your Church Expense System account. Please visit this link to reset your password:\n\n${resetUrl}\n\nThis reset link will expire in 1 hour for security reasons.\n\nIf you didn't request a password reset, please ignore this email. Your password will remain unchanged.\n\nBest regards,\nChurch Expense System`,
+  }
+}
