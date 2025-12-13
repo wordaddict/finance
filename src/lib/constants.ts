@@ -16,13 +16,14 @@ export const TEAMS = {
   AMBIENCE: 'AMBIENCE',
   
   // Legacy teams (keeping for backward compatibility)
-  ADMIN: 'ADMIN',
+  ADMIN: 'ADMINISTRATION',
   SOCIAL_MEDIA: 'SOCIAL_MEDIA',
   VISION_AND_VOLUME: 'VISION_AND_VOLUME',
   CREATIVE: 'CREATIVE',
-  REACH_OUT: 'REACH_OUT',
+  CONNECTIONS_AND_COMMUNITY: 'CONNECTIONS_AND_COMMUNITY',
+  VIRTUAL_DESIGN: 'VIRTUAL_DESIGN',
   CELEB_KIDS: 'CELEB_KIDS',
-  PROTOCOL: 'PROTOCOL',
+  PROTOCOL: 'PROTOCOL_AND_CHURCH_EXPERIENCE',
 } as const
 
 // Team display names for UI
@@ -45,13 +46,14 @@ export const TEAM_DISPLAY_NAMES = {
 
   
   // Legacy teams
-  [TEAMS.ADMIN]: 'Admin',
+  [TEAMS.ADMIN]: 'Administration',
   [TEAMS.SOCIAL_MEDIA]: 'Social Media',
   [TEAMS.VISION_AND_VOLUME]: 'Vision and Volume',
   [TEAMS.CREATIVE]: 'Creative',
-  [TEAMS.REACH_OUT]: 'Reach Out',
+  [TEAMS.CONNECTIONS_AND_COMMUNITY]: 'Connections and Community',
+  [TEAMS.VIRTUAL_DESIGN]: 'Virtual Design',
   [TEAMS.CELEB_KIDS]: 'Celeb Kids',
-  [TEAMS.PROTOCOL]: 'Protocol',
+  [TEAMS.PROTOCOL]: 'Protocol and Church Experience',
 } as const
 
 // Array of team values for easy iteration
@@ -80,10 +82,10 @@ export const CAMPUSES = {
 // Campus display names for UI
 export const CAMPUS_DISPLAY_NAMES = {
   [CAMPUSES.DMV]: 'CCI DMV',
-  [CAMPUSES.CCI_VIRTUAL]: 'CCI Virtual',
   [CAMPUSES.DALLAS]: 'CCI Dallas',
   [CAMPUSES.BOSTON]: 'CCI Boston', 
   [CAMPUSES.AUSTIN]: 'CCI Austin',
+  [CAMPUSES.CCI_VIRTUAL]: 'CCI-USA Virtual',
   [CAMPUSES.CCI_USA_NASHVILLE]: 'CCI-USA Nashville',
   [CAMPUSES.CCI_USA_OKLAHOMA]: 'CCI-USA Oklahoma',
   [CAMPUSES.CCI_USA_NEWYORK_NEWJERSEY]: 'CCI-USA New York/New Jersey',
