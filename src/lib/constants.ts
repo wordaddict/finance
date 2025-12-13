@@ -30,21 +30,12 @@ export const TEAMS = {
 export const TEAM_DISPLAY_NAMES = {
   // Photography and Storytelling
   [TEAMS.PHOTOGRAPHY_AND_STORYTELLING]: 'Photography and Storytelling',
-
-
-  
   // Follow Up
   [TEAMS.FOLLOW_UP]: 'Follow Up',
-
-  
   // CCW
   [TEAMS.CCW]: 'CCW',
-
-  
   // Ambience
   [TEAMS.AMBIENCE]: 'Ambience',
-
-  
   // Legacy teams
   [TEAMS.ADMIN]: 'Administration',
   [TEAMS.SOCIAL_MEDIA]: 'Social Media',
@@ -188,28 +179,28 @@ export const EXPENSE_CATEGORIES = {
   EQUIPMENT_PURCHASE: 'Equipment Purchase',
   EQUIPMENT_RENTAL: 'Equipment Rental',
   FINANCIAL_WELFARE: 'Financial Welfare/Assistance',
-  GUEST_MINISTER_TRAVEL_EXPENSE: 'Guest Minister Travel Expense',
-  FOLLOW_UP: 'Follow Up',
   FOOD: 'Food',
+  FOLLOW_UP: 'Follow Up',
+  GUEST_MINISTER_HONORARIUM: 'Guest Minister Honorarium',
+  GUEST_MINISTER_HOTEL_ACCOMMODATION: 'Guest Minister Hotel/Accommodation',
+  GUEST_MINISTER_TRAVEL_EXPENSE: 'Guest Minister Travel Expense',
   GUEST_MINISTER_WELFARE: 'Guest Minister Hospitality',
-  PASTORAL_TRAVEL_EXPENSE: 'Pastoral Travel/Expense',
   HONORARIUM: 'Other Honorarium',
   HOSPITALITY: 'Hospitality',
-  GUEST_MINISTER_HOTEL_ACCOMMODATION: 'Guest Minister Hotel/Accommodation',
-  GUEST_MINISTER_HONORARIUM: 'Guest Minister Honorarium',
   HOTEL_AND_ACCOMMODATION: 'Hotel and Accommodation',
   INTERNET_TELEPHONE: 'Internet/telephone',
   LOGISTICS: 'Logistics',
+  MAP: 'MAP',
   MEDIA_AND_TECHNICAL: 'Media and Technical',
   OTHERS: 'Others',
   OUTREACH: 'Outreach',
+  PASTORAL_TRAVEL_EXPENSE: 'Pastoral Travel/Expense',
   RENT: 'Rent',
   REPAIRS_AND_MAINTENANCE: 'Repairs and Maintenance',
   SALARIES_AND_ALLOWANCES: 'Salaries and Allowances',
   SECURITY_PROTOCOL: 'Protocol/Security',
   SOCIAL_MEDIA: 'Social Media',
   SPECIAL_EVENTS_AND_PROGRAMS: 'Special Events and Programs',
-  MAP: 'MAP',
   SUBSCRIPTION: 'Subscription',
   TRAVEL_EXPENSES: 'Travel Expenses',
   WELFARE: 'General Welfare',
