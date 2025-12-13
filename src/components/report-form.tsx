@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
 import { X, Upload, FileText } from 'lucide-react'
 
 interface ReportFormProps {
@@ -630,10 +631,12 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                   <span className="text-gray-500">Approved Amount:</span> <span className="font-semibold text-green-600">${(totalApprovedAmount / 100).toFixed(2)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Team:</span> {expense.team}
+                  <span className="text-gray-500">Team:</span>{' '}
+                  {TEAM_DISPLAY_NAMES[expense.team as keyof typeof TEAM_DISPLAY_NAMES] || expense.team}
                 </div>
                 <div>
-                  <span className="text-gray-500">Campus:</span> {expense.campus}
+                  <span className="text-gray-500">Campus:</span>{' '}
+                  {CAMPUS_DISPLAY_NAMES[expense.campus as keyof typeof CAMPUS_DISPLAY_NAMES] || expense.campus}
                 </div>
                 <div className="sm:col-span-2">
                   <span className="text-gray-500">Payment Recipient:</span>{' '}
@@ -790,7 +793,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                       'text-gray-600'
                     }`}>
                       {needsAdditionalPayment && '+'}${(difference / 100).toFixed(2)}
-                      {needsAdditionalPayment && ' (Admin will make additional payment)'}
+                      {needsAdditionalPayment && ' (Admin will make additional payment if Approved)'}
                       {hasRefund && ' (Refund required)'}
                     </span>
                   </div>
@@ -1045,7 +1048,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                       'text-gray-600'
                     }`}>
                       {needsAdditionalPayment && '+'}${(difference / 100).toFixed(2)}
-                      {needsAdditionalPayment && ' (Admin will make additional payment)'}
+                      {needsAdditionalPayment && ' (Admin will make additional payment if Approved)'}
                       {hasRefund && ' (Refund required)'}
                     </span>
                   </div>
