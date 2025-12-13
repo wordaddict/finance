@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { SessionUser } from '@/lib/auth'
 import { ExpenseForm } from './expense-form'
-import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES, EXPENSE_CATEGORIES, URGENCY_DISPLAY_NAMES, TEAM_VALUES, CAMPUS_VALUES, STATUS_VALUES, ACCOUNT_VALUES, EXPENSE_TYPE_VALUES, EXPENSE_CATEGORY_VALUES, URGENCY_VALUES } from '@/lib/constants'
+import { TEAMS, TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES, EXPENSE_CATEGORIES, URGENCY_DISPLAY_NAMES, TEAM_VALUES, CAMPUS_VALUES, STATUS_VALUES, ACCOUNT_VALUES, EXPENSE_TYPE_VALUES, EXPENSE_CATEGORY_VALUES, URGENCY_VALUES } from '@/lib/constants'
 import { 
   DollarSign, 
   FileText, 
@@ -459,7 +459,14 @@ export function Dashboard({ user }: DashboardProps) {
                   <div key={team.teamName} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
                       <p className="font-medium text-sm sm:text-base">
-                        {TEAM_DISPLAY_NAMES[team.teamName as keyof typeof TEAM_DISPLAY_NAMES] || team.teamName}
+                        {(() => {
+                          const teamKey = team.teamName as keyof typeof TEAM_DISPLAY_NAMES
+                          const display = TEAM_DISPLAY_NAMES[teamKey]
+                          if (display) return display
+                          if (team.teamName === 'ADMIN') return TEAM_DISPLAY_NAMES[TEAMS.ADMIN as keyof typeof TEAM_DISPLAY_NAMES]
+                          if (team.teamName === 'PROTOCOL') return TEAM_DISPLAY_NAMES[TEAMS.PROTOCOL as keyof typeof TEAM_DISPLAY_NAMES]
+                          return team.teamName
+                        })()}
                       </p>
                       <p className="text-xs sm:text-sm text-gray-500">
                         {team.count} request{team.count !== 1 ? 's' : ''}

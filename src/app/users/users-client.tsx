@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
 import { canManageUsers } from '@/lib/rbac'
 import { formatRoleName } from '@/lib/utils'
+import { CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
 import { Check, X, UserX, Eye, EyeOff, Filter } from 'lucide-react'
 import { ConfirmationModal } from '@/components/confirmation-modal'
 
@@ -15,6 +16,7 @@ interface User {
   name: string | null
   role: string
   status: string
+  campus: string
   createdAt: string
 }
 
@@ -268,6 +270,12 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
     }
   }
 
+  const getCampusColor = () => 'bg-indigo-100 text-indigo-800'
+
+  const formatCampusName = (campus: string) =>
+    CAMPUS_DISPLAY_NAMES[campus as keyof typeof CAMPUS_DISPLAY_NAMES] ||
+    campus.replace(/_/g, ' ')
+
   if (!canManageUsers(user)) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -379,6 +387,9 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                             </span>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(userItem.role)}`}>
                               {formatRoleName(userItem.role)}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCampusColor()}`}>
+                              {formatCampusName(userItem.campus)}
                             </span>
                           </div>
                         </div>
