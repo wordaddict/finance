@@ -31,11 +31,12 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
   const [statusFilter, setStatusFilter] = useState('')
   const [actionLoading, setActionLoading] = useState<{
     userId: string | null
-    action: 'approve' | 'deny' | 'suspend' | null
+    action: 'approve' | 'deny' | 'suspend' | 'role' | null
   }>({
     userId: null,
     action: null,
   })
+  const [roleUpdates, setRoleUpdates] = useState<Record<string, string>>({})
   const [denyModal, setDenyModal] = useState<{
     isOpen: boolean
     userId: string | null
@@ -89,6 +90,12 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
       
       if (response.ok) {
         setUsers(data.users)
+        setRoleUpdates(
+          data.users.reduce((acc: Record<string, string>, u: User) => {
+            acc[u.id] = u.role
+            return acc
+          }, {})
+        )
       } else {
         setError(data.error || 'Failed to fetch users')
       }
@@ -142,6 +149,36 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
       }
     } catch (error) {
       setError('Failed to approve user')
+    } finally {
+      setActionLoading({ userId: null, action: null })
+    }
+  }
+
+  const handleRoleUpdate = async (userId: string) => {
+    const newRole = roleUpdates[userId]
+    if (!newRole) return
+
+    try {
+      setActionLoading({ userId, action: 'role' })
+      const response = await fetch('/api/users/update-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          role: newRole,
+        }),
+      })
+
+      if (response.ok) {
+        await fetchUsers()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to update user role')
+      }
+    } catch (error) {
+      setError('Failed to update user role')
     } finally {
       setActionLoading({ userId: null, action: null })
     }
@@ -399,7 +436,35 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                       </div>
                       
                       {/* Action Buttons */}
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <div className="flex items-center space-x-2">
+                          <label className="text-xs font-medium text-gray-600">Role</label>
+                          <select
+                            value={roleUpdates[userItem.id] || userItem.role}
+                            onChange={(e) =>
+                              setRoleUpdates((prev) => ({
+                                ...prev,
+                                [userItem.id]: e.target.value,
+                              }))
+                            }
+                            className="px-3 py-1.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="ADMIN">Admin</option>
+                            <option value="CAMPUS_PASTOR">Campus Pastor</option>
+                            <option value="LEADER">Leader</option>
+                          </select>
+                          <Button
+                            onClick={() => handleRoleUpdate(userItem.id)}
+                            disabled={actionLoading.userId === userItem.id && actionLoading.action === 'role'}
+                            variant="outline"
+                            size="sm"
+                            className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 rounded-full px-4"
+                          >
+                            {actionLoading.userId === userItem.id && actionLoading.action === 'role'
+                              ? 'Updating...'
+                              : 'Update'}
+                          </Button>
+                        </div>
                         {userItem.status === 'PENDING_APPROVAL' && (
                           <>
                             <Button
