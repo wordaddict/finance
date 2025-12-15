@@ -223,10 +223,14 @@ export async function PUT(request: NextRequest) {
     // Get approvers for notifications (exclude suspended users)
     const approvers = await db.user.findMany({
       where: {
-        role: {
-          in: ['ADMIN', 'CAMPUS_PASTOR'],
-        },
         status: 'ACTIVE', // Only send to active users
+        OR: [
+          { role: 'ADMIN' },
+          {
+            role: 'CAMPUS_PASTOR',
+            campus: updatedExpense.campus,
+          },
+        ],
       },
     })
 

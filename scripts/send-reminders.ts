@@ -45,6 +45,9 @@ async function sendReminders() {
       const pendingCount = await db.expenseRequest.count({
         where: {
           status: 'SUBMITTED',
+          ...(approver.role === 'CAMPUS_PASTOR'
+            ? { campus: approver.campus as any }
+            : {}),
         },
       })
 

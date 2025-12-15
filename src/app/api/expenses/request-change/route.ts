@@ -69,10 +69,14 @@ export async function POST(request: NextRequest) {
     // Get approvers for notifications (exclude suspended users)
     const approvers = await db.user.findMany({
       where: {
-        role: {
-          in: ['ADMIN', 'CAMPUS_PASTOR'],
-        },
         status: 'ACTIVE',
+        OR: [
+          { role: 'ADMIN' },
+          {
+            role: 'CAMPUS_PASTOR',
+            campus: expense.campus,
+          },
+        ],
       },
     })
 
