@@ -220,17 +220,12 @@ export async function PUT(request: NextRequest) {
       },
     })
 
-    // Get approvers for notifications (exclude suspended users)
+    // Get admins for notifications (exclude suspended users)
+    // Campus pastors only get notified on creation and final approval
     const approvers = await db.user.findMany({
       where: {
+        role: 'ADMIN',
         status: 'ACTIVE', // Only send to active users
-        OR: [
-          { role: 'ADMIN' },
-          {
-            role: 'CAMPUS_PASTOR',
-            campus: updatedExpense.campus,
-          },
-        ],
       },
     })
 

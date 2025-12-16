@@ -30,24 +30,20 @@ async function sendReminders() {
 
     console.log(`Found ${staleExpenses.length} stale expenses`)
 
-    // Group by approver role (exclude suspended users)
+    // Get admins for reminders (exclude suspended users)
+    // Campus pastors only get notified on creation and final approval, not reminders
     const approvers = await db.user.findMany({
       where: {
-        role: {
-          in: ['ADMIN', 'CAMPUS_PASTOR'],
-        },
+        role: 'ADMIN',
         status: 'ACTIVE', // Only send to active users
       },
     })
 
-    // Send reminders to approvers
+    // Send reminders to admins only
     for (const approver of approvers) {
       const pendingCount = await db.expenseRequest.count({
         where: {
           status: 'SUBMITTED',
-          ...(approver.role === 'CAMPUS_PASTOR'
-            ? { campus: approver.campus as any }
-            : {}),
         },
       })
 

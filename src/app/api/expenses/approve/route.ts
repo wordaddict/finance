@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canApproveExpenses, canApproveAtStage } from '@/lib/rbac'
-import { sendEmail, generateExpenseApprovedEmail } from '@/lib/email'
+import { sendEmail, generateExpenseApprovedEmail, sendEmailsWithRateLimit } from '@/lib/email'
 import { sendSMS, generateExpenseApprovedSMS } from '@/lib/sms'
 
 const approveExpenseSchema = z.object({
@@ -211,6 +211,34 @@ export async function POST(request: NextRequest) {
       )
       emailTemplate.to = expenseForEmail.requester.email
       await sendEmail(emailTemplate)
+
+      // Send notification to campus pastors of the expense's campus
+      const campusPastors = await db.user.findMany({
+        where: {
+          status: 'ACTIVE',
+          role: 'CAMPUS_PASTOR',
+          campus: expenseForEmail.campus,
+        },
+      })
+
+      // Prepare email templates for campus pastors
+      const pastorEmailTemplates = campusPastors.map((pastor) => {
+        const pastorEmailTemplate = generateExpenseApprovedEmail(
+          pastor.name || pastor.email,
+          expenseForEmail.title,
+          approvedAmountCents,
+          process.env.NEXT_PUBLIC_APP_URL!
+        )
+        pastorEmailTemplate.to = pastor.email
+        return pastorEmailTemplate
+      })
+
+      // Send emails to campus pastors with rate limiting
+      const pastorEmailResults = await sendEmailsWithRateLimit(pastorEmailTemplates, 500)
+
+      if (pastorEmailResults.failed > 0) {
+        console.warn(`Failed to send ${pastorEmailResults.failed} out of ${campusPastors.length} pastor notification emails:`, pastorEmailResults.errors)
+      }
 
       // SMS notification (if phone number available)
       // const smsTemplate = generateExpenseApprovedSMS(
