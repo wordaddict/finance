@@ -31,18 +31,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Only the requester can request changes to their approved expense
-    if (expense.requesterId !== user.id) {
+    // Only the requester or an admin can request changes to the expense
+    if (expense.requesterId !== user.id && user.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'You can only request changes to your own expense requests' },
+        { error: 'You can only request changes to your own expense requests or be an admin' },
         { status: 403 }
       )
     }
 
-    // Only allow change requests for APPROVED expenses
-    if (expense.status !== 'APPROVED') {
+    // Only allow change requests for SUBMITTED or APPROVED expenses
+    if (expense.status !== 'SUBMITTED' && expense.status !== 'APPROVED') {
       return NextResponse.json(
-        { error: 'Change requests can only be made for approved expenses' },
+        { error: 'Change requests can only be made for submitted or approved expenses' },
         { status: 400 }
       )
     }
@@ -59,10 +59,14 @@ export async function POST(request: NextRequest) {
     await db.statusEvent.create({
       data: {
         expenseId,
-        from: 'APPROVED',
+        from: expense.status,
         to: 'CHANGE_REQUESTED',
         actorId: user.id,
-        reason: comment || 'Requester requested to add more items',
+        reason: comment || (user.role === 'ADMIN'
+          ? 'Admin requested changes'
+          : expense.status === 'APPROVED'
+            ? 'Requester requested to add more items'
+            : 'Requester requested changes'),
       },
     })
 
@@ -98,7 +102,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Change request submitted successfully. You can now add more items to this expense.',
+      message: user.role === 'ADMIN'
+        ? 'Change request submitted successfully. The requester can now edit the expense.'
+        : expense.status === 'APPROVED'
+          ? 'Change request submitted successfully. You can now add more items to this expense.'
+          : 'Change request submitted successfully. You can now edit this expense.',
       expense: {
         ...expense,
         status: 'CHANGE_REQUESTED',

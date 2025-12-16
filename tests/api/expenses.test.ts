@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 import { GET } from '@/app/api/expenses/route'
+import { POST as adminChangeRequestPost } from '@/app/api/expenses/admin-change-request/route'
 import { db } from '@/lib/db'
 
 // Mock the database
@@ -9,6 +10,11 @@ vi.mock('@/lib/db', () => ({
     expenseRequest: {
       findMany: vi.fn(),
       count: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    statusEvent: {
+      create: vi.fn(),
     },
   },
 }))
@@ -31,6 +37,13 @@ vi.mock('@/lib/error-handler', () => ({
 // Mock the email functions to prevent Resend initialization
 vi.mock('@/lib/email', () => ({
   sendErrorNotification: vi.fn(),
+  generateAdminChangeRequestedEmail: vi.fn(() => ({
+    to: 'user@example.com',
+    subject: 'Changes Requested',
+    html: '<p>Changes requested</p>',
+    text: 'Changes requested',
+  })),
+  sendEmailsWithRateLimit: vi.fn(() => Promise.resolve({ sent: 1, failed: 0, errors: [] })),
 }))
 
 const { requireAuth } = await import('@/lib/auth')
@@ -233,6 +246,84 @@ describe('/api/expenses', () => {
 
       expect(response.status).toBe(500)
       expect(data.error).toBe('Internal server error')
+    })
+  })
+
+  describe('POST /api/expenses/admin-change-request', () => {
+    it('should allow admin to request changes on submitted expense', async () => {
+      // Mock admin user
+      const mockUser = {
+        id: 'admin-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'ADMIN',
+      }
+
+      // Mock expense data
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Test Expense',
+        status: 'SUBMITTED',
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      // Mock requireAuth to return admin user
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+
+      // Mock db calls
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+      vi.mocked(db.expenseRequest.update).mockResolvedValue({
+        ...mockExpense,
+        status: 'CHANGE_REQUESTED',
+        notes: 'Please update the budget',
+      } as any)
+      vi.mocked(db.statusEvent.create).mockResolvedValue({} as any)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/admin-change-request', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Please update the budget',
+        }),
+      })
+
+      const response = await adminChangeRequestPost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toContain('Change request submitted successfully')
+      expect(data.expense.status).toBe('CHANGE_REQUESTED')
+      expect(data.expense.notes).toBe('Please update the budget')
+    })
+
+    it('should reject non-admin users', async () => {
+      // Mock regular user
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Regular User',
+        role: 'USER',
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/admin-change-request', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: 'expense-1',
+          comment: 'Please update the budget',
+        }),
+      })
+
+      const response = await adminChangeRequestPost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('Only admins can request changes to expenses')
     })
   })
 })

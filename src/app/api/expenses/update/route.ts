@@ -25,6 +25,7 @@ const updateExpenseSchema = z.object({
     publicId: z.string(),
     secureUrl: z.string(),
     mimeType: z.string(),
+    itemId: z.string().uuid().nullable().optional(),
   })).optional(),
   items: z.array(z.object({
     id: z.string().uuid().optional(), // Optional ID for existing items
@@ -159,16 +160,59 @@ export async function PUT(request: NextRequest) {
         })),
       }
     } else {
-      // Normal edit: replace all items
-      itemsUpdate = {
-        deleteMany: {}, // Delete all existing items
-        create: data.items.map((item: any) => ({
-          description: item.description,
-          category: item.category || null,
-          quantity: item.quantity,
-          unitPriceCents: item.unitPriceCents,
-          amountCents: item.amountCents,
-        })),
+      // Normal edit: preserve existing items to keep attachments, update/create/delete as needed
+      const existingItemIds = existingExpense.items.map(item => item.id)
+
+      // Separate items into existing (to keep and update) and new (to add)
+      const itemsToUpdate = data.items.filter((item: any) =>
+        item.id && existingItemIds.includes(item.id)
+      )
+      const itemsToAdd = data.items.filter((item: any) =>
+        !item.id || !existingItemIds.includes(item.id)
+      )
+      const itemsToDelete = existingExpense.items.filter(existingItem =>
+        !data.items.some((item: any) => item.id === existingItem.id)
+      )
+
+      itemsUpdate = {}
+
+      // Update existing items (preserves IDs and attachments)
+      if (itemsToUpdate.length > 0) {
+        // Note: We need to update items individually since Prisma doesn't support updateMany with different data
+        for (const item of itemsToUpdate) {
+          await db.expenseItem.update({
+            where: { id: item.id },
+            data: {
+              description: item.description,
+              category: item.category || null,
+              quantity: item.quantity,
+              unitPriceCents: item.unitPriceCents,
+              amountCents: item.amountCents,
+            } as any,
+          })
+        }
+      }
+
+      // Delete items that are no longer needed
+      if (itemsToDelete.length > 0) {
+        await db.expenseItem.deleteMany({
+          where: {
+            id: { in: itemsToDelete.map(item => item.id) }
+          }
+        })
+      }
+
+      // Create new items
+      if (itemsToAdd.length > 0) {
+        itemsUpdate = {
+          create: itemsToAdd.map((item: any) => ({
+            description: item.description,
+            category: item.category || null,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            amountCents: item.amountCents,
+          })),
+        }
       }
     }
 
@@ -200,6 +244,7 @@ export async function PUT(request: NextRequest) {
             publicId: attachment.publicId,
             secureUrl: attachment.secureUrl,
             mimeType: attachment.mimeType,
+            itemId: attachment.itemId || null,
           })),
         } : undefined,
       } as any,

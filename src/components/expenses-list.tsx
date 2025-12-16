@@ -17,7 +17,7 @@ function getCloudinaryDownloadUrl(secureUrl: string): string {
   // Insert fl_attachment after /upload/ to force download
   return secureUrl.replace('/upload/', '/upload/fl_attachment/')
 }
-import { 
+import {
   Plus,
   Filter,
   Search,
@@ -26,7 +26,8 @@ import {
   X,
   DollarSign,
   FileText,
-  Tag
+  Tag,
+  Edit
 } from 'lucide-react'
 
 interface Expense {
@@ -196,7 +197,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
   const [itemCommentModal, setItemCommentModal] = useState<{
     isOpen: boolean
     itemId: string
-    action: 'APPROVED' | 'DENIED' | 'CHANGE_REQUESTED'
+    action: 'APPROVED' | 'DENIED'
     comment: string
     approvedAmount: string
     itemAmount: number
@@ -414,13 +415,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const handleItemApproval = async (itemId: string, status: 'APPROVED' | 'DENIED' | 'CHANGE_REQUESTED', comment?: string, approvedAmountCents?: number) => {
+  const handleItemApproval = async (itemId: string, status: 'APPROVED' | 'DENIED', comment?: string, approvedAmountCents?: number) => {
     try {
       setLoading(true)
       
-      const endpoint = status === 'APPROVED' ? '/api/expense-items/approve' : 
-                      status === 'DENIED' ? '/api/expense-items/deny' : 
-                      '/api/expense-items/change-request'
+      const endpoint = status === 'APPROVED' ? '/api/expense-items/approve' :
+                      '/api/expense-items/deny'
       
       const requestBody: any = {
         itemId,
@@ -485,16 +485,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
               item.approvals?.[0]?.status === 'DENIED'
             )
 
-            const someItemsChangeRequested = updatedItems?.some(item => 
-              item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
-            )
-
-            const allItemsChangeRequested = updatedItems?.every(item => 
-              item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
-            )
-
-            const allItemsProcessed = updatedItems?.every(item => 
-              item.approvals?.[0]?.status === 'APPROVED' || item.approvals?.[0]?.status === 'DENIED' || item.approvals?.[0]?.status === 'CHANGE_REQUESTED'
+            const allItemsProcessed = updatedItems?.every(item =>
+              item.approvals?.[0]?.status === 'APPROVED' || item.approvals?.[0]?.status === 'DENIED'
             )
 
             // Removed auto-approval/denial logic - expenses must be manually approved/denied
@@ -529,7 +521,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const handleItemApprovalClick = (itemId: string, action: 'APPROVED' | 'DENIED' | 'CHANGE_REQUESTED', itemAmount: number) => {
+  const handleItemApprovalClick = (itemId: string, action: 'APPROVED' | 'DENIED', itemAmount: number) => {
     setItemCommentModal({
       isOpen: true,
       itemId,
@@ -544,8 +536,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
   const handleItemCommentSubmit = () => {
     const { itemId, action, comment, approvedAmount, itemAmount } = itemCommentModal
     
-    if ((action === 'DENIED' || action === 'CHANGE_REQUESTED') && !comment.trim()) {
-      setError(`Comment is required when ${action === 'DENIED' ? 'denying' : 'requesting changes to'} an item`)
+    if (action === 'DENIED' && !comment.trim()) {
+      setError('Comment is required when denying an item')
       return
     }
 
@@ -600,8 +592,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
       })
 
       if (response.ok) {
-        fetchExpenses() // Refresh the list
-        setDenialModal({ isOpen: false, expenseId: '', expenseTitle: '' })
+        // Reload the page to show updated data
+        window.location.reload()
       }
     } catch (error) {
       console.error('Failed to deny expense:', error)
@@ -658,7 +650,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
           comment: '',
           processing: false
         })
-        fetchExpenses() // Refresh the list
+
+        // Reload the page to show updated data
+        window.location.reload()
       } else {
         setError(data.error || 'Failed to submit change request')
       }
@@ -737,7 +731,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
           processing: false
         })
         setMessage('Expense request approved successfully')
-        fetchExpenses()
+
+        // Reload the page to show updated data
+        window.location.reload()
       } else {
         setMessage(data.error || 'Failed to approve expense request')
       }
@@ -745,6 +741,51 @@ export function ExpensesList({ user }: ExpensesListProps) {
       setMessage('Failed to approve expense request')
     } finally {
       setApprovalCommentModal(prev => ({ ...prev, processing: false }))
+    }
+  }
+
+  const handleChangeRequestSubmit = async () => {
+    if (!changeRequestModal.comment.trim()) {
+      setError('Please provide a reason for requesting changes')
+      return
+    }
+
+    setChangeRequestModal(prev => ({ ...prev, processing: true }))
+
+    try {
+      const response = await fetch('/api/expenses/admin-change-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          expenseId: changeRequestModal.expenseId,
+          comment: changeRequestModal.comment.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setChangeRequestModal({
+          isOpen: false,
+          expenseId: '',
+          expenseTitle: '',
+          comment: '',
+          processing: false
+        })
+        setMessage('Change request submitted successfully. The requester can now edit the expense.')
+
+        // Reload the page to show updated data
+        window.location.reload()
+      } else {
+        setError(data.error || 'Failed to request changes')
+      }
+    } catch (error) {
+      console.error('Failed to request changes:', error)
+      setError('Failed to request changes')
+    } finally {
+      setChangeRequestModal(prev => ({ ...prev, processing: false }))
     }
   }
 
@@ -2114,14 +2155,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleItemApprovalClick(item.id, 'CHANGE_REQUESTED', item.amountCents)}
-                                className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                              >
-                                Request Changes
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
                                 onClick={() => handleItemApprovalClick(item.id, 'DENIED', item.amountCents)}
                                 className="text-red-600 border-red-300 hover:bg-red-50"
                               >
@@ -2388,6 +2421,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           comment: '',
                           processing: false
                         })
+                        setViewModal({ isOpen: false, expense: null })
                       }}
                       className="bg-green-600 hover:bg-green-700"
                     >
@@ -2397,11 +2431,30 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     <Button
                       onClick={() => {
                         if (!viewModal.expense) return
+                        setChangeRequestModal({
+                          isOpen: true,
+                          expenseId: viewModal.expense.id,
+                          expenseTitle: viewModal.expense.title,
+                          comment: '',
+                          processing: false
+                        })
+                        setViewModal({ isOpen: false, expense: null })
+                      }}
+                      variant="outline"
+                      className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Request Changes
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (!viewModal.expense) return
                         setDenialModal({
                           isOpen: true,
                           expenseId: viewModal.expense.id,
                           expenseTitle: viewModal.expense.title
                         })
+                        setViewModal({ isOpen: false, expense: null })
                       }}
                       variant="outline"
                       className="text-red-600 border-red-300 hover:bg-red-50"
@@ -2502,15 +2555,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comment {(itemCommentModal.action === 'DENIED' || itemCommentModal.action === 'CHANGE_REQUESTED') && <span className="text-red-500">*</span>}
+                  Comment {itemCommentModal.action === 'DENIED' && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   value={itemCommentModal.comment}
                   onChange={(e) => setItemCommentModal(prev => ({ ...prev, comment: e.target.value }))}
-                  placeholder={itemCommentModal.action === 'DENIED' 
-                    ? "Please provide a reason for denial..." 
-                    : itemCommentModal.action === 'CHANGE_REQUESTED'
-                    ? "Please specify what changes are needed..."
+                  placeholder={itemCommentModal.action === 'DENIED'
+                    ? "Please provide a reason for denial..."
                     : "Add an optional comment..."
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -2528,18 +2579,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </Button>
                 <Button
                   onClick={handleItemCommentSubmit}
-                  disabled={itemCommentModal.processing || ((itemCommentModal.action === 'DENIED' || itemCommentModal.action === 'CHANGE_REQUESTED') && !itemCommentModal.comment.trim())}
-                  className={itemCommentModal.action === 'APPROVED' 
-                    ? "bg-green-600 hover:bg-green-700" 
-                    : itemCommentModal.action === 'CHANGE_REQUESTED'
-                    ? "bg-orange-600 hover:bg-orange-700"
+                  disabled={itemCommentModal.processing || (itemCommentModal.action === 'DENIED' && !itemCommentModal.comment.trim())}
+                  className={itemCommentModal.action === 'APPROVED'
+                    ? "bg-green-600 hover:bg-green-700"
                     : "bg-red-600 hover:bg-red-700"
                   }
                 >
-                  {itemCommentModal.processing ? 'Processing...' : 
-                   itemCommentModal.action === 'APPROVED' ? 'Approve' : 
-                   itemCommentModal.action === 'CHANGE_REQUESTED' ? 'Request Changes' :
-                   'Deny'}
+                  {itemCommentModal.processing ? 'Processing...' :
+                   itemCommentModal.action === 'APPROVED' ? 'Approve' : 'Deny'}
                 </Button>
               </div>
             </div>
@@ -2661,6 +2708,78 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {approvalCommentModal.processing ? 'Approving...' : 'Approve Expense'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Request Modal */}
+      {changeRequestModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Request Changes</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setChangeRequestModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    comment: '',
+                    processing: false
+                  })}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Expense:</strong> {changeRequestModal.expenseTitle}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Request changes to this expense. The creator will be able to edit and resubmit.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Change Request Comment <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={changeRequestModal.comment}
+                  onChange={(e) => setChangeRequestModal(prev => ({ ...prev, comment: e.target.value }))}
+                  placeholder="Explain what changes are needed..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setChangeRequestModal({
+                    isOpen: false,
+                    expenseId: '',
+                    expenseTitle: '',
+                    comment: '',
+                    processing: false
+                  })}
+                  disabled={changeRequestModal.processing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleChangeRequestSubmit}
+                  disabled={changeRequestModal.processing || !changeRequestModal.comment.trim()}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {changeRequestModal.processing ? 'Requesting Changes...' : 'Request Changes'}
                 </Button>
               </div>
             </div>

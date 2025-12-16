@@ -415,6 +415,47 @@ export function generateExpenseChangeRequestedEmail(
   }
 }
 
+export function generateAdminChangeRequestedEmail(
+  recipientName: string,
+  expenseTitle: string,
+  amount: number,
+  adminName: string,
+  comment: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+
+  return {
+    to: '',
+    subject: `Changes Requested for Expense: ${expenseTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Changes Requested for Your Expense</h2>
+        <p>Hello ${recipientName},</p>
+        <p>An admin has requested changes to your expense submission:</p>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <h3>${expenseTitle}</h3>
+          <p><strong>Amount:</strong> $${(amount / 100).toFixed(2)}</p>
+          <p><strong>Requested by:</strong> ${adminName} (Admin)</p>
+          <div style="background: #fff; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+            <p><strong>Change Request:</strong></p>
+            <p style="margin: 10px 0; font-style: italic;">"${comment}"</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #ffc107; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Edit Your Expense
+          </a>
+        </div>
+        <p>The expense status has been changed to "Change Requested" and you can now edit and resubmit your expense. Please make the requested changes and submit for approval.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Changes Requested for Your Expense: ${expenseTitle}\n\nAmount: $${(amount / 100).toFixed(2)}\nRequested by: ${adminName} (Admin)\n\nChange Request: "${comment}"\n\nThe expense status has been changed to "Change Requested" and you can now edit and resubmit your expense. Please make the requested changes and submit for approval.\n\nEdit at: ${expenseUrl}`,
+  }
+}
+
 export function generatePastorRemarkAddedEmail(
   recipientName: string,
   expenseTitle: string,

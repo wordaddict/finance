@@ -463,7 +463,6 @@ The system sends email notifications for various events:
 
 - `POST /api/expense-items/approve` - Approve individual expense item
 - `POST /api/expense-items/deny` - Deny individual expense item
-- `POST /api/expense-items/change-request` - Request changes to item
 - `POST /api/expense-items/undo-approval` - Undo item approval (Admin only)
 
 ### Expense Notes Endpoints
