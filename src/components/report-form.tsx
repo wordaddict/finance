@@ -164,13 +164,22 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
 
   const handleFileUpload = async (file: File) => {
     try {
+      // Determine if file is PDF and set upload parameters
+      const isPdf = file.name.toLowerCase().endsWith('.pdf')
+      const resourceType = isPdf ? 'raw' : 'auto'
+      const uploadType = isPdf ? 'upload' : undefined
+
+
       // Get Cloudinary upload signature
       const signatureResponse = await fetch('/api/uploads/cloudinary-sign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ folder: 'expense-reports' }),
+        body: JSON.stringify({
+          folder: 'expense-reports',
+          type: uploadType
+        }),
       })
 
       if (!signatureResponse.ok) {
@@ -178,12 +187,8 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       }
 
       const signature = await signatureResponse.json()
-      
-      // Debug logging
-      console.log('Cloudinary signature:', signature)
-      console.log('File being uploaded:', file.name, file.size, file.type)
 
-      // Upload to Cloudinary
+      // Prepare FormData with exactly the signed parameters
       const formData = new FormData()
       formData.append('file', file)
       formData.append('api_key', signature.api_key)
@@ -191,13 +196,36 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       formData.append('signature', signature.signature)
       formData.append('folder', signature.folder)
 
-      const uploadResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${signature.cloud_name}/auto/upload`,
-        {
-          method: 'POST',
-          body: formData,
+      // Include type parameter for PDFs (this is signed)
+      if (uploadType) {
+        formData.append('type', uploadType)
+      }
+
+      // Debug: Show signed params vs sent params
+      const signedParams = {
+        folder: signature.folder,
+        timestamp: signature.timestamp,
+        ...(uploadType && { type: uploadType })
+      }
+
+      const sentParams: any = {}
+      for (const [key, value] of formData.entries()) {
+        if (key !== 'file' && key !== 'api_key' && key !== 'signature') {
+          sentParams[key] = value
         }
-      )
+      }
+
+      console.log('DEBUG - Signed params:', signedParams)
+      console.log('DEBUG - Sent params:', sentParams)
+      console.log('DEBUG - Match:', JSON.stringify(signedParams) === JSON.stringify(sentParams))
+
+      // Use raw/upload endpoint for PDFs, auto/upload for others
+      const endpoint = `https://api.cloudinary.com/v1_1/${signature.cloud_name}/${resourceType}/upload`
+
+      const uploadResponse = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      })
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text()
@@ -217,9 +245,13 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         mimeType = 'application/octet-stream'
       }
       
+      // For raw resources (PDFs), the secure_url should already be correct
+      // The upload function ensures PDFs use raw resource type
+      const finalSecureUrl = uploadResult.secure_url
+
       return {
         publicId: uploadResult.public_id,
-        secureUrl: uploadResult.secure_url,
+        secureUrl: finalSecureUrl,
         mimeType: mimeType,
       }
     } catch (error) {

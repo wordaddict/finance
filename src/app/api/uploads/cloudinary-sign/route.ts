@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
     await requireAuth()
 
     const body = await request.json()
-    const { folder = 'expense-receipts' } = body
+    const { folder = 'expense-receipts', type } = body
 
-    const signature = generateUploadSignature(folder)
+    const signature = generateUploadSignature(folder, type as 'upload' | undefined)
 
     return NextResponse.json(signature)
   } catch (error) {

@@ -11,6 +11,12 @@ import { ReportForm } from './report-form'
 import { ConfirmationModal } from './confirmation-modal'
 import { ReportDenialModal } from './report-denial-modal'
 import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, STATUS_VALUES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
+
+// Client-side download URL helper
+function getCloudinaryDownloadUrl(secureUrl: string): string {
+  // Insert fl_attachment after /upload/ to force download
+  return secureUrl.replace('/upload/', '/upload/fl_attachment/')
+}
 import { 
   Plus,
   Filter,
@@ -150,6 +156,35 @@ interface Expense {
 
 interface ExpensesListProps {
   user: SessionUser
+}
+
+// Helper function to handle attachment clicks
+async function handleAttachmentClick(attachment: any) {
+  try {
+    const fileName = attachment.secureUrl.split('/').pop() || 'download'
+
+    // For images, try to view in new tab
+    if (attachment.mimeType?.startsWith('image/')) {
+      window.open(attachment.secureUrl, '_blank')
+      return
+    }
+
+    // For all documents, use download URL with attachment flag
+    const downloadUrl = getCloudinaryDownloadUrl(attachment.secureUrl)
+
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = fileName
+    link.target = '_blank' // Fallback
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+  } catch (error) {
+    console.error('Failed to handle attachment:', error)
+    // Fallback: try to open in new tab
+    window.open(attachment.secureUrl, '_blank')
+  }
 }
 
 export function ExpensesList({ user }: ExpensesListProps) {
@@ -1984,7 +2019,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                           src={attachment.secureUrl}
                                           alt="Item attachment"
                                           className="w-8 h-8 object-cover rounded border cursor-pointer"
-                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                          onClick={async () => await handleAttachmentClick(attachment)}
                                         />
                                       ) : (
                                         <div className="w-8 h-8 bg-blue-100 rounded border flex items-center justify-center">
@@ -1998,7 +2033,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                       className="h-6 px-2 text-xs"
                                     >
                                       View
@@ -2136,7 +2171,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               src={attachment.secureUrl}
                               alt="Receipt"
                               className="w-12 h-12 object-cover rounded border"
-                              onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                             />
                           ) : (
                             <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
@@ -2155,7 +2190,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                         >
                           View
                         </Button>
@@ -2840,7 +2875,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                           src={attachment.secureUrl}
                                           alt="Item attachment"
                                           className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                          onClick={async () => await handleAttachmentClick(attachment)}
                                         />
                                       ) : (
                                         <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
@@ -2856,7 +2891,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                       className="text-xs"
                                     >
                                       View
@@ -2880,7 +2915,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                           src={attachment.secureUrl}
                                           alt="Refund receipt"
                                           className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                          onClick={async () => await handleAttachmentClick(attachment)}
                                         />
                                       ) : (
                                         <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
@@ -2896,7 +2931,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                       className="text-xs"
                                     >
                                       View
@@ -2936,7 +2971,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                       src={attachment.secureUrl}
                                       alt="Orphaned attachment"
                                       className="w-8 h-8 object-cover rounded border cursor-pointer"
-                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                     />
                                   ) : (
                                     <div className="w-8 h-8 bg-yellow-100 rounded border flex items-center justify-center">
@@ -2953,7 +2988,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                   className="text-xs"
                                 >
                                   View
@@ -3024,7 +3059,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                     src={attachment.secureUrl}
                                     alt="Report attachment"
                                     className="w-12 h-12 object-cover rounded border cursor-pointer"
-                                    onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                   />
                                 ) : (
                                   <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
@@ -3044,7 +3079,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                               >
                                 View
                               </Button>

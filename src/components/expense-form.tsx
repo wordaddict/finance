@@ -143,13 +143,22 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
 
   const handleFileUpload = async (file: File) => {
     try {
+      // Determine if file is PDF and set upload parameters
+      const isPdf = file.name.toLowerCase().endsWith('.pdf')
+      const resourceType = isPdf ? 'raw' : 'auto'
+      const uploadType = isPdf ? 'upload' : undefined
+
+
       // Get Cloudinary upload signature
       const signatureResponse = await fetch('/api/uploads/cloudinary-sign', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ folder: 'expense-receipts' }),
+        body: JSON.stringify({
+          folder: 'expense-receipts',
+          type: uploadType
+        }),
       })
 
       if (!signatureResponse.ok) {
@@ -157,12 +166,8 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
       }
 
       const signature = await signatureResponse.json()
-      
-      // Debug logging
-      console.log('Cloudinary signature:', signature)
-      console.log('File being uploaded:', file.name, file.size, file.type)
 
-      // Upload to Cloudinary
+      // Prepare FormData with exactly the signed parameters
       const formData = new FormData()
       formData.append('file', file)
       formData.append('api_key', signature.api_key)
@@ -170,13 +175,37 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
       formData.append('signature', signature.signature)
       formData.append('folder', signature.folder)
 
-      const uploadResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${signature.cloud_name}/auto/upload`,
-        {
-          method: 'POST',
-          body: formData,
+      // Include type parameter for PDFs (this is signed)
+      if (uploadType) {
+        formData.append('type', uploadType)
+      }
+
+      // Debug: Show signed params vs sent params
+      const signedParams = {
+        folder: signature.folder,
+        timestamp: signature.timestamp,
+        ...(uploadType && { type: uploadType })
+      }
+
+      const sentParams: any = {}
+      for (const [key, value] of formData.entries()) {
+        if (key !== 'file' && key !== 'api_key' && key !== 'signature') {
+          sentParams[key] = value
         }
-      )
+      }
+
+      console.log('DEBUG - Signed params:', signedParams)
+      console.log('DEBUG - Sent params:', sentParams)
+      console.log('DEBUG - Match:', JSON.stringify(signedParams) === JSON.stringify(sentParams))
+
+      // Use raw/upload endpoint for PDFs, auto/upload for others
+      const endpoint = `https://api.cloudinary.com/v1_1/${signature.cloud_name}/${resourceType}/upload`
+
+
+      const uploadResponse = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      })
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text()
@@ -195,10 +224,14 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
       if (!mimeType) {
         mimeType = 'application/octet-stream'
       }
-      
+
+      // For raw resources (PDFs), the secure_url should already be correct
+      // The upload function ensures PDFs use raw resource type
+      const finalSecureUrl = uploadResult.secure_url
+
       return {
         publicId: uploadResult.public_id,
-        secureUrl: uploadResult.secure_url,
+        secureUrl: finalSecureUrl,
         mimeType: mimeType,
       }
     } catch (error) {
@@ -882,11 +915,30 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                             <div key={attachment.id} className="flex items-center justify-between bg-blue-50 p-2 rounded text-xs border border-blue-200">
                               <div className="flex items-center space-x-2">
                                 <FileText className="w-3 h-3 text-blue-500" />
-                                <a 
-                                  href={attachment.secureUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:underline"
+                                <a
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    const fileName = attachment.secureUrl.split('/').pop() || 'download'
+
+                                    // For images, view in new tab
+                                    if (attachment.mimeType?.startsWith('image/')) {
+                                      window.open(attachment.secureUrl, '_blank')
+                                      return
+                                    }
+
+                                    // For all documents, use download URL with attachment flag
+                                    const downloadUrl = attachment.secureUrl.replace('/upload/', '/upload/fl_attachment/')
+
+                                    const link = document.createElement('a')
+                                    link.href = downloadUrl
+                                    link.download = fileName
+                                    link.target = '_blank'
+                                    document.body.appendChild(link)
+                                    link.click()
+                                    document.body.removeChild(link)
+                                  }}
+                                  className="text-xs text-blue-600 hover:underline cursor-pointer"
                                 >
                                   {attachment.secureUrl.split('/').pop() || 'View attachment'}
                                 </a>
@@ -1033,11 +1085,55 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                       <div key={attachment.id} className="flex items-center justify-between bg-blue-50 p-2 rounded border border-blue-200">
                         <div className="flex items-center space-x-2">
                           <FileText className="w-4 h-4 text-blue-500" />
-                          <a 
-                            href={attachment.secureUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
+                          <a
+                            href="#"
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              const fileName = attachment.secureUrl.split('/').pop() || 'download'
+
+                              // For images, view in new tab
+                              if (attachment.mimeType?.startsWith('image/')) {
+                                window.open(attachment.secureUrl, '_blank')
+                                return
+                              }
+
+                              // For PDFs and documents, get correct URL from API
+                              let correctUrl = attachment.secureUrl
+
+                              try {
+                                const response = await fetch('/api/attachments/url', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    publicId: attachment.publicId,
+                                    mimeType: attachment.mimeType,
+                                  }),
+                                })
+                                if (response.ok) {
+                                  const data = await response.json()
+                                  correctUrl = data.url
+                                }
+                              } catch (error) {
+                                console.error('Failed to get attachment URL:', error)
+                              }
+
+                              console.log('Attachment details:', {
+                                secureUrl: attachment.secureUrl,
+                                publicId: attachment.publicId,
+                                mimeType: attachment.mimeType,
+                                finalUrl: correctUrl
+                              })
+
+                              // Download using the corrected URL
+                              const link = document.createElement('a')
+                              link.href = correctUrl
+                              link.download = fileName
+                              link.target = '_blank'
+                              document.body.appendChild(link)
+                              link.click()
+                              document.body.removeChild(link)
+                            }}
+                            className="text-sm text-blue-600 hover:underline cursor-pointer"
                           >
                             {attachment.secureUrl.split('/').pop() || 'View attachment'}
                           </a>
