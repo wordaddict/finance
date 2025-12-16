@@ -6,7 +6,7 @@ import { sendEmailsWithRateLimit, generateExpenseChangeRequestedEmail } from '@/
 
 const requestChangeSchema = z.object({
   expenseId: z.string().uuid(),
-  comment: z.string().optional(),
+  comment: z.string().min(1, 'Comment is required when requesting changes'),
 })
 
 export async function POST(request: NextRequest) {

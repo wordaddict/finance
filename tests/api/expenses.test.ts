@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 import { GET } from '@/app/api/expenses/route'
 import { POST as adminChangeRequestPost } from '@/app/api/expenses/admin-change-request/route'
+import { POST as requestChangePost } from '@/app/api/expenses/request-change/route'
 import { db } from '@/lib/db'
 
 // Mock the database
@@ -15,6 +16,9 @@ vi.mock('@/lib/db', () => ({
     },
     statusEvent: {
       create: vi.fn(),
+    },
+    user: {
+      findMany: vi.fn(),
     },
   },
 }))
@@ -256,7 +260,9 @@ describe('/api/expenses', () => {
         id: 'admin-1',
         email: 'admin@example.com',
         name: 'Admin User',
-        role: 'ADMIN',
+        role: 'ADMIN' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
       }
 
       // Mock expense data
@@ -306,7 +312,9 @@ describe('/api/expenses', () => {
         id: 'user-1',
         email: 'user@example.com',
         name: 'Regular User',
-        role: 'USER',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
       }
 
       vi.mocked(requireAuth).mockResolvedValue(mockUser)
@@ -324,6 +332,388 @@ describe('/api/expenses', () => {
 
       expect(response.status).toBe(403)
       expect(data.error).toBe('Only admins can request changes to expenses')
+    })
+
+    it('should allow admin to request changes on approved expense', async () => {
+      // Mock admin user
+      const mockUser = {
+        id: 'admin-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'ADMIN' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      // Mock approved expense data
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Approved Expense',
+        status: 'APPROVED',
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      // Mock requireAuth to return admin user
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+
+      // Mock db calls
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+      vi.mocked(db.expenseRequest.update).mockResolvedValue({
+        ...mockExpense,
+        status: 'CHANGE_REQUESTED',
+        notes: 'Need to adjust budget',
+      } as any)
+      vi.mocked(db.statusEvent.create).mockResolvedValue({} as any)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/admin-change-request', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Need to adjust budget',
+        }),
+      })
+
+      const response = await adminChangeRequestPost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toContain('Change request submitted successfully')
+      expect(data.expense.status).toBe('CHANGE_REQUESTED')
+      expect(data.expense.notes).toBe('Need to adjust budget')
+    })
+
+    it('should reject admin change request on invalid status', async () => {
+      const mockUser = {
+        id: 'admin-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'ADMIN' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Paid Expense',
+        status: 'PAID', // Invalid status for change requests
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/admin-change-request', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Invalid request',
+        }),
+      })
+
+      const response = await adminChangeRequestPost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Can only request changes to submitted or approved expenses')
+    })
+  })
+
+  describe('POST /api/expenses/request-change', () => {
+    it('should allow requester to request changes on submitted expense', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Submitted Expense',
+        status: 'SUBMITTED',
+        requesterId: 'user-1', // Same as mock user
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+      vi.mocked(db.expenseRequest.update).mockResolvedValue({
+        ...mockExpense,
+        status: 'CHANGE_REQUESTED',
+      } as any)
+      vi.mocked(db.statusEvent.create).mockResolvedValue({} as any)
+      vi.mocked(db.user.findMany).mockResolvedValue([])
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'I need to make changes',
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toContain('You can now edit this expense')
+      expect(data.expense.status).toBe('CHANGE_REQUESTED')
+    })
+
+    it('should allow requester to request changes on approved expense', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Approved Expense',
+        status: 'APPROVED',
+        requesterId: 'user-1',
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+      vi.mocked(db.expenseRequest.update).mockResolvedValue({
+        ...mockExpense,
+        status: 'CHANGE_REQUESTED',
+      } as any)
+      vi.mocked(db.statusEvent.create).mockResolvedValue({} as any)
+      vi.mocked(db.user.findMany).mockResolvedValue([])
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'I want to add more items',
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toContain('You can now add more items to this expense')
+      expect(data.expense.status).toBe('CHANGE_REQUESTED')
+    })
+
+    it('should allow admin to request changes on submitted expense', async () => {
+      const mockUser = {
+        id: 'admin-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'ADMIN' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Submitted Expense',
+        status: 'SUBMITTED',
+        requesterId: 'user-1', // Different from admin
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+      vi.mocked(db.expenseRequest.update).mockResolvedValue({
+        ...mockExpense,
+        status: 'CHANGE_REQUESTED',
+      } as any)
+      vi.mocked(db.statusEvent.create).mockResolvedValue({} as any)
+      vi.mocked(db.user.findMany).mockResolvedValue([])
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Admin requested changes',
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toContain('The requester can now edit the expense')
+      expect(data.expense.status).toBe('CHANGE_REQUESTED')
+    })
+
+    it('should reject unauthorized user requesting changes', async () => {
+      const mockUser = {
+        id: 'user-2',
+        email: 'other@example.com',
+        name: 'Other User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Submitted Expense',
+        status: 'SUBMITTED',
+        requesterId: 'user-1', // Different from mock user
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Unauthorized request',
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(403)
+      expect(data.error).toBe('You can only request changes to your own expense requests or be an admin')
+    })
+
+    it('should reject change request on invalid status', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Denied Expense',
+        status: 'DENIED', // Invalid status
+        requesterId: 'user-1',
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Invalid request',
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Change requests can only be made for submitted or approved expenses')
+    })
+
+    it('should handle non-existent expense', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(null)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: 'Non-existent expense',
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(404)
+      expect(data.error).toBe('Expense request not found')
+    })
+
+    it('should require comment', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const mockExpense = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        title: 'Submitted Expense',
+        status: 'SUBMITTED',
+        requesterId: 'user-1',
+        requester: {
+          name: 'Test User',
+          email: 'user@example.com',
+        },
+        items: [],
+      }
+
+      vi.mocked(requireAuth).mockResolvedValue(mockUser)
+      vi.mocked(db.expenseRequest.findUnique).mockResolvedValue(mockExpense as any)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/request-change', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '123e4567-e89b-12d3-a456-426614174000',
+          comment: '', // Empty comment
+        }),
+      })
+
+      const response = await requestChangePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toBe('Invalid request data')
     })
   })
 })
