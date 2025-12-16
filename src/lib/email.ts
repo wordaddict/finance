@@ -520,7 +520,7 @@ export function generatePasswordResetEmail(
   baseUrl: string
 ): EmailTemplate {
   const appUrl = baseUrl
-  
+
   return {
     to: '',
     subject: 'Reset Your Password - Church Expense System',
@@ -542,5 +542,64 @@ export function generatePasswordResetEmail(
       </div>
     `,
     text: `Password Reset Request\n\nHello ${recipientName},\n\nWe received a request to reset your password for your Church Expense System account. Please visit this link to reset your password:\n\n${resetUrl}\n\nThis reset link will expire in 1 hour for security reasons.\n\nIf you didn't request a password reset, please ignore this email. Your password will remain unchanged.\n\nBest regards,\nChurch Expense System`,
+  }
+}
+
+export function generateErrorNotificationEmail(
+  errorMessage: string,
+  endpoint: string,
+  userId?: string,
+  stackTrace?: string
+): EmailTemplate {
+  return {
+    to: 'madeyinka6@gmail.com',
+    subject: `🚨 500 Error Alert - Church Expense System`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc3545;">500 Internal Server Error</h2>
+        <p>A 500 error has occurred in the Church Expense System:</p>
+
+        <div style="background: #ffeaea; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+          <h3 style="margin-top: 0;">Error Details</h3>
+          <p><strong>Endpoint:</strong> ${endpoint}</p>
+          <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+          <p><strong>User ID:</strong> ${userId || 'Not available'}</p>
+          <p><strong>Error Message:</strong></p>
+          <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;">${errorMessage}</pre>
+          ${stackTrace ? `
+            <p><strong>Stack Trace:</strong></p>
+            <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; font-size: 12px;">${stackTrace}</pre>
+          ` : ''}
+        </div>
+
+        <p style="color: #6c757d; font-size: 14px;">
+          This is an automated notification. Please investigate the issue immediately.
+        </p>
+
+        <p>Best regards,<br>Church Expense System Monitoring</p>
+      </div>
+    `,
+    text: `500 Error Alert - Church Expense System\n\nA 500 error has occurred:\n\nEndpoint: ${endpoint}\nTimestamp: ${new Date().toISOString()}\nUser ID: ${userId || 'Not available'}\nError Message: ${errorMessage}\n${stackTrace ? `Stack Trace: ${stackTrace}\n` : ''}\nPlease investigate the issue immediately.`,
+  }
+}
+
+// Utility function to send error notification email
+export async function sendErrorNotification(
+  error: Error,
+  endpoint: string,
+  userId?: string
+): Promise<boolean> {
+  try {
+    const errorTemplate = generateErrorNotificationEmail(
+      error.message,
+      endpoint,
+      userId,
+      error.stack
+    )
+
+    return await sendEmail(errorTemplate)
+  } catch (emailError) {
+    console.error('Failed to send error notification email:', emailError)
+    return false
   }
 }

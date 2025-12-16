@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canViewAllExpenses } from '@/lib/rbac'
+import { handleApiError, getUserIdFromRequest } from '@/lib/error-handler'
+import type { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
+  let user: any
+
   try {
-    const user = await requireAuth()
+    user = await requireAuth()
     const { searchParams } = new URL(request.url)
     
     const status = searchParams.get('status')
@@ -136,10 +140,6 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Fetch expenses error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch expenses' },
-      { status: 500 }
-    )
+    return handleApiError(error, '/api/expenses', user?.id)
   }
 }
