@@ -41,11 +41,11 @@ export async function GET(request: NextRequest) {
     if (status) {
       where.status = status
     }
-    
+
     if (urgency) {
       where.urgency = parseInt(urgency)
     }
-    
+
     if (account) {
       where.account = account
     }

@@ -34,7 +34,7 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
   const [campus, setCampus] = useState('')
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
-  const [urgency, setUrgency] = useState(2)
+  const [urgency] = useState(2) // Default urgency value
   const [isEvent, setIsEvent] = useState(false)
   const [eventDate, setEventDate] = useState('')
   const [eventName, setEventName] = useState('')
@@ -70,7 +70,6 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
       setCampus(editExpense.campus || '')
       setDescription(editExpense.description || '')
       setNotes(editExpense.notes || '')
-      setUrgency(editExpense.urgency || 2)
       setPayToExternal(editExpense.payToExternal || false)
       setPayeeName(editExpense.payeeName || '')
       setPayeeZelle(editExpense.payeeZelle || '')
@@ -660,22 +659,6 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
               />
             </div>
 
-
-            <div>
-              <label htmlFor="urgency" className="block text-sm font-medium mb-1">
-                Urgency
-              </label>
-              <select
-                id="urgency"
-                value={urgency}
-                onChange={(e) => setUrgency(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              >
-                <option value={1}>Not Urgent (Few months)</option>
-                <option value={2}>Urgent (This Month)</option>
-                <option value={3}>Very Urgent (This week)</option>
-              </select>
-            </div>
 
             <div>
               <label className="flex items-center space-x-2">

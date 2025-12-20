@@ -110,7 +110,6 @@ The CCI Expense Management System is designed to handle the complete expense man
 
 - **Itemized Expenses**: Multiple items per request with individual descriptions, quantities, and prices
 - **Admin Category**: Categorization for reporting and accounting
-- **Urgency Levels**: Three urgency levels (Not Urgent, Urgent, Very Urgent)
 - **Team Assignment**: Expenses assigned to specific teams
 - **Campus Assignment**: Expenses linked to specific campuses
 - **Event Support**: Special fields for event-related expenses
@@ -304,7 +303,6 @@ The system sends email notifications for various events:
 
 - **Expense Trends**: Track expense trends over time
 - **Category Analysis**: Analyze expenses by category
-- **Urgency Distribution**: View distribution of urgency levels
 - **Approval Workflow**: Track items in each approval stage
 - **Budget Tracking**: Monitor event budgets and spending
 

@@ -1532,9 +1532,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           Event
                         </span>
                       )}
-                      <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
+                      {/* <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
                         {URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${expense.urgency}`}
-                      </span>
+                      </span> */}
                     </div>
                   </div>
                   <p className="text-gray-500 mt-1 text-sm">
@@ -1833,12 +1833,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
                     {STATUS_DISPLAY_NAMES[viewModal.expense.status as keyof typeof STATUS_DISPLAY_NAMES] || viewModal.expense.status}
                   </p>
                 </div>
-                <div>
+                {/* <div>
                   <label className="text-sm font-medium text-gray-500">Urgency</label>
                   <p className={`font-medium ${getUrgencyColor(viewModal.expense.urgency)}`}>
                     {URGENCY_DISPLAY_NAMES[viewModal.expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${viewModal.expense.urgency}`}
                   </p>
-                </div>
+                </div> */}
                 <div className="sm:col-span-2">
                   <label className="text-sm font-medium text-gray-500">Payment Recipient</label>
                   {viewModal.expense.payToExternal ? (

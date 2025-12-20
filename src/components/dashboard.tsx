@@ -280,7 +280,7 @@ export function Dashboard({ user }: DashboardProps) {
                 </select>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="text-sm font-medium mb-1 block">Urgency</label>
                 <select
                   value={filters.urgency}
@@ -294,7 +294,7 @@ export function Dashboard({ user }: DashboardProps) {
                     </option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               <div>
                 <label className="text-sm font-medium mb-1 block">Account</label>
