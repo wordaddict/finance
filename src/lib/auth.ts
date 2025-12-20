@@ -29,7 +29,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 
 export async function createSession(userId: string, request: NextRequest): Promise<string> {
   const sessionId = randomBytes(32).toString('hex')
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+  const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
 
   await db.session.create({
     data: {
@@ -87,7 +87,7 @@ export function setSessionCookie(sessionId: string, response: NextResponse): voi
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 1 * 60 * 60, // 1 hour
   })
 }
 
