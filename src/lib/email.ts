@@ -586,6 +586,84 @@ export function generatePasswordResetEmail(
   }
 }
 
+export function generateExpenseNoteAddedEmail(
+  recipientName: string,
+  expenseTitle: string,
+  noteAuthorName: string,
+  noteContent: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  const expenseUrl = `${appUrl}/expenses`
+
+  return {
+    to: '',
+    subject: `New Note Added to Expense: ${expenseTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>New Note Added to Expense</h2>
+        <p>Hello ${recipientName},</p>
+        <p>A new note has been added to an expense request:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>${expenseTitle}</h3>
+          <p><strong>Note by:</strong> ${noteAuthorName}</p>
+          <div style="background: #fff; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;">
+            <p><strong>Note:</strong></p>
+            <p style="margin: 10px 0; font-style: italic;">"${noteContent}"</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Expense Details
+          </a>
+        </div>
+        <p>Please review the note and respond if necessary.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `New Note Added to Expense: ${expenseTitle}\n\nNote by: ${noteAuthorName}\n\nNote: "${noteContent}"\n\nPlease review the note at: ${expenseUrl}`,
+  }
+}
+
+export function generateReportNoteAddedEmail(
+  recipientName: string,
+  reportTitle: string,
+  noteAuthorName: string,
+  noteContent: string,
+  baseUrl: string
+): EmailTemplate {
+  const appUrl = baseUrl
+  const reportsUrl = `${appUrl}/reports`
+
+  return {
+    to: '',
+    subject: `New Note Added to Report: ${reportTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>New Note Added to Report</h2>
+        <p>Hello ${recipientName},</p>
+        <p>A new note has been added to an expense report:</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>${reportTitle}</h3>
+          <p><strong>Note by:</strong> ${noteAuthorName}</p>
+          <div style="background: #fff; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;">
+            <p><strong>Note:</strong></p>
+            <p style="margin: 10px 0; font-style: italic;">"${noteContent}"</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${reportsUrl}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Report Details
+          </a>
+        </div>
+        <p>Please review the note and respond if necessary.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `New Note Added to Report: ${reportTitle}\n\nNote by: ${noteAuthorName}\n\nNote: "${noteContent}"\n\nPlease review the note at: ${reportsUrl}`,
+  }
+}
+
 export function generateErrorNotificationEmail(
   errorMessage: string,
   endpoint: string,

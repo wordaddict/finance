@@ -1970,6 +1970,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 </div>
               )}
 
+
               {viewModal.expense.pastorRemarks && viewModal.expense.pastorRemarks.length > 0 && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Pastor Remarks</label>
@@ -2238,7 +2239,29 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 <div className="flex justify-between items-center mb-2">
                   <label className="text-sm font-medium text-gray-500">Notes</label>
                 </div>
-                
+
+                {/* Display initial notes from creation */}
+                {viewModal.expense?.notes && (
+                  <div className="mt-2 space-y-2 mb-4">
+                    <div className="p-3 rounded-lg border bg-gray-50 border-gray-200">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-800">
+                            {viewModal.expense.notes}
+                          </p>
+                          <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                            <span>
+                              👤 Requester: {viewModal.expense.requester.name || viewModal.expense.requester.email}
+                            </span>
+                            <span>•</span>
+                            <span>{formatDate(viewModal.expense.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Display existing notes */}
                 {viewModal.expense?.expenseNotes && viewModal.expense.expenseNotes.length > 0 && (
                   <div className="mt-2 space-y-2 mb-4">
@@ -2333,14 +2356,14 @@ export function ExpensesList({ user }: ExpensesListProps) {
                               if (response.ok) {
                                 setNoteInput(prev => ({ ...prev, [expenseId]: '' }))
                                 setMessage('Note added successfully')
-                                
-                                // Refresh expenses list
-                                await fetchExpenses()
-                                
-                                // Fetch the updated expense with notes to update view modal
-                                if (viewModal.expense) {
-                                  try {
-                                    const expenseResponse = await fetch(`/api/expenses`)
+
+                                // Refresh the expenses list in the background
+                                fetchExpenses()
+
+                                // Directly fetch the updated expense with notes to update view modal
+                                try {
+                                  const expenseResponse = await fetch(`/api/expenses`)
+                                  if (expenseResponse.ok) {
                                     const expenseData = await expenseResponse.json()
                                     if (expenseData.expenses) {
                                       const updatedExpense = expenseData.expenses.find((e: Expense) => e.id === expenseId)
@@ -2348,11 +2371,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
                                         setViewModal({ isOpen: true, expense: updatedExpense })
                                       }
                                     }
-                                  } catch (err) {
-                                    console.error('Failed to refresh expense:', err)
-                                    // Still refresh the list even if modal update fails
-                                    fetchExpenses()
                                   }
+                                } catch (refreshError) {
+                                  console.error('Failed to refresh expense after note addition:', refreshError)
                                 }
                               } else {
                                 setError(data.error || 'Failed to add note')
@@ -2374,12 +2395,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 })()}
               </div>
 
-              {viewModal.expense?.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Admin Notes</label>
-                  <p className="mt-1 p-3 bg-yellow-50 rounded-lg text-sm sm:text-base">{viewModal.expense.notes}</p>
-                </div>
-              )}
 
               {viewModal.expense?.paidAt && (
                 <div>

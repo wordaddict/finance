@@ -14,6 +14,9 @@ vi.mock('@/lib/db', () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    expenseNote: {
+      create: vi.fn(),
+    },
     statusEvent: {
       create: vi.fn(),
     },
@@ -303,7 +306,6 @@ describe('/api/expenses', () => {
       expect(response.status).toBe(200)
       expect(data.message).toContain('Change request submitted successfully')
       expect(data.expense.status).toBe('CHANGE_REQUESTED')
-      expect(data.expense.notes).toBe('Please update the budget')
     })
 
     it('should reject non-admin users', async () => {
@@ -383,7 +385,6 @@ describe('/api/expenses', () => {
       expect(response.status).toBe(200)
       expect(data.message).toContain('Change request submitted successfully')
       expect(data.expense.status).toBe('CHANGE_REQUESTED')
-      expect(data.expense.notes).toBe('Need to adjust budget')
     })
 
     it('should reject admin change request on invalid status', async () => {

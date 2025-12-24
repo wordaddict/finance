@@ -54,7 +54,15 @@ export async function POST(request: NextRequest) {
       where: { id: expenseId },
       data: {
         status: STATUS.CHANGE_REQUESTED,
-        notes: comment, // Store the admin's change request comment in the notes field
+      },
+    })
+
+    // Create a note for the admin's change request comment
+    await db.expenseNote.create({
+      data: {
+        expenseId,
+        authorId: user.id,
+        note: `Change Requested: ${comment}`,
       },
     })
 
@@ -91,7 +99,6 @@ export async function POST(request: NextRequest) {
       expense: {
         ...expense,
         status: STATUS.CHANGE_REQUESTED,
-        notes: comment,
       },
     })
   } catch (error) {
