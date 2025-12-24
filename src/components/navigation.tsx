@@ -67,7 +67,7 @@ export function Navigation({ user }: NavigationProps) {
             {/* Navigation links - hidden on tablet, shown on desktop */}
             <div className="hidden xl:flex space-x-4">
               <a
-                href="/"
+                href="/expense"
                 className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap"
               >
                 Expenses
@@ -201,7 +201,7 @@ export function Navigation({ user }: NavigationProps) {
                 <div className="flex-1 overflow-y-auto">
                   <nav className="p-6 space-y-2">
                     <a
-                      href="/"
+                      href="/expense"
                       className="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors group"
                       onClick={() => setMobileMenuOpen(false)}
                     >

@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       })
 
       const allReportsClosed = allReports.every(r => r.status === 'CLOSED')
-      const expenseCanBeClosed = ['APPROVED', 'PARTIALLY_APPROVED', 'PAID', 'EXPENSE_REPORT_REQUESTED'].includes(report.expense.status)
+      const expenseCanBeClosed = ['APPROVED', 'PAID', 'EXPENSE_REPORT_REQUESTED'].includes(report.expense.status)
 
       // If all reports are closed and expense is in a closable state, close the expense too
       if (allReportsClosed && expenseCanBeClosed && report.expense.status !== 'CLOSED') {

@@ -1373,8 +1373,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
         return 'text-green-600 bg-green-50'
       case 'DENIED':
         return 'text-red-600 bg-red-50'
-      case 'PARTIALLY_APPROVED':
-        return 'text-orange-600 bg-orange-50'
       case 'CHANGE_REQUESTED':
         return 'text-purple-600 bg-purple-50'
       case 'PAID':
@@ -1548,12 +1546,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <div className="text-left sm:text-right">
                     <div className="space-y-1">
                       <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
-                      {(expense.status === 'PARTIALLY_APPROVED' || expense.status === 'DENIED') && (
+                      {expense.status === 'DENIED' && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">Approved:</span>
-                          <span className={`text-sm font-semibold ${
-                            expense.status === 'DENIED' ? 'text-red-600' : 'text-orange-600'
-                          }`}>
+                          <span className="text-sm font-semibold text-red-600">
                             {formatCurrency(calculateApprovedAmount(expense))}
                           </span>
                         </div>
@@ -1631,7 +1627,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         <span className="hidden sm:inline">Request Change</span>
                       </Button>
                     )}
-                    {(expense.status === 'APPROVED' || expense.status === 'PARTIALLY_APPROVED') && user.role === 'ADMIN' && (
+                    {expense.status === 'APPROVED' && user.role === 'ADMIN' && (
                       <>
                         <Button 
                           variant="outline" 
@@ -1818,8 +1814,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <p className="text-xl sm:text-2xl font-bold text-green-600">
                     Requested: {formatCurrency(viewModal.expense.amountCents)}
                   </p>
-                  {(viewModal.expense.status === 'PARTIALLY_APPROVED' || viewModal.expense.status === 'DENIED') && (
-                    <p className="text-lg font-semibold text-orange-600">
+                  {viewModal.expense.status === 'DENIED' && (
+                    <p className="text-lg font-semibold text-red-600">
                       Approved: {formatCurrency(calculateApprovedAmount(viewModal.expense))}
                     </p>
                   )}
@@ -2173,10 +2169,10 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             ${(viewModal.expense.amountCents / 100).toFixed(2)}
                           </span>
                         </div>
-                        {(viewModal.expense.status === 'PARTIALLY_APPROVED' || viewModal.expense.status === 'DENIED') && (
+                        {viewModal.expense.status === 'DENIED' && (
                           <div className="flex justify-between items-center">
-                            <span className="font-medium text-orange-800">Total Approved:</span>
-                            <span className="font-bold text-lg text-orange-800">
+                            <span className="font-medium text-red-800">Total Approved:</span>
+                            <span className="font-bold text-lg text-red-800">
                               ${(calculateApprovedAmount(viewModal.expense) / 100).toFixed(2)}
                             </span>
                           </div>

@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Allow closing if expense is APPROVED, PARTIALLY_APPROVED, PAID, or EXPENSE_REPORT_REQUESTED
+    // Allow closing if expense is APPROVED, PAID, or EXPENSE_REPORT_REQUESTED
     // This allows admins to close expenses even if reportRequired is true
-    if (!['APPROVED', 'PARTIALLY_APPROVED', 'PAID', 'EXPENSE_REPORT_REQUESTED'].includes(expense.status)) {
+    if (!['APPROVED', 'PAID', 'EXPENSE_REPORT_REQUESTED'].includes(expense.status)) {
       return NextResponse.json(
         { error: 'Expense request must be approved, paid, or expense report requested to be closed' },
         { status: 400 }

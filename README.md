@@ -88,20 +88,16 @@ The CCI Expense Management System is designed to handle the complete expense man
    - Ready for payment processing
    - Requester can request changes if needed
 
-3. **PARTIALLY_APPROVED** - Some items approved, some denied
-   - Mixed approval status
-   - Can be marked as paid for approved items only
-
-4. **DENIED** - Expense has been rejected
+3. **DENIED** - Expense has been rejected
    - Includes denial reason
    - Cannot be edited or resubmitted
 
-5. **CHANGE_REQUESTED** - Changes are required
+4. **CHANGE_REQUESTED** - Changes are required
    - Can be requested by approvers or requesters
    - Expense can be edited and resubmitted
    - Status resets to SUBMITTED after update
 
-6. **PAID** - Expense has been marked as paid
+5. **PAID** - Expense has been marked as paid
    - Payment date and amount recorded
    - Can create expense reports
    - Tracks cumulative payment amounts
@@ -154,7 +150,6 @@ Special handling for expenses related to events:
    - **Change Requested**: Request modifications
 4. Expense status updates based on item approvals:
    - All approved → APPROVED
-   - Some approved → PARTIALLY_APPROVED
    - All denied → DENIED
    - Changes requested → CHANGE_REQUESTED
 

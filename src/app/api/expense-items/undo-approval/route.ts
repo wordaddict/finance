@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if expense is in a state that allows undoing approvals
-    if (item.expense.status !== 'SUBMITTED' && item.expense.status !== 'APPROVED' && item.expense.status !== 'PARTIALLY_APPROVED' && item.expense.status !== 'DENIED') {
+    if (item.expense.status !== 'SUBMITTED' && item.expense.status !== 'APPROVED' && item.expense.status !== 'DENIED') {
       return NextResponse.json(
-        { error: 'Can only undo approvals for expenses in submitted, approved, partially approved, or denied status' },
+        { error: 'Can only undo approvals for expenses in submitted, approved, or denied status' },
         { status: 400 }
       )
     }

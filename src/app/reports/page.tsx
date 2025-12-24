@@ -7,7 +7,7 @@ export default async function ReportsPage() {
 
   // Only admins can access reports page
   if (user.role !== 'ADMIN') {
-    redirect('/')
+    redirect('/expense')
   }
 
   return <ReportsPageClient user={user} />

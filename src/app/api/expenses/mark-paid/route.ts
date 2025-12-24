@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
         )
       }
     } else {
-      // Initial payment - must be approved or partially approved
-      if (expense.status !== 'APPROVED' && expense.status !== 'PARTIALLY_APPROVED') {
+      // Initial payment - must be approved
+      if (expense.status !== 'APPROVED') {
         return NextResponse.json(
-          { error: 'Expense request must be approved or partially approved before marking as paid' },
+          { error: 'Expense request must be approved before marking as paid' },
           { status: 400 }
         )
       }
