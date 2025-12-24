@@ -51,3 +51,7 @@ export function canApproveAtStage(user: SessionUser, stage: number): boolean {
   const allowedStages = getApprovalStages(user)
   return allowedStages.includes(stage)
 }
+
+export function canUpdateExpenseItems(user: SessionUser): boolean {
+  return hasRole(user, 'ADMIN')
+}

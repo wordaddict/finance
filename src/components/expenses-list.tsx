@@ -10,7 +10,7 @@ import { DenialModal } from './denial-modal'
 import { ReportForm } from './report-form'
 import { ConfirmationModal } from './confirmation-modal'
 import { ReportDenialModal } from './report-denial-modal'
-import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, STATUS_VALUES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES } from '@/lib/constants'
+import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, STATUS_VALUES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES, EXPENSE_CATEGORIES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
 // Client-side download URL helper
 function getCloudinaryDownloadUrl(secureUrl: string): string {
@@ -380,6 +380,11 @@ export function ExpensesList({ user }: ExpensesListProps) {
     isOpen: false,
     expense: null,
   })
+  const [editingItemCategory, setEditingItemCategory] = useState<{
+    itemId: string
+    category: string
+    processing: boolean
+  } | null>(null)
   const [filters, setFilters] = useState({
     status: '',
     team: '',
@@ -561,6 +566,71 @@ export function ExpensesList({ user }: ExpensesListProps) {
       : undefined
 
     handleItemApproval(itemId, action, comment.trim() || undefined, approvedAmountCents)
+  }
+
+  const handleUpdateItemCategory = async (itemId: string, category: string) => {
+    try {
+      setEditingItemCategory({ itemId, category, processing: true })
+
+      const response = await fetch('/api/expense-items/update-category', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itemId,
+          category: category || null
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage('Item category updated successfully')
+
+        // Update the local state
+        setExpenses(prevExpenses => {
+          return prevExpenses.map(expense => {
+            const updatedItems = expense.items?.map(item =>
+              item.id === itemId
+                ? { ...item, category: category || null }
+                : item
+            )
+
+            return {
+              ...expense,
+              items: updatedItems
+            }
+          })
+        })
+
+        // Update the view modal if it's showing this expense
+        if (viewModal.expense) {
+          const updatedItems = viewModal.expense.items?.map(item =>
+            item.id === itemId
+              ? { ...item, category: category || null }
+              : item
+          )
+
+          setViewModal(prev => ({
+            ...prev,
+            expense: prev.expense ? {
+              ...prev.expense,
+              items: updatedItems
+            } : null
+          }))
+        }
+
+        setEditingItemCategory(null)
+      } else {
+        setError(data.error || 'Failed to update item category')
+      }
+    } catch (error) {
+      console.error('Failed to update item category:', error)
+      setError('Failed to update item category')
+    } finally {
+      setEditingItemCategory(null)
+    }
   }
 
   const handleApprove = async (expenseId: string) => {
@@ -2015,10 +2085,26 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="font-medium text-sm">{item.description}</p>
-                                {item.category && (
-                                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    {item.category}
-                                  </span>
+                                {user.role === 'ADMIN' ? (
+                                  <select
+                                    value={item.category || ''}
+                                    onChange={(e) => handleUpdateItemCategory(item.id, e.target.value)}
+                                    disabled={editingItemCategory?.itemId === item.id && editingItemCategory.processing}
+                                    className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                                  >
+                                    <option value="">Select Category</option>
+                                    {EXPENSE_CATEGORY_VALUES.map(category => (
+                                      <option key={category} value={category}>
+                                        {category}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  item.category && (
+                                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                      {item.category}
+                                    </span>
+                                  )
                                 )}
                               </div>
                               <p className="text-xs text-gray-500">
