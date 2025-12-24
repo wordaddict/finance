@@ -123,10 +123,10 @@ export default function LandingPage() {
             </h2>
             <div className="relative">
               <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-light text-gray-800 italic leading-relaxed">
-                "To see people celebrate endless life in Christ and discover their purpose."
+                &ldquo;To see people celebrate endless life in Christ and discover their purpose.&rdquo;
               </p>
-              <div className="absolute -left-2 sm:-left-4 -top-2 sm:-top-4 text-red-200 text-4xl sm:text-5xl lg:text-6xl font-serif">"</div>
-              <div className="absolute -right-2 sm:-right-4 -bottom-2 sm:-bottom-4 text-red-200 text-4xl sm:text-5xl lg:text-6xl font-serif">"</div>
+              <div className="absolute -left-2 sm:-left-4 -top-2 sm:-top-4 text-red-200 text-4xl sm:text-5xl lg:text-6xl font-serif">&ldquo;</div>
+              <div className="absolute -right-2 sm:-right-4 -bottom-2 sm:-bottom-4 text-red-200 text-4xl sm:text-5xl lg:text-6xl font-serif">&rdquo;</div>
             </div>
           </div>
         </div>
