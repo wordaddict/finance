@@ -719,12 +719,13 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                     Full Event Budget ($) *
                   </label>
                   <input
+                    key={`fullEventBudget-${fullEventBudget}`}
                     id="fullEventBudget"
                     type="number"
                     step="0.01"
                     min="0"
-                    value={fullEventBudget === 0 ? '' : fullEventBudget.toString()}
-                    onChange={(e) => {
+                    defaultValue={fullEventBudget === 0 ? '' : fullEventBudget.toFixed(2)}
+                    onBlur={(e) => {
                       const value = e.target.value
                       const numericValue = value === '' ? 0 : parseFloat(value) || 0
                       setFullEventBudget(numericValue)
@@ -845,11 +846,12 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                             Unit Price ($) *
                           </label>
                           <input
+                            key={`unitPrice-${item.id}-${item.unitPrice}`}
                             type="number"
                             step="0.01"
                             min="0"
-                            value={item.unitPrice === 0 ? '' : item.unitPrice.toString()}
-                            onChange={(e) => {
+                            defaultValue={item.unitPrice === 0 ? '' : item.unitPrice.toFixed(2)}
+                            onBlur={(e) => {
                               const value = e.target.value
                               const numericValue = value === '' ? 0 : parseFloat(value) || 0
                               updateItem(item.id, 'unitPrice', numericValue)
