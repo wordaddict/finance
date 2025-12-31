@@ -62,6 +62,38 @@ interface ReportsPageClientProps {
   user: any
 }
 
+// Client-safe helper (avoid importing server cloudinary SDK)
+function getCloudinaryDownloadUrl(secureUrl: string): string {
+  return secureUrl.replace('/upload/', '/upload/fl_attachment/')
+}
+
+// Unified attachment handler (matches expense requests behavior)
+async function handleAttachmentClick(attachment: Report['attachments'][number]) {
+  try {
+    const fileName = attachment.secureUrl.split('/').pop() || 'download'
+
+    // Images can open directly
+    if (attachment.mimeType?.startsWith('image/')) {
+      window.open(attachment.secureUrl, '_blank')
+      return
+    }
+
+    // Use Cloudinary download URL to make PDFs/docs viewable
+    const downloadUrl = getCloudinaryDownloadUrl(attachment.secureUrl)
+
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = fileName
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('Failed to handle attachment:', error)
+    window.open(attachment.secureUrl, '_blank')
+  }
+}
+
 export default function ReportsPageClient({ user }: ReportsPageClientProps) {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
@@ -512,7 +544,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                                           src={attachment.secureUrl}
                                           alt="Item attachment"
                                           className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                          onClick={async () => await handleAttachmentClick(attachment)}
                                         />
                                       ) : (
                                         <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
@@ -528,7 +560,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                       className="text-xs"
                                     >
                                       View
@@ -552,7 +584,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                                           src={attachment.secureUrl}
                                           alt="Refund receipt"
                                           className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                          onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                          onClick={async () => await handleAttachmentClick(attachment)}
                                         />
                                       ) : (
                                         <div className="w-10 h-10 bg-blue-100 rounded border flex items-center justify-center">
@@ -568,7 +600,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                      onClick={async () => await handleAttachmentClick(attachment)}
                                       className="text-xs"
                                     >
                                       View
@@ -648,7 +680,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                                     src={attachment.secureUrl}
                                     alt="Report attachment"
                                     className="w-12 h-12 object-cover rounded border cursor-pointer"
-                                    onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                    onClick={async () => await handleAttachmentClick(attachment)}
                                   />
                                 ) : (
                                   <div className="w-12 h-12 bg-red-100 rounded border flex items-center justify-center">
@@ -668,7 +700,7 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(attachment.secureUrl, '_blank')}
+                                onClick={async () => await handleAttachmentClick(attachment)}
                               >
                                 View
                               </Button>
