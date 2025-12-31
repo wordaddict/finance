@@ -7,7 +7,7 @@ import { Navigation } from '@/components/navigation'
 import { canManageUsers } from '@/lib/rbac'
 import { formatRoleName } from '@/lib/utils'
 import { CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
-import { Check, X, UserX, Eye, EyeOff, Filter } from 'lucide-react'
+import { Check, X, UserX, Eye, EyeOff, Filter, Search } from 'lucide-react'
 import { ConfirmationModal } from '@/components/confirmation-modal'
 
 interface User {
@@ -29,6 +29,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [actionLoading, setActionLoading] = useState<{
     userId: string | null
     action: 'approve' | 'deny' | 'suspend' | 'role' | null
@@ -75,7 +76,7 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
 
   useEffect(() => {
     fetchUsers()
-  }, [statusFilter])
+  }, [statusFilter, searchQuery])
 
   const fetchUsers = async () => {
     try {
@@ -83,6 +84,9 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
       const params = new URLSearchParams()
       if (statusFilter) {
         params.append('status', statusFilter)
+      }
+      if (searchQuery) {
+        params.append('search', searchQuery)
       }
       
       const response = await fetch(`/api/users?${params.toString()}`)
@@ -369,6 +373,22 @@ export default function UsersPageClient({ user }: UsersPageClientProps) {
                     <option value="ACTIVE">Active</option>
                     <option value="SUSPENDED">Suspended</option>
                   </select>
+                </div>
+                <div className="flex-1 min-w-[220px]">
+                  <label htmlFor="search" className="block text-sm font-medium mb-1">
+                    Search
+                  </label>
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      id="search"
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search by name or email"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>

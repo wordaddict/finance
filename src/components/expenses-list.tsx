@@ -1527,7 +1527,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
               >
-                <option value="">All Statuses</option>
+                <option value="">All Active Status</option>
                 {STATUS_VALUES.map(status => (
                   <option key={status} value={status}>
                     {STATUS_DISPLAY_NAMES[status as keyof typeof STATUS_DISPLAY_NAMES]}

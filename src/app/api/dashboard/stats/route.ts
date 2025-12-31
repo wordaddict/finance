@@ -34,6 +34,9 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       filterWhere.status = status
+    } else {
+      // Default to active (non-closed) expenses when no explicit status filter is chosen
+      filterWhere.status = { not: 'CLOSED' }
     }
     if (team) {
       filterWhere.team = team

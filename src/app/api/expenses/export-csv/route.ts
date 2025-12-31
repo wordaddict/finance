@@ -40,6 +40,9 @@ export async function GET(request: NextRequest) {
     
     if (status) {
       where.status = status
+    } else {
+      // Default to active (non-closed) expenses when no explicit status filter is chosen
+      where.status = { not: 'CLOSED' }
     }
 
     if (urgency) {
