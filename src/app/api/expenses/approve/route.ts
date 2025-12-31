@@ -111,12 +111,19 @@ export async function POST(request: NextRequest) {
 
     // Update expense status if fully approved
     if (newStatus === 'APPROVED') {
-      // Automatically approve all items when expense is approved
+      // Automatically approve all items that are not already denied when expense is approved
       if (expense.items && expense.items.length > 0) {
         for (const item of expense.items) {
+          // Skip items that have been denied
+          const hasBeenDenied = item.approvals.some((approval: { status: string }) => approval.status === 'DENIED')
+
+          if (hasBeenDenied) {
+            continue // Skip denied items
+          }
+
           // Check if item already has an approval from this user
           const existingItemApproval = item.approvals.find((approval: { approverId: string }) => approval.approverId === user.id)
-          
+
           if (!existingItemApproval) {
             // Create approval for this item - approve full amount
             await db.expenseItemApproval.create({

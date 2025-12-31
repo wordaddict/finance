@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GET } from '@/app/api/expenses/route'
 import { POST as adminChangeRequestPost } from '@/app/api/expenses/admin-change-request/route'
 import { POST as requestChangePost } from '@/app/api/expenses/request-change/route'
+import { POST as approvePost } from '@/app/api/expenses/approve/route'
 import { db } from '@/lib/db'
 
 // Mock the database
@@ -23,6 +24,17 @@ vi.mock('@/lib/db', () => ({
     user: {
       findMany: vi.fn(),
     },
+    approval: {
+      upsert: vi.fn(),
+      findUnique: vi.fn(),
+    },
+    expenseItemApproval: {
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    setting: {
+      findFirst: vi.fn(),
+    },
   },
 }))
 
@@ -34,6 +46,8 @@ vi.mock('@/lib/auth', () => ({
 // Mock the RBAC function
 vi.mock('@/lib/rbac', () => ({
   canViewAllExpenses: vi.fn(),
+  canApproveExpenses: vi.fn(),
+  canApproveAtStage: vi.fn(),
 }))
 
 // Mock the error handler
@@ -50,11 +64,18 @@ vi.mock('@/lib/email', () => ({
     html: '<p>Changes requested</p>',
     text: 'Changes requested',
   })),
+  generateExpenseApprovedEmail: vi.fn(() => ({
+    to: 'user@example.com',
+    subject: 'Expense Approved',
+    html: '<p>Expense approved</p>',
+    text: 'Expense approved',
+  })),
+  sendEmail: vi.fn(() => Promise.resolve()),
   sendEmailsWithRateLimit: vi.fn(() => Promise.resolve({ sent: 1, failed: 0, errors: [] })),
 }))
 
 const { requireAuth } = await import('@/lib/auth')
-const { canViewAllExpenses } = await import('@/lib/rbac')
+const { canViewAllExpenses, canApproveExpenses, canApproveAtStage } = await import('@/lib/rbac')
 
 describe('/api/expenses', () => {
   beforeEach(() => {
@@ -715,6 +736,121 @@ describe('/api/expenses', () => {
 
       expect(response.status).toBe(400)
       expect(data.error).toBe('Invalid request data')
+    })
+  })
+
+  describe('POST /api/expenses/approve', () => {
+    it('should skip denied items when auto-approving expense', async () => {
+      // Mock authenticated admin user
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440004',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        role: 'ADMIN' as const,
+        status: 'ACTIVE' as const,
+        campus: 'MAIN' as const,
+      }
+
+      // Mock expense with one approved item and one denied item
+      const mockExpense = {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        title: 'Test Expense',
+        amountCents: 20000, // $200
+        status: 'SUBMITTED',
+        requesterId: '550e8400-e29b-41d4-a716-446655440001',
+        requester: {
+          id: '550e8400-e29b-41d4-a716-446655440001',
+          name: 'Test User',
+          email: 'user@example.com',
+          status: 'ACTIVE' as const,
+        },
+        approvals: [],
+        items: [
+          {
+            id: '550e8400-e29b-41d4-a716-446655440002',
+            amountCents: 10000, // $100
+            description: 'Item 1',
+            approvals: [], // No existing approval from current user
+          },
+          {
+            id: '550e8400-e29b-41d4-a716-446655440005',
+            amountCents: 10000, // $100
+            description: 'Item 2',
+            approvals: [
+              {
+                id: '550e8400-e29b-41d4-a716-446655440006',
+                status: 'DENIED',
+                approverId: '550e8400-e29b-41d4-a716-446655440004', // Same user denied it
+              },
+            ],
+          },
+        ],
+      }
+
+      const mockSettings = { requireTwoStage: false }
+
+      // Mock all the required functions
+      ;(requireAuth as any).mockResolvedValue(mockUser)
+      ;(canApproveExpenses as any).mockReturnValue(true)
+      ;(canApproveAtStage as any).mockReturnValue(true)
+      ;(db.expenseRequest.findUnique as any).mockResolvedValueOnce(mockExpense)
+      ;(db.approval.findUnique as any).mockResolvedValue(null)
+      ;(db.approval.upsert as any).mockResolvedValue({})
+      ;(db.setting.findFirst as any).mockResolvedValue(mockSettings)
+      ;(db.expenseItemApproval.create as any).mockResolvedValue({})
+      ;(db.expenseRequest.update as any).mockResolvedValue({})
+      ;(db.statusEvent.create as any).mockResolvedValue({})
+      ;(db.expenseRequest.findUnique as any).mockResolvedValueOnce({
+        ...mockExpense,
+        items: [
+          {
+            ...mockExpense.items[0],
+            approvals: [{ status: 'APPROVED', approvedAmountCents: 10000 }],
+          },
+          {
+            ...mockExpense.items[1],
+            approvals: [{ status: 'DENIED' }], // Denied item should remain denied
+          },
+        ],
+      })
+      ;(db.user.findMany as any).mockResolvedValue([])
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/approve', {
+        method: 'POST',
+        body: JSON.stringify({
+          expenseId: '550e8400-e29b-41d4-a716-446655440000',
+          stage: 1,
+          comment: 'Approved with some items denied',
+        }),
+      })
+
+      const response = await approvePost(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toBe('Expense request approved successfully')
+      expect(data.status).toBe('APPROVED')
+
+      // Verify that expenseItemApproval.create was called only once (for the non-denied item)
+      expect(db.expenseItemApproval.create).toHaveBeenCalledTimes(1)
+      expect(db.expenseItemApproval.create).toHaveBeenCalledWith({
+        data: {
+          itemId: '550e8400-e29b-41d4-a716-446655440002', // Only the non-denied item should be auto-approved
+          approverId: '550e8400-e29b-41d4-a716-446655440004',
+          status: 'APPROVED',
+          approvedAmountCents: 10000,
+          comment: 'Auto-approved with expense approval: Approved with some items denied',
+        },
+      })
+
+      // Verify that the denied item was not auto-approved
+      expect(db.expenseItemApproval.create).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            itemId: '550e8400-e29b-41d4-a716-446655440005',
+          }),
+        })
+      )
     })
   })
 })

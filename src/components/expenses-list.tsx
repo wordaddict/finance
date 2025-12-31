@@ -1616,14 +1616,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <div className="text-left sm:text-right">
                     <div className="space-y-1">
                       <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
-                      {expense.status === 'DENIED' && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500">Approved:</span>
-                          <span className="text-sm font-semibold text-red-600">
-                            {formatCurrency(calculateApprovedAmount(expense))}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Approved:</span>
+                        <span className="text-sm font-semibold text-blue-600">
+                          {formatCurrency(calculateApprovedAmount(expense))}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1880,16 +1878,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">{viewModal.expense.title}</h3>
-                <div className="space-y-1">
-                  <p className="text-xl sm:text-2xl font-bold text-green-600">
-                    Requested: {formatCurrency(viewModal.expense.amountCents)}
-                  </p>
-                  {viewModal.expense.status === 'DENIED' && (
-                    <p className="text-lg font-semibold text-red-600">
-                      Approved: {formatCurrency(calculateApprovedAmount(viewModal.expense))}
-                    </p>
-                  )}
-                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2256,14 +2244,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             ${(viewModal.expense.amountCents / 100).toFixed(2)}
                           </span>
                         </div>
-                        {viewModal.expense.status === 'DENIED' && (
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium text-red-800">Total Approved:</span>
-                            <span className="font-bold text-lg text-red-800">
-                              ${(calculateApprovedAmount(viewModal.expense) / 100).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-blue-800">Total Approved:</span>
+                          <span className="font-bold text-lg text-blue-800">
+                            ${(calculateApprovedAmount(viewModal.expense) / 100).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

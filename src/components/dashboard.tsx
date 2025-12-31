@@ -46,6 +46,7 @@ interface DashboardStats {
     id: string
     title: string
     amountCents: number
+    approvedAmountCents: number
     status: string
     createdAt: string
     teamName: string
@@ -567,16 +568,24 @@ export function Dashboard({ user }: DashboardProps) {
                     </p>
                   </div>
                   <div className="text-left sm:text-right">
-                    <p className="font-medium text-sm sm:text-base">{formatCurrency(expense.amountCents)}</p>
-                    <p className={`text-xs sm:text-sm ${
-                      expense.status === 'APPROVED' ? 'text-green-600' :
-                      expense.status === 'DENIED' ? 'text-red-600' :
-                      expense.status === 'PAID' ? 'text-blue-600' :
-                      expense.status === 'EXPENSE_REPORT_REQUESTED' ? 'text-indigo-600' :
-                      'text-yellow-600'
-                    }`}>
-                      {STATUS_DISPLAY_NAMES[expense.status as keyof typeof STATUS_DISPLAY_NAMES] || expense.status}
-                    </p>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-row sm:items-center sm:justify-end gap-2">
+                        <p className="text-xs sm:text-sm text-gray-500">Requested:</p>
+                        <p className="font-medium text-sm sm:text-base">{formatCurrency(expense.amountCents)}</p>
+                        <span className="text-gray-400">|</span>
+                        <p className="text-xs sm:text-sm text-gray-500">Approved:</p>
+                        <p className="font-medium text-sm sm:text-base text-blue-600">{formatCurrency(expense.approvedAmountCents)}</p>
+                      </div>
+                      <p className={`text-xs sm:text-sm ${
+                        expense.status === 'APPROVED' ? 'text-green-600' :
+                        expense.status === 'DENIED' ? 'text-red-600' :
+                        expense.status === 'PAID' ? 'text-blue-600' :
+                        expense.status === 'EXPENSE_REPORT_REQUESTED' ? 'text-indigo-600' :
+                        'text-yellow-600'
+                      }`}>
+                        {STATUS_DISPLAY_NAMES[expense.status as keyof typeof STATUS_DISPLAY_NAMES] || expense.status}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

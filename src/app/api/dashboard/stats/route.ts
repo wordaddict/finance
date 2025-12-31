@@ -193,6 +193,13 @@ export async function GET(request: NextRequest) {
       where: filterWhere,
       include: {
         requester: true,
+        items: {
+          include: {
+            approvals: {
+              where: { status: 'APPROVED' },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -209,15 +216,33 @@ export async function GET(request: NextRequest) {
       teamBreakdown: teamBreakdownWithNames,
       campusBreakdown: campusBreakdownWithNames,
       statusBreakdown: statusBreakdownWithNames,
-      recentExpenses: recentExpenses.map(expense => ({
-        id: expense.id,
-        title: expense.title,
-        amountCents: expense.amountCents,
-        status: expense.status,
-        createdAt: expense.createdAt.toISOString(),
-        teamName: expense.team,
-        campus: expense.campus,
-      })),
+      recentExpenses: recentExpenses.map(expense => {
+        // Calculate approved amount based on item approvals
+        let approvedAmountCents = expense.amountCents
+
+        if (expense.items && expense.items.length > 0) {
+          approvedAmountCents = expense.items.reduce((total, item) => {
+            // Find approved item approval (use the first one if multiple exist)
+            const itemApproval = item.approvals.find((approval: any) => approval.status === 'APPROVED')
+            if (itemApproval && itemApproval.approvedAmountCents !== null && itemApproval.approvedAmountCents !== undefined) {
+              return total + itemApproval.approvedAmountCents
+            }
+            // If no approval found or amount is null, use full item amount (for non-approved expenses)
+            return total + item.amountCents
+          }, 0)
+        }
+
+        return {
+          id: expense.id,
+          title: expense.title,
+          amountCents: expense.amountCents, // Total requested
+          approvedAmountCents: approvedAmountCents, // Total approved
+          status: expense.status,
+          createdAt: expense.createdAt.toISOString(),
+          teamName: expense.team,
+          campus: expense.campus,
+        }
+      }),
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)

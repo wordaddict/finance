@@ -29,6 +29,26 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, noModal = false }: ExpenseFormProps) {
+  // Calculate approved amount for existing expenses
+  const calculateApprovedAmount = (expense: any) => {
+    if (!expense.items || expense.items.length === 0) {
+      // For non-itemized expenses, return full amount if approved, 0 if denied
+      if (expense.status === 'APPROVED') return expense.amountCents / 100
+      if (expense.status === 'DENIED') return 0
+      return expense.amountCents / 100 // For submitted/partial, show full amount as potential
+    }
+
+    // For itemized expenses, calculate sum of approved amounts
+    return expense.items.reduce((total: number, item: any) => {
+      const itemApproval = item.approvals?.[0]
+      if (itemApproval?.status === 'APPROVED') {
+        // Use approvedAmountCents if specified and not null, otherwise use full item amount
+        return total + ((itemApproval.approvedAmountCents ?? item.amountCents) / 100)
+      }
+      return total
+    }, 0)
+  }
+
   const [title, setTitle] = useState('')
   const [team, setTeam] = useState('')
   const [campus, setCampus] = useState('')
@@ -985,6 +1005,14 @@ export function ExpenseForm({ user, onClose, onSuccess, onCancel, editExpense, n
                     ${totalAmount.toFixed(2)}
                   </span>
                 </div>
+                {editExpense && (
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-300">
+                    <span className="font-medium">Approved Amount:</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      ${calculateApprovedAmount(editExpense).toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 {isEvent && fullEventBudget > 0 && (
                   <div className="mt-2 pt-2 border-t border-gray-300">
                     <div className="flex justify-between items-center">
