@@ -25,10 +25,12 @@ const updateExpenseSchema = z.object({
     publicId: z.string(),
     secureUrl: z.string(),
     mimeType: z.string(),
-    itemId: z.string().uuid().nullable().optional(),
+    // Allow temp item IDs from the client (e.g., "temp-1") or real UUIDs
+    itemId: z.string().uuid().or(z.string().min(1)).nullable().optional(),
   })).optional(),
   items: z.array(z.object({
     id: z.string().uuid().optional(), // Optional ID for existing items
+    tempId: z.string().optional().nullable(), // Client-side temp ID for new items
     description: z.string().min(1),
     category: z.string().optional().nullable(),
     quantity: z.number().positive(),
@@ -65,6 +67,10 @@ const updateExpenseSchema = z.object({
   message: "Items total must equal the full event budget",
   path: ["items"]
 })
+
+// Simple UUID v4 format check
+const isUuid = (value: string | null | undefined) =>
+  !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
 export async function PUT(request: NextRequest) {
   try {
@@ -120,6 +126,7 @@ export async function PUT(request: NextRequest) {
     // If this was an approved expense and we're adding items, preserve existing items
     // Otherwise, replace all items (normal edit flow)
     let itemsUpdate: any
+    const newItemIdByTemp: Record<string, string> = {}
     if (wasApproved) {
       // For change requests on approved expenses: keep existing items, add new ones
       // The frontend should send all items (existing + new), but we'll identify new ones
@@ -150,15 +157,25 @@ export async function PUT(request: NextRequest) {
         })
       }
 
-      itemsUpdate = {
-        create: itemsToAdd.map((item: any) => ({
-          description: item.description,
-          category: item.category || null,
-          quantity: item.quantity,
-          unitPriceCents: item.unitPriceCents,
-          amountCents: item.amountCents,
-        })),
+      // Create new items individually to capture their generated IDs and map tempIds
+      for (const item of itemsToAdd) {
+        const created = await db.expenseItem.create({
+          data: {
+            expenseId: data.expenseId,
+            description: item.description,
+            category: item.category || null,
+            quantity: item.quantity,
+            unitPriceCents: item.unitPriceCents,
+            amountCents: item.amountCents,
+          },
+        })
+        if (item.tempId) {
+          newItemIdByTemp[item.tempId] = created.id
+        }
       }
+
+      // No nested item create; we already created the new items above
+      itemsUpdate = {}
     } else {
       // Normal edit: preserve existing items to keep attachments, update/create/delete as needed
       const existingItemIds = existingExpense.items.map(item => item.id)
@@ -202,16 +219,22 @@ export async function PUT(request: NextRequest) {
         })
       }
 
-      // Create new items
+      // Create new items and track tempId -> id mapping
       if (itemsToAdd.length > 0) {
-        itemsUpdate = {
-          create: itemsToAdd.map((item: any) => ({
-            description: item.description,
-            category: item.category || null,
-            quantity: item.quantity,
-            unitPriceCents: item.unitPriceCents,
-            amountCents: item.amountCents,
-          })),
+        for (const item of itemsToAdd) {
+          const created = await db.expenseItem.create({
+            data: {
+              expenseId: data.expenseId,
+              description: item.description,
+              category: item.category || null,
+              quantity: item.quantity,
+              unitPriceCents: item.unitPriceCents,
+              amountCents: item.amountCents,
+            },
+          })
+          if (item.tempId) {
+            newItemIdByTemp[item.tempId] = created.id
+          }
         }
       }
     }
@@ -240,12 +263,22 @@ export async function PUT(request: NextRequest) {
         // Update attachments if provided
         attachments: data.attachments ? {
           deleteMany: {}, // Delete existing attachments
-          create: data.attachments.map(attachment => ({
-            publicId: attachment.publicId,
-            secureUrl: attachment.secureUrl,
-            mimeType: attachment.mimeType,
-            itemId: attachment.itemId || null,
-          })),
+          create: data.attachments.map(attachment => {
+            // Resolve itemId: prefer valid UUID, otherwise map tempId to new item
+            let resolvedItemId: string | null = null
+            if (isUuid(attachment.itemId)) {
+              resolvedItemId = attachment.itemId as string
+            } else if (attachment.itemId && newItemIdByTemp[attachment.itemId]) {
+              resolvedItemId = newItemIdByTemp[attachment.itemId]
+            }
+
+            return {
+              publicId: attachment.publicId,
+              secureUrl: attachment.secureUrl,
+              mimeType: attachment.mimeType,
+              itemId: resolvedItemId,
+            }
+          }),
         } : undefined,
       } as any,
       include: {

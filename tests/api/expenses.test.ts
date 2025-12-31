@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GET } from '@/app/api/expenses/route'
 import { POST as adminChangeRequestPost } from '@/app/api/expenses/admin-change-request/route'
 import { POST as requestChangePost } from '@/app/api/expenses/request-change/route'
+import { PUT as updateExpensePut } from '@/app/api/expenses/update/route'
 import { POST as approvePost } from '@/app/api/expenses/approve/route'
 import { db } from '@/lib/db'
 
@@ -20,6 +21,7 @@ vi.mock('@/lib/db', () => ({
     },
     statusEvent: {
       create: vi.fn(),
+      findFirst: vi.fn(),
     },
     user: {
       findMany: vi.fn(),
@@ -34,6 +36,11 @@ vi.mock('@/lib/db', () => ({
     },
     setting: {
       findFirst: vi.fn(),
+    },
+    expenseItem: {
+      update: vi.fn(),
+      deleteMany: vi.fn(),
+      create: vi.fn(),
     },
   },
 }))
@@ -848,6 +855,139 @@ describe('/api/expenses', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             itemId: '550e8400-e29b-41d4-a716-446655440005',
+          }),
+        })
+      )
+    })
+  })
+
+  describe('PUT /api/expenses/update', () => {
+    it('should map attachment temp itemIds to newly created items when adding items in change request', async () => {
+      const expenseId = '550e8400-e29b-41d4-a716-446655440100'
+      const existingItemId = '550e8400-e29b-41d4-a716-446655440101'
+      const newItemId = '550e8400-e29b-41d4-a716-446655440102'
+
+      const mockUser = {
+        id: '550e8400-e29b-41d4-a716-446655440200',
+        email: 'requester@example.com',
+        name: 'Requester',
+        role: 'ADMIN' as const,
+        status: 'ACTIVE' as const,
+        campus: 'DMV' as const,
+      }
+
+      const existingExpense = {
+        id: expenseId,
+        title: 'Existing Expense',
+        amountCents: 1000,
+        team: 'ADMINISTRATION',
+        campus: 'DMV',
+        description: 'desc',
+        notes: null,
+        category: 'Hospitality',
+        urgency: 2,
+        eventDate: null,
+        eventName: null,
+        fullEventBudgetCents: null,
+        payToExternal: false,
+        payeeName: null,
+        payeeZelle: null,
+        status: 'CHANGE_REQUESTED',
+        requester: { email: mockUser.email },
+        items: [
+          {
+            id: existingItemId,
+            description: 'Existing item',
+            category: null,
+            quantity: 1,
+            unitPriceCents: 1000,
+            amountCents: 1000,
+          },
+        ],
+      }
+
+      const payload = {
+        expenseId,
+        title: 'Existing Expense',
+        amountCents: 55500,
+        team: 'ADMINISTRATION',
+        campus: 'DMV',
+        description: 'desc',
+        notes: null,
+        category: 'Hospitality',
+        urgency: 2,
+        eventDate: null,
+        eventName: null,
+        fullEventBudgetCents: null,
+        payToExternal: false,
+        payeeName: null,
+        payeeZelle: null,
+        items: [
+          {
+            id: existingItemId,
+            tempId: null,
+            description: 'Existing item',
+            category: null,
+            quantity: 1,
+            unitPriceCents: 1000,
+            amountCents: 1000,
+          },
+          {
+            tempId: 'temp-1',
+            description: 'New item',
+            category: null,
+            quantity: 1,
+            unitPriceCents: 54522,
+            amountCents: 54522,
+          },
+        ],
+        attachments: [
+          {
+            publicId: 'public-id-1',
+            secureUrl: 'https://example.com/attachment1',
+            mimeType: 'image/png',
+            itemId: 'temp-1',
+          },
+        ],
+      }
+
+      ;(requireAuth as any).mockResolvedValue(mockUser)
+      ;(db.expenseRequest.findUnique as any).mockResolvedValue(existingExpense)
+      ;(db.statusEvent.findFirst as any).mockResolvedValue({ id: 'status-1' }) // mark as previously approved
+      ;(db.expenseItem.create as any).mockResolvedValue({ id: newItemId })
+      ;(db.expenseRequest.update as any).mockResolvedValue({ ...existingExpense, status: 'SUBMITTED' })
+      ;(db.statusEvent.create as any).mockResolvedValue({})
+      ;(db.user.findMany as any).mockResolvedValue([])
+      ;(db.approval.findUnique as any).mockResolvedValue(null)
+      ;(db.approval.upsert as any).mockResolvedValue({})
+
+      const request = new NextRequest('http://localhost:3000/api/expenses/update', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      })
+
+      const response = await updateExpensePut(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.message).toBe('Expense request updated successfully')
+
+      // New item created and mapped
+      expect(db.expenseItem.create).toHaveBeenCalledTimes(1)
+
+      // Attachments should reference the newly created itemId (resolved from tempId)
+      expect(db.expenseRequest.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            attachments: expect.objectContaining({
+              deleteMany: {},
+              create: expect.arrayContaining([
+                expect.objectContaining({
+                  publicId: 'public-id-1',
+                  itemId: newItemId,
+                }),
+              ]),
+            }),
           }),
         })
       )
