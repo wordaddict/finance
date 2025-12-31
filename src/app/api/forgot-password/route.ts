@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { sendEmail, generatePasswordResetEmail } from '@/lib/email'
+import { sendEmail, generatePasswordResetEmail, EMAIL_BASE_URL } from '@/lib/email'
 import { randomBytes } from 'crypto'
 
 const forgotPasswordSchema = z.object({
@@ -47,11 +47,10 @@ export async function POST(request: NextRequest) {
       })
 
       // Send reset email
-      const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`
+      const resetUrl = `${EMAIL_BASE_URL}/reset-password?token=${resetToken}`
       const emailTemplate = generatePasswordResetEmail(
         user.name || user.email,
-        resetUrl,
-        process.env.NEXT_PUBLIC_APP_URL!
+        resetUrl
       )
       emailTemplate.to = normalizedEmail
 

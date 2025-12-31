@@ -213,8 +213,7 @@ export async function POST(request: NextRequest) {
       const emailTemplate = generateExpenseApprovedEmail(
         expenseForEmail.requester.name || expenseForEmail.requester.email,
         expenseForEmail.title,
-        approvedAmountCents,
-        process.env.NEXT_PUBLIC_APP_URL!
+        approvedAmountCents
       )
       emailTemplate.to = expenseForEmail.requester.email
       await sendEmail(emailTemplate)
@@ -233,8 +232,7 @@ export async function POST(request: NextRequest) {
         const pastorEmailTemplate = generateExpenseApprovedEmail(
           pastor.name || pastor.email,
           expenseForEmail.title,
-          approvedAmountCents,
-          process.env.NEXT_PUBLIC_APP_URL!
+        approvedAmountCents
         )
         pastorEmailTemplate.to = pastor.email
         return pastorEmailTemplate

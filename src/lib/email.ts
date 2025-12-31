@@ -2,6 +2,9 @@ import { Resend } from 'resend'
 import { db } from './db'
 import { formatRoleName } from './utils'
 
+// All email links should use this fixed base URL to avoid environment-specific hosts
+export const EMAIL_BASE_URL = 'https://www.cciamerica.org'
+
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export interface EmailTemplate {
@@ -89,10 +92,8 @@ export function generateExpenseSubmittedEmail(
   expenseTitle: string,
   amount: number,
   requesterName: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
   
   return {
     to: '', // Will be set by caller
@@ -124,10 +125,8 @@ export function generateExpenseApprovedEmail(
   recipientName: string,
   expenseTitle: string,
   amount: number,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
   
   return {
     to: '',
@@ -158,11 +157,10 @@ export function generateExpenseDeniedEmail(
   recipientName: string,
   expenseTitle: string,
   amount: number,
-  baseUrl: string,
+  // reason is optional
   reason?: string,
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
   
   return {
     to: '',
@@ -194,10 +192,8 @@ export function generateExpensePaidEmail(
   recipientName: string,
   expenseTitle: string,
   amount: number,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
   
   return {
     to: '',
@@ -278,9 +274,8 @@ export function generatePendingAccountApprovalEmail(
   newUserEmail: string,
   newUserRole: string,
   newUserCampus: string,
-  baseUrl: string
 ): EmailTemplate {
-  const usersUrl = `${baseUrl}/users`
+  const usersUrl = `${EMAIL_BASE_URL}/users`
   
   return {
     to: '', // Will be set by caller
@@ -343,10 +338,8 @@ export function generateExpenseReportCreatedEmail(
   reportTitle: string,
   totalApprovedAmount: number,
   reporterName: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const reportsUrl = `${appUrl}/reports`
+  const reportsUrl = `${EMAIL_BASE_URL}/reports`
   
   return {
     to: '',
@@ -380,10 +373,8 @@ export function generateExpenseChangeRequestedEmail(
   amount: number,
   requesterName: string,
   comment: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
   
   return {
     to: '',
@@ -421,10 +412,8 @@ export function generateAdminChangeRequestedEmail(
   amount: number,
   adminName: string,
   comment: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
 
   return {
     to: '',
@@ -462,10 +451,8 @@ export function generatePastorRemarkAddedEmail(
   pastorName: string,
   remark: string,
   campus: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
   
   return {
     to: '',
@@ -499,11 +486,8 @@ export function generatePastorRemarkAddedEmail(
 
 export function generateEmailVerificationEmail(
   recipientName: string,
-  verificationUrl: string,
-  baseUrl: string
+  verificationUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  
   return {
     to: '',
     subject: 'Verify Your Email Address - Church Expense System',
@@ -557,11 +541,8 @@ export function generateUserSuspendedEmail(
 
 export function generatePasswordResetEmail(
   recipientName: string,
-  resetUrl: string,
-  baseUrl: string
+  resetUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-
   return {
     to: '',
     subject: 'Reset Your Password - Church Expense System',
@@ -591,10 +572,8 @@ export function generateExpenseNoteAddedEmail(
   expenseTitle: string,
   noteAuthorName: string,
   noteContent: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const expenseUrl = `${appUrl}/expenses`
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
 
   return {
     to: '',
@@ -630,10 +609,8 @@ export function generateReportNoteAddedEmail(
   reportTitle: string,
   noteAuthorName: string,
   noteContent: string,
-  baseUrl: string
 ): EmailTemplate {
-  const appUrl = baseUrl
-  const reportsUrl = `${appUrl}/reports`
+  const reportsUrl = `${EMAIL_BASE_URL}/reports`
 
   return {
     to: '',

@@ -313,8 +313,7 @@ export async function PUT(request: NextRequest) {
         approver.name || approver.email,
         updatedExpense.title,
         updatedExpense.amountCents,
-        updatedExpense.requester?.name || updatedExpense.requester?.email || 'Unknown',
-        process.env.NEXT_PUBLIC_APP_URL!
+        updatedExpense.requester?.name || updatedExpense.requester?.email || 'Unknown'
       )
       emailTemplate.to = approver.email
       emailTemplate.subject = wasApproved 
