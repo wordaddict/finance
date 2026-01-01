@@ -120,8 +120,8 @@ export function WishlistList() {
   return (
     <div className="space-y-8">
       {/* Search and Filters */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative z-20">
+        <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
@@ -136,12 +136,17 @@ export function WishlistList() {
           </div>
 
           {/* Filters */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 w-full lg:w-auto">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40 rounded-xl">
+              <SelectTrigger className="w-full sm:w-44 rounded-xl">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                align="start"
+                sideOffset={6}
+                className="z-50 rounded-2xl shadow-2xl border border-gray-200 bg-white min-w-[240px] max-h-64 overflow-auto"
+              >
                 <SelectItem value="all">All Categories</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category!}>{category}</SelectItem>
@@ -150,10 +155,15 @@ export function WishlistList() {
             </Select>
 
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-36 rounded-xl">
+              <SelectTrigger className="w-full sm:w-40 rounded-xl">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                align="start"
+                sideOffset={6}
+                className="z-50 rounded-2xl shadow-2xl border border-gray-200 bg-white min-w-[200px] max-h-64 overflow-auto"
+              >
                 <SelectItem value="all">All Priorities</SelectItem>
                 <SelectItem value="3">High Priority</SelectItem>
                 <SelectItem value="2">Medium Priority</SelectItem>
@@ -162,10 +172,15 @@ export function WishlistList() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 rounded-xl">
+              <SelectTrigger className="w-full sm:w-36 rounded-xl">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                align="start"
+                sideOffset={6}
+                className="z-50 rounded-2xl shadow-2xl border border-gray-200 bg-white min-w-[180px] max-h-64 overflow-auto"
+              >
                 <SelectItem value="all">All Items</SelectItem>
                 <SelectItem value="available">Still Needed</SelectItem>
                 <SelectItem value="fulfilled">Fulfilled</SelectItem>
