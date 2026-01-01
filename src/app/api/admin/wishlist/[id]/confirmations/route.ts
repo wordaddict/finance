@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin role
-    await requireRole(['ADMIN'])
+    // Check role: allow admin and campus pastors
+    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
 
     const itemId = params.id
 

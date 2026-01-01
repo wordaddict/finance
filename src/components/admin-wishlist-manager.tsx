@@ -10,6 +10,7 @@ import { WishlistItemForm } from '@/components/wishlist-item-form'
 import { ConfirmationsList } from '@/components/confirmations-list'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/utils'
 
 interface WishlistItem {
   id: string
@@ -133,9 +134,10 @@ export function AdminWishlistManager() {
   }
 
   const totalItems = items.length
-  const activeItems = items.filter(item => item.isActive).length
+  const activeItems = items.filter(item => item.isActive && (item.quantityNeeded - item.quantityConfirmed) > 0).length
   const fulfilledItems = items.filter(item => item.quantityConfirmed >= item.quantityNeeded).length
-  const totalValue = items.reduce((sum, item) => sum + (item.priceCents * item.quantityNeeded), 0) / 100
+  const totalValueCents = items.reduce((sum, item) => sum + (item.priceCents * item.quantityNeeded), 0)
+  const totalGivenCents = items.reduce((sum, item) => sum + (item.priceCents * item.quantityConfirmed), 0)
 
   if (loading) {
     return (
@@ -149,7 +151,7 @@ export function AdminWishlistManager() {
   return (
     <div className="space-y-8">
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -189,10 +191,20 @@ export function AdminWishlistManager() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-orange-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">${totalValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValueCents)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Given</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalGivenCents)}</p>
               </div>
             </div>
           </CardContent>
@@ -337,7 +349,7 @@ export function AdminWishlistManager() {
 
       {/* Confirmations Dialog */}
       <Dialog open={isConfirmationsOpen} onOpenChange={setIsConfirmationsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white text-gray-900 shadow-2xl border border-gray-200 rounded-2xl">
           <DialogHeader>
             <DialogTitle>
               Donation Confirmations - {selectedItem?.title}

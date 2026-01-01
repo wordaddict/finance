@@ -21,8 +21,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin role
-    await requireRole(['ADMIN'])
+    // Check admin/campus pastor role
+    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
 
     const itemId = params.id
     const body: UpdateWishlistItemRequest = await request.json()
@@ -127,8 +127,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin role
-    await requireRole(['ADMIN'])
+    // Check admin/campus pastor role
+    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
 
     const itemId = params.id
 

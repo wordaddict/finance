@@ -18,8 +18,8 @@ interface CreateWishlistItemRequest {
 // GET /api/admin/wishlist - List all wishlist items (admin only)
 export async function GET(request: NextRequest) {
   try {
-    // Check admin role
-    await requireRole(['ADMIN'])
+    // Allow admin and campus pastors to view items
+    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
 
     const items = await db.wishlistItem.findMany({
       orderBy: [
@@ -57,8 +57,10 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/wishlist - Create new wishlist item (admin only)
 export async function POST(request: NextRequest) {
   try {
-    // Check admin role
-    await requireRole(['ADMIN'])
+    // Check admin/campus pastor role
+    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
+    // Check admin/campus pastor role
+    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
 
     const body: CreateWishlistItemRequest = await request.json()
 

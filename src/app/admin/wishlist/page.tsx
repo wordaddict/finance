@@ -14,8 +14,8 @@ export default async function AdminWishlistPage() {
     redirect('/login')
   }
 
-  // Check if user has admin role
-  if (user.role !== 'ADMIN') {
+  // Allow admins and campus pastors
+  if (user.role !== 'ADMIN' && user.role !== 'CAMPUS_PASTOR') {
     redirect('/dashboard')
   }
 
