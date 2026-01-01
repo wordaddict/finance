@@ -40,6 +40,24 @@ export default function WishlistPage() {
           </p>
         </div>
 
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm uppercase tracking-wide text-gray-500">Watch</p>
+              <h2 className="text-xl font-semibold text-gray-900">Project overview</h2>
+            </div>
+          </div>
+          <div className="aspect-video rounded-xl overflow-hidden bg-gray-100">
+            <iframe
+              src="https://www.youtube.com/embed/JrtVGV_spDw"
+              title="CCI DMV Building Move Project Overview"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+
         <Suspense fallback={<div className="text-center py-12">Loading wish list...</div>}>
           <WishlistList />
         </Suspense>
