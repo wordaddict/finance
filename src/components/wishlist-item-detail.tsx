@@ -95,7 +95,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{item.title}</h1>
         <div className="flex justify-center gap-2 mb-4">
-          {getPriorityBadge(item.priority)}
+          {/* Priority badge removed per request */}
           {item.category && <Badge variant="outline">{item.category}</Badge>}
         </div>
         <div className="text-2xl font-semibold text-green-600 mb-2">

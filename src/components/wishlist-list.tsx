@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Filter, Heart, Package, DollarSign, ExternalLink } from 'lucide-react'
+import { Search, Filter, Heart, Package, ExternalLink } from 'lucide-react'
 import { trackViewList } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -120,7 +120,7 @@ export function WishlistList() {
   return (
     <div className="space-y-8">
       {/* Search and Filters */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -130,7 +130,7 @@ export function WishlistList() {
                 placeholder="Search items..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-xl"
               />
             </div>
           </div>
@@ -138,7 +138,7 @@ export function WishlistList() {
           {/* Filters */}
           <div className="flex gap-2">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40 rounded-lg">
+              <SelectTrigger className="w-40 rounded-xl">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -150,7 +150,7 @@ export function WishlistList() {
             </Select>
 
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-36 rounded-lg">
+              <SelectTrigger className="w-36 rounded-xl">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -162,7 +162,7 @@ export function WishlistList() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 rounded-lg">
+              <SelectTrigger className="w-32 rounded-xl">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -212,9 +212,7 @@ export function WishlistList() {
                       <Package className="h-12 w-12 text-gray-400" />
                     </div>
                   )}
-                  <div className="absolute top-2 right-2">
-                    {getPriorityBadge(item.priority)}
-                  </div>
+                  {/* Priority badge removed per request */}
                 </div>
 
                 <CardHeader className="pb-2">
@@ -226,11 +224,8 @@ export function WishlistList() {
 
                 <CardContent className="space-y-4 pt-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
-                      <span className="font-semibold text-green-600">
-                        {formatPrice(item.priceCents)}
-                      </span>
+                    <div className="font-semibold text-green-600">
+                      {formatPrice(item.priceCents)}
                     </div>
                     <div className="text-sm text-gray-600">
                       {remaining} of {item.quantityNeeded} needed
