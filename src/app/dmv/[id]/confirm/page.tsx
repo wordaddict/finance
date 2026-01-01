@@ -26,9 +26,13 @@ async function getWishlistItem(id: string) {
       return null
     }
 
+    const { _count, ...rest } = item
+
     return {
-      ...item,
-      quantityConfirmed: item._count.confirmations
+      ...rest,
+      createdAt: rest.createdAt.toISOString(),
+      updatedAt: rest.updatedAt.toISOString(),
+      quantityConfirmed: _count.confirmations
     }
   } catch (error) {
     console.error('Error fetching wishlist item:', error)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { CheckedState } from '@radix-ui/react-checkbox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -260,7 +261,9 @@ export function WishlistItemForm({ item, onSuccess, onCancel }: WishlistItemForm
           <Checkbox
             id="isActive"
             checked={formData.isActive}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked as boolean }))}
+            onCheckedChange={(checked: CheckedState) =>
+              setFormData(prev => ({ ...prev, isActive: checked === true }))
+            }
           />
           <Label htmlFor="isActive" className="text-sm font-medium">
             Item is active (visible on wish list)

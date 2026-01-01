@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import type { CheckedState } from '@radix-ui/react-checkbox'
 import { ArrowLeft, Heart, CheckCircle, Loader2 } from 'lucide-react'
 import { trackSubmitConfirmation } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
@@ -206,10 +207,12 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
               <Checkbox
                 id="purchaseCompleted"
                 checked={formData.purchaseCompleted}
-                onCheckedChange={(checked) => setFormData(prev => ({
-                  ...prev,
-                  purchaseCompleted: checked as boolean
-                }))}
+                onCheckedChange={(checked: CheckedState) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    purchaseCompleted: checked === true
+                  }))
+                }
               />
               <Label htmlFor="purchaseCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 I confirm that I have completed my purchase *

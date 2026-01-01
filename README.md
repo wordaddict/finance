@@ -387,6 +387,12 @@ npm run db:dmv-seed
 ```
 Adds all 20 CCI DMV building move items with proper categories and priorities.
 
+To remove only this seeded data:
+```bash
+npm run db:dmv-unseed
+```
+Deletes the 20 DMV wish list items by ID without touching other data.
+
 ## User Account Management
 
 ### Account Registration
