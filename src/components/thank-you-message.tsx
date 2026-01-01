@@ -54,7 +54,7 @@ export function ThankYouMessage({ itemId }: ThankYouMessageProps) {
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Thank You!</h1>
         <p className="text-xl text-gray-600">
-          Your generous donation has been recorded and will help build CCI DMV's future.
+          Your generous donation has been recorded and will help build CCI DMV&apos;s future.
         </p>
       </div>
 
@@ -109,7 +109,7 @@ export function ThankYouMessage({ itemId }: ThankYouMessageProps) {
                 <span className="text-blue-600 font-semibold text-xs">1</span>
               </div>
               <div>
-                <p className="font-medium text-sm">We'll update our records</p>
+                <p className="font-medium text-sm">We&apos;ll update our records</p>
                 <p className="text-xs text-gray-600">Your donation helps us track progress toward our goals</p>
               </div>
             </div>
@@ -120,7 +120,7 @@ export function ThankYouMessage({ itemId }: ThankYouMessageProps) {
               </div>
               <div>
                 <p className="font-medium text-sm">Item marked as fulfilled</p>
-                <p className="text-xs text-gray-600">We'll remove it from the active wish list when complete</p>
+                <p className="text-xs text-gray-600">We&apos;ll remove it from the active wish list when complete</p>
               </div>
             </div>
 
@@ -129,8 +129,8 @@ export function ThankYouMessage({ itemId }: ThankYouMessageProps) {
                 <span className="text-purple-600 font-semibold text-xs">3</span>
               </div>
               <div>
-                <p className="font-medium text-sm">We'll reach out if needed</p>
-                <p className="text-xs text-gray-600">If you provided contact info, we'll coordinate pickup/delivery</p>
+                <p className="font-medium text-sm">We&apos;ll reach out if needed</p>
+                <p className="text-xs text-gray-600">If you provided contact info, we&apos;ll coordinate pickup/delivery</p>
               </div>
             </div>
           </div>
@@ -168,8 +168,8 @@ export function ThankYouMessage({ itemId }: ThankYouMessageProps) {
       {/* Footer message */}
       <div className="text-center text-gray-500 text-sm">
         <p>
-          "Each of you should give what you have decided in your heart to give,
-          not reluctantly or under compulsion, for God loves a cheerful giver."
+          &quot;Each of you should give what you have decided in your heart to give,
+          not reluctantly or under compulsion, for God loves a cheerful giver.&quot;
         </p>
         <p className="mt-1 font-medium">2 Corinthians 9:7</p>
       </div>

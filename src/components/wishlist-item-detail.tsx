@@ -208,7 +208,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                 <div>
                   <p className="font-medium">Complete your purchase</p>
                   <p className="text-sm text-gray-600">
-                    Complete the transaction on the retailer's website
+                    Complete the transaction on the retailer&apos;s website
                   </p>
                 </div>
               </div>
@@ -220,7 +220,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                 <div>
                   <p className="font-medium">Confirm your donation</p>
                   <p className="text-sm text-gray-600">
-                    Come back here and click "I gave this" to let us know
+                    Come back here and click &quot;I gave this&quot; to let us know
                   </p>
                 </div>
               </div>

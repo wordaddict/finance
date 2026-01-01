@@ -254,7 +254,7 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
             </div>
             <div>
               <p className="font-medium text-sm">Your confirmation is recorded</p>
-              <p className="text-xs text-gray-600">We'll mark this item as partially or fully fulfilled</p>
+              <p className="text-xs text-gray-600">We&apos;ll mark this item as partially or fully fulfilled</p>
             </div>
           </div>
 
@@ -263,7 +263,7 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
               <span className="text-blue-600 font-semibold text-xs">2</span>
             </div>
             <div>
-              <p className="font-medium text-sm">We'll coordinate pickup/delivery</p>
+              <p className="font-medium text-sm">We&apos;ll coordinate pickup/delivery</p>
               <p className="text-xs text-gray-600">Our team will reach out if we need delivery details</p>
             </div>
           </div>
