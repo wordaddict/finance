@@ -95,6 +95,20 @@ export function Navigation({ user }: NavigationProps) {
                 </a>
               )}
               <a
+                href="/dmv"
+                className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap"
+              >
+                Building Wish List
+              </a>
+              {user.role === 'ADMIN' && (
+                <a
+                  href="/admin/wishlist"
+                  className="text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap"
+                >
+                  Manage Wish List
+                </a>
+              )}
+              <a
                 href="/profile"
                 className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1 whitespace-nowrap"
               >
@@ -245,6 +259,30 @@ export function Navigation({ user }: NavigationProps) {
                           <User className="w-4 h-4 text-orange-600" />
                         </div>
                         <span className="font-medium">Users</span>
+                      </a>
+                    )}
+
+                    <a
+                      href="/dmv"
+                      className="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors group"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                        <span className="text-blue-600 font-semibold text-sm">🏠</span>
+                      </div>
+                      <span className="font-medium">Building Wish List</span>
+                    </a>
+
+                    {user.role === 'ADMIN' && (
+                      <a
+                        href="/admin/wishlist"
+                        className="flex items-center space-x-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors group"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                          <span className="text-red-600 font-semibold text-sm">⚙️</span>
+                        </div>
+                        <span className="font-medium">Manage Wish List</span>
                       </a>
                     )}
 

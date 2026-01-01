@@ -42,6 +42,7 @@ The CCI Expense Management System is designed to handle the complete expense man
 - **Dashboard Analytics**: Real-time statistics and insights
 - **CSV Export**: Data export capabilities for accounting and reporting
 - **Account Management**: User approval workflow with email verification
+- **Building Move Wish List**: Donor contribution system for church building projects
 
 ## User Roles & Permissions
 
@@ -301,6 +302,97 @@ The system sends email notifications for various events:
 - **Approval Workflow**: Track items in each approval stage
 - **Budget Tracking**: Monitor event budgets and spending
 
+## Building Move Wish List
+
+A simple, church-appropriate donor contribution system for building projects and special needs:
+
+### Public Features
+
+- **Browse Items**: Searchable, filterable list of needed items with images, descriptions, and prices
+- **Item Details**: Detailed view with purchase links, progress tracking, and donation instructions
+- **Donation Confirmation**: Secure form to confirm purchases and track contributions
+- **Progress Tracking**: Real-time updates showing how many items still need donors
+- **Shareable Links**: Easy sharing of specific items or the entire wish list
+
+### Admin Features
+
+- **Item Management**: Create, edit, and delete wish list items
+- **Donation Tracking**: View all donation confirmations with donor details
+- **Analytics Dashboard**: Track views, clicks, and conversion rates
+- **Priority Management**: Set item priorities (High, Medium, Low) for display ordering
+- **Category Organization**: Organize items by categories for easier browsing
+
+### Key Features
+
+- **No Payment Processing**: Links out to external retailers (Amazon, Home Depot, etc.)
+- **Anonymous Donations**: Optional donor information to respect privacy
+- **Rate Limiting**: Basic abuse prevention with IP-based rate limiting
+- **Inventory Management**: Prevents over-donation with real-time stock tracking
+- **Mobile-Friendly**: Responsive design optimized for mobile donation
+- **Church-Appropriate**: Clean, professional design suitable for church websites
+
+### Usage
+
+#### Adding Items (Admin)
+
+1. Navigate to `/admin/wishlist` (Admin only)
+2. Click "Add New Item"
+3. Fill in item details:
+   - Title and description
+   - Category and priority
+   - Price (in cents)
+   - Quantity needed
+   - Purchase URL (Amazon, Home Depot, etc.)
+   - Optional image URL
+4. Mark as active to make it visible
+
+#### Donation Process
+
+1. Visitors browse `/dmv` to see all available items
+2. Click any item to view details and purchase link
+3. Purchase the item from the external retailer
+4. Return to the site and click "I Gave This"
+5. Fill out the confirmation form (optional donor info)
+6. Receive thank you message with impact summary
+
+#### Managing Confirmations (Admin)
+
+1. Go to `/admin/wishlist`
+2. Click "View" on any item to see confirmations
+3. Review donor details and confirmation timestamps
+4. Track progress toward fulfilling each item
+
+### Technical Implementation
+
+- **Database Tables**: `wishlist_items`, `wishlist_confirmations`
+- **API Endpoints**: CRUD operations for items, confirmation submissions
+- **Authentication**: Admin-only access to management features
+- **Analytics**: Basic event tracking (views, clicks, submissions)
+- **Validation**: Server-side validation with inventory checks
+- **Security**: Rate limiting and input sanitization
+
+### Seed Data
+
+The system provides separate seed commands for different data types:
+
+#### System Data (Users, Settings)
+```bash
+npm run db:seed
+```
+Creates default users, roles, and system settings.
+
+#### DMV Building Wish List
+```bash
+npm run db:dmv-seed
+```
+Adds all 20 CCI DMV building move items with proper categories and priorities.
+
+To remove only this seeded data:
+```bash
+npm run db:dmv-unseed
+```
+Deletes the 20 DMV wish list items by ID without touching other data.
+
 ## User Account Management
 
 ### Account Registration
@@ -411,12 +503,15 @@ The system sends email notifications for various events:
    ```bash
    # Generate Prisma client
    npx prisma generate
-   
+
    # Push schema to database
    npx prisma db push
-   
-   # Seed with initial data (optional)
-   npx prisma db seed
+
+   # Seed with system data (users, settings)
+   npm run db:seed
+
+   # Seed with DMV Building Wish List items
+   npm run db:dmv-seed
    ```
 
 5. **Start the development server**
@@ -495,6 +590,16 @@ The system sends email notifications for various events:
 
 - `GET /api/dashboard/stats` - Get dashboard statistics
 
+### Building Wish List Endpoints
+
+- `GET /api/dmv/wishlist` - Get all active wish list items
+- `POST /api/dmv/wishlist/[id]/confirm` - Submit donation confirmation
+- `GET /api/admin/wishlist` - Get all wish list items (Admin only)
+- `POST /api/admin/wishlist` - Create new wish list item (Admin only)
+- `PUT /api/admin/wishlist/[id]` - Update wish list item (Admin only)
+- `DELETE /api/admin/wishlist/[id]` - Delete wish list item (Admin only)
+- `GET /api/admin/wishlist/[id]/confirmations` - Get confirmations for item (Admin only)
+
 ## Deployment
 
 ### Environment Setup
@@ -522,6 +627,12 @@ npx prisma db push
 
 # Or use migrations for production
 npx prisma migrate deploy
+
+# Seed system data (users, settings)
+npm run db:seed
+
+# Seed DMV Building Wish List (optional)
+npm run db:dmv-seed
 ```
 
 ### Build and Deploy

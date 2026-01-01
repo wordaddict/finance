@@ -333,6 +333,47 @@ model ReportNote {
   updatedAt DateTime       @updatedAt
   report    ExpenseReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
   author    User           @relation(fields: [authorId], references: [id])
-  
+
   @@index([reportId])
+}
+
+model WishlistItem {
+  id            String               @id @default(uuid())
+  title         String
+  description   String?
+  category      String?
+  priceCents    Int
+  currency      String               @default("USD")
+  quantityNeeded Int                 @default(1)
+  quantityConfirmed Int              @default(0)
+  purchaseUrl   String
+  imageUrl      String?
+  priority      Int                  @default(1) // 1=low, 2=medium, 3=high
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  confirmations WishlistConfirmation[]
+
+  @@index([isActive])
+  @@index([category])
+  @@index([priority])
+}
+
+model WishlistConfirmation {
+  id          String        @id @default(uuid())
+  itemId      String
+  quantity    Int           @default(1)
+  donorName   String?
+  donorEmail  String?
+  note        String?
+  ipHash      String?       // For basic rate limiting
+  userAgent   String?
+  createdAt   DateTime      @default(now())
+
+  item        WishlistItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([createdAt])
+  @@index([ipHash])
 }

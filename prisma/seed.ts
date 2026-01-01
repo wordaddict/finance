@@ -109,6 +109,7 @@ async function main() {
   console.log('Admin: admin@church.com / admin123')
   console.log('Pastor: pastor@church.com / pastor123')
   console.log('Leader: leader@church.com / leader123')
+  console.log('💡 To seed the DMV Building Wish List, run: npm run db:dmv-seed')
 }
 
 main()
