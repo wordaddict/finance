@@ -273,7 +273,7 @@ export function WishlistList() {
                         className="rounded-full"
                       >
                         <a
-                          href={item.purchaseUrl}
+                          href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center"

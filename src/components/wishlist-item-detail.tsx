@@ -234,13 +234,13 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                   onClick={handlePurchaseLinkClick}
                 >
                   <a
-                    href={item.purchaseUrl}
+                    href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2"
                   >
                     <DollarSign className="h-5 w-5" />
-                    Purchase on {new URL(item.purchaseUrl).hostname}
+                    Give via Tithely
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 </Button>
