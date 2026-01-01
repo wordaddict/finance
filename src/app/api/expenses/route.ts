@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
     
     if (status) {
       where.status = status
+    } else {
+      // Default to active (non-closed) expenses when no explicit status filter is chosen
+      where.status = { not: 'CLOSED' }
     }
     
     if (team) {
@@ -43,6 +46,15 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
+        { team: { contains: search, mode: 'insensitive' } },
+        {
+          requester: {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          },
+        },
       ]
     }
 

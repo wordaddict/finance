@@ -82,8 +82,7 @@ export async function POST(request: NextRequest) {
         recipient.name || recipient.email,
         expense.title,
         user.name || user.email,
-        note.trim(),
-        process.env.NEXT_PUBLIC_APP_URL!
+        note.trim()
       )
       emailTemplate.to = recipient.email
       return emailTemplate

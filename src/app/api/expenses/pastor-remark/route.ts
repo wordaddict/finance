@@ -104,8 +104,7 @@ export async function POST(request: NextRequest) {
         expense.title,
         user.name || user.email,
         remark,
-        user.campus || 'Unknown',
-        process.env.NEXT_PUBLIC_APP_URL!
+        user.campus || 'Unknown'
       )
       emailTemplate.to = recipient.email
       return emailTemplate

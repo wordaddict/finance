@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
         expense.requester.name || expense.requester.email,
         expense.title,
         expense.amountCents,
-        process.env.NEXT_PUBLIC_APP_URL!,
         reason,
       )
       emailTemplate.to = expense.requester.email

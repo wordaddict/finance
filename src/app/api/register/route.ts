@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
-import { sendEmail, generateEmailVerificationEmail, sendEmailsWithRateLimit, generatePendingAccountApprovalEmail } from '@/lib/email'
+import { sendEmail, generateEmailVerificationEmail, sendEmailsWithRateLimit, generatePendingAccountApprovalEmail, EMAIL_BASE_URL } from '@/lib/email'
 import { randomBytes } from 'crypto'
 import { CAMPUS_VALUES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
 import { Campus } from '@prisma/client'
@@ -72,11 +72,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Send verification email
-    const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify?token=${verificationToken}`
+    const verificationUrl = `${EMAIL_BASE_URL}/verify?token=${verificationToken}`
     const emailTemplate = generateEmailVerificationEmail(
       name.trim(),
-      verificationUrl,
-      process.env.NEXT_PUBLIC_APP_URL!
+      verificationUrl
     )
     emailTemplate.to = normalizedEmail
 
@@ -98,8 +97,7 @@ export async function POST(request: NextRequest) {
           name.trim(),
           normalizedEmail,
           role === 'ADMIN' ? 'Admin' : role === 'CAMPUS_PASTOR' ? 'Campus Pastor' : 'Leader',
-          CAMPUS_DISPLAY_NAMES[campus as keyof typeof CAMPUS_DISPLAY_NAMES] || campus,
-          process.env.NEXT_PUBLIC_APP_URL!
+          CAMPUS_DISPLAY_NAMES[campus as keyof typeof CAMPUS_DISPLAY_NAMES] || campus
         )
         emailTemplate.to = admin.email
         return emailTemplate

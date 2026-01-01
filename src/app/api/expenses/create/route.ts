@@ -179,8 +179,7 @@ export async function POST(request: NextRequest) {
         approver.name || approver.email,
         expense.title,
         expense.amountCents,
-        expense.requester?.name || expense.requester?.email || 'Unknown',
-        process.env.NEXT_PUBLIC_APP_URL!
+        expense.requester?.name || expense.requester?.email || 'Unknown'
       )
       emailTemplate.to = approver.email
       return emailTemplate

@@ -88,7 +88,6 @@ export async function POST(request: NextRequest) {
         expense.amountCents,
         expense.requester.name || expense.requester.email,
         comment || 'Requester wants to add more items',
-        process.env.NEXT_PUBLIC_APP_URL!
       )
       emailTemplate.to = approver.email
       return emailTemplate

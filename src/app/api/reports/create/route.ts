@@ -198,8 +198,7 @@ export async function POST(request: NextRequest) {
         admin.name || admin.email,
         report.title,
         report.totalApprovedAmount || 0,
-        user.name || user.email,
-        process.env.NEXT_PUBLIC_APP_URL!
+        user.name || user.email
       )
       emailTemplate.to = admin.email
       return emailTemplate
