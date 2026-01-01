@@ -137,9 +137,9 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Quantity */}
+            {/* Quantity pledged */}
             <div className="space-y-2">
-              <Label htmlFor="quantity">How many did you purchase? *</Label>
+              <Label htmlFor="quantity">How many are you covering with your gift? *</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -197,12 +197,12 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
                   ...prev,
                   note: e.target.value
                 }))}
-                placeholder="Any special instructions or notes for pickup/delivery..."
+                // placeholder="Any special instructions or notes for pickup/delivery..."
                 rows={3}
               />
             </div>
 
-            {/* Purchase Confirmation */}
+            {/* Gift Confirmation */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="purchaseCompleted"
@@ -215,7 +215,7 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
                 }
               />
               <Label htmlFor="purchaseCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                I confirm that I have completed my purchase *
+                I confirm that I have completed my gift via Tithely *
               </Label>
             </div>
 
