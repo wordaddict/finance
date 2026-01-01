@@ -120,7 +120,7 @@ export function WishlistList() {
   return (
     <div className="space-y-8">
       {/* Search and Filters */}
-      <div className="bg-white p-6 rounded-lg shadow-sm">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -138,7 +138,7 @@ export function WishlistList() {
           {/* Filters */}
           <div className="flex gap-2">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-40 rounded-lg">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -150,7 +150,7 @@ export function WishlistList() {
             </Select>
 
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="w-36 rounded-lg">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -162,7 +162,7 @@ export function WishlistList() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32 rounded-lg">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -176,7 +176,8 @@ export function WishlistList() {
       </div>
 
       {/* Results count */}
-      <div className="text-sm text-gray-600">
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm">
+        <span className="h-2 w-2 rounded-full bg-green-500" />
         Showing {filteredItems.length} of {items.length} items
       </div>
 
@@ -194,7 +195,10 @@ export function WishlistList() {
             const isAvailable = isItemAvailable(item)
 
             return (
-              <Card key={item.id} className={`overflow-hidden ${!isAvailable ? 'opacity-60' : ''}`}>
+              <Card
+                key={item.id}
+                className={`overflow-hidden rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow ${!isAvailable ? 'opacity-60' : ''}`}
+              >
                 <div className="aspect-video relative bg-gray-100">
                   {item.imageUrl ? (
                     <Image
@@ -213,14 +217,14 @@ export function WishlistList() {
                   </div>
                 </div>
 
-                <CardHeader>
-                  <CardTitle className="text-lg">{item.title}</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg leading-tight">{item.title}</CardTitle>
                   <CardDescription>
                     {item.description || 'No description available'}
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-4 w-4 text-green-600" />
@@ -234,13 +238,15 @@ export function WishlistList() {
                   </div>
 
                   {item.category && (
-                    <Badge variant="outline">{item.category}</Badge>
+                    <Badge variant="outline" className="rounded-full px-3">
+                      {item.category}
+                    </Badge>
                   )}
 
                   <div className="flex gap-2">
                     <Button
                       asChild
-                      className="flex-1"
+                      className="flex-1 rounded-full"
                       disabled={!isAvailable}
                     >
                       <Link href={`/dmv/${item.id}`}>
@@ -254,6 +260,7 @@ export function WishlistList() {
                         variant="outline"
                         size="sm"
                         asChild
+                        className="rounded-full"
                       >
                         <a
                           href={item.purchaseUrl}
