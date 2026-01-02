@@ -116,7 +116,7 @@ export async function POST(
     const donorLabel = donorName?.trim() || 'Anonymous donor'
 
     await sendEmail({
-      to: 'madeyinka6@gmail.com',
+      to: 'femi2tin@gmail.com',
       subject: `New Wish List Gift: ${item.title}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
