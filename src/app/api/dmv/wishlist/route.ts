@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,15 +50,21 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
-      success: true,
-      items: itemsWithProgress
-    })
+    return Response.json(
+      {
+        success: true,
+        items: itemsWithProgress
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
   } catch (error) {
     console.error('Error fetching wishlist items:', error)
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch wishlist items' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: { 'Cache-Control': 'no-store' }
+      }
     )
   }
 }
