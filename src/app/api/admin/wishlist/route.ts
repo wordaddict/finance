@@ -32,24 +32,40 @@ export async function GET(request: NextRequest) {
       db.wishlistConfirmation.groupBy({
         by: ['itemId'],
         _sum: { quantity: true },
+        _count: true,
       }),
       db.wishlistContribution.groupBy({
         by: ['itemId'],
         _sum: { amountCents: true },
+        _count: true,
       }),
     ])
 
     const quantityMap = new Map<string, number>(
-      confirmationSums.map((entry: { itemId: string; _sum: { quantity: number | null } }) => [
-        entry.itemId,
-        entry._sum?.quantity ?? 0
-      ])
+      confirmationSums.map(
+        (entry: { itemId: string; _sum: { quantity: number | null }; _count: number }) => [
+          entry.itemId,
+          entry._sum?.quantity ?? 0
+        ]
+      )
     )
     const contributionMap = new Map<string, number>(
-      contributionSums.map((entry: { itemId: string; _sum: { amountCents: number | null } }) => [
-        entry.itemId,
-        entry._sum?.amountCents ?? 0
-      ])
+      contributionSums.map(
+        (entry: { itemId: string; _sum: { amountCents: number | null }; _count: number }) => [
+          entry.itemId,
+          entry._sum?.amountCents ?? 0
+        ]
+      )
+    )
+    const confirmationCountMap = new Map<string, number>(
+      confirmationSums.map(
+        (entry: { itemId: string; _count: number }) => [entry.itemId, entry._count ?? 0]
+      )
+    )
+    const contributionCountMap = new Map<string, number>(
+      contributionSums.map(
+        (entry: { itemId: string; _count: number }) => [entry.itemId, entry._count ?? 0]
+      )
     )
 
     const itemsWithProgress = items.map((item: WishlistItemModel) => {
@@ -58,6 +74,8 @@ export async function GET(request: NextRequest) {
       const goalCents = item.priceCents * item.quantityNeeded
       const confirmedValueCents = quantityConfirmed * item.priceCents + contributedCents
       const remainingValueCents = Math.max(0, goalCents - confirmedValueCents)
+      const donorsCount =
+        (confirmationCountMap.get(item.id) ?? 0) + (contributionCountMap.get(item.id) ?? 0)
 
       return {
         ...item,
@@ -66,6 +84,7 @@ export async function GET(request: NextRequest) {
         goalCents,
         confirmedValueCents,
         remainingValueCents,
+        donorsCount,
       }
     })
 

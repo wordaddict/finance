@@ -73,6 +73,7 @@ export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
 
   const totalQuantity = confirmations.reduce((sum, conf) => sum + conf.quantity, 0)
   const totalContributionCents = contributions.reduce((sum, contribution) => sum + contribution.amountCents, 0)
+  const totalGifts = confirmations.length + contributions.length
   const formatCurrency = (value: number) => `$${(value / 100).toFixed(2)}`
 
   if (loading) {
@@ -98,7 +99,8 @@ export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-600">Total Confirmations</p>
-              <p className="text-2xl font-bold text-blue-600">{confirmations.length}</p>
+              <p className="text-2xl font-bold text-blue-600">{totalGifts}</p>
+              <p className="text-xs text-gray-500">(includes confirmations + contributions)</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Quantity</p>

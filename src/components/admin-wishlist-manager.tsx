@@ -25,6 +25,7 @@ interface WishlistItem {
   goalCents: number
   confirmedValueCents: number
   remainingValueCents: number
+  donorsCount: number
   allowContributions: boolean
   purchaseUrl: string
   imageUrl: string | null
@@ -342,7 +343,7 @@ export function AdminWishlistManager() {
                       onClick={() => handleViewConfirmations(item)}
                     >
                       <Users className="h-4 w-4 mr-1" />
-                      {item.quantityConfirmed}
+                    {item.donorsCount}
                     </Button>
 
                     <Button

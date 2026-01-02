@@ -201,24 +201,13 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                   <span className="text-blue-600 font-semibold text-sm">1</span>
                 </div>
                 <div>
-                  <p className="font-medium">Purchase the item</p>
+                  <p className="font-medium">Give towards the item</p>
                   <p className="text-sm text-gray-600">
-                    Click the purchase button below to buy from our recommended retailer
+                    Click on the Givevia Tithely button below
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold text-sm">2</span>
-                </div>
-                <div>
-                  <p className="font-medium">Complete your purchase</p>
-                  <p className="text-sm text-gray-600">
-                    Complete the transaction on the retailer&apos;s website
-                  </p>
-                </div>
-              </div>
 
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
