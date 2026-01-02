@@ -5,9 +5,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 
 interface WishlistItem {
-  priceCents: number
-  quantityNeeded: number
-  quantityConfirmed: number
+  goalCents: number
+  confirmedValueCents: number
 }
 
 export function WishlistProgress() {
@@ -31,11 +30,11 @@ export function WishlistProgress() {
       const items: WishlistItem[] = data.items || []
 
       const totalValue = items.reduce(
-        (sum, item) => sum + item.priceCents * item.quantityNeeded,
+        (sum, item) => sum + item.goalCents,
         0
       )
       const totalGiven = items.reduce(
-        (sum, item) => sum + item.priceCents * item.quantityConfirmed,
+        (sum, item) => sum + item.confirmedValueCents,
         0
       )
 

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { WishlistConfirmationForm } from '@/components/wishlist-confirmation-form'
+import { WishlistContributionForm } from '@/components/wishlist-contribution-form'
 import { db } from '@/lib/db'
 
 interface PageProps {
@@ -15,7 +15,7 @@ async function getWishlistItem(id: string) {
       where: { id },
     })
 
-    if (!item || !item.isActive) {
+    if (!item || !item.isActive || !item.allowContributions) {
       return null
     }
 
@@ -63,30 +63,25 @@ export async function generateMetadata({ params }: PageProps) {
   }
 
   return {
-    title: `Confirm Donation - ${item.title}`,
-    description: `Confirm your donation of ${item.title} to CCI DMV's building wish list.`,
+    title: `Contribute toward ${item.title}`,
+    description: `Help fund ${item.title} on the CCI DMV building wish list.`,
   }
 }
 
-export default async function ConfirmDonationPage({ params }: PageProps) {
+export default async function ContributePage({ params }: PageProps) {
   const item = await getWishlistItem(params.id)
 
   if (!item) {
     notFound()
   }
 
-  const remainingQuantity = Math.max(0, item.quantityNeeded - item.quantityConfirmed)
-  const remainingValueCents = Math.max(0, item.goalCents - item.confirmedValueCents)
-
-  if (remainingValueCents <= 0) {
-    // Item is already fulfilled, redirect to thank you page
+  if (item.remainingValueCents <= 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Thank You!</h1>
           <p className="text-gray-600 mb-6">
-            This item has already been fulfilled by generous donors like you.
-            Your willingness to help means the world to our community!
+            This item has already been fully funded by generous donors.
           </p>
           <a
             href="/dmv"
@@ -102,10 +97,11 @@ export default async function ConfirmDonationPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Suspense fallback={<div className="text-center py-12">Loading confirmation form...</div>}>
-          <WishlistConfirmationForm item={item} maxQuantity={remainingQuantity} />
+        <Suspense fallback={<div className="text-center py-12">Loading contribution form...</div>}>
+          <WishlistContributionForm item={item} />
         </Suspense>
       </div>
     </div>
   )
 }
+

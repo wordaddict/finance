@@ -18,6 +18,11 @@ interface WishlistItem {
   currency: string
   quantityNeeded: number
   quantityConfirmed: number
+  contributedCents: number
+  goalCents: number
+  confirmedValueCents: number
+  remainingValueCents: number
+  allowContributions: boolean
   purchaseUrl: string
   imageUrl: string | null
   priority: number
@@ -62,12 +67,8 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
     )
   }
 
-  const getRemainingQuantity = () => {
-    return Math.max(0, item.quantityNeeded - item.quantityConfirmed)
-  }
-
   const isItemAvailable = () => {
-    return item.isActive && getRemainingQuantity() > 0
+    return item.isActive && item.remainingValueCents > 0
   }
 
   const handlePurchaseLinkClick = () => {
@@ -78,8 +79,11 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
     }
   }
 
-  const remaining = getRemainingQuantity()
   const isAvailable = isItemAvailable()
+  const progressPercent = item.goalCents === 0
+    ? 0
+    : Math.min(100, Math.round((item.confirmedValueCents / item.goalCents) * 100))
+  const remainingQuantity = Math.max(0, item.quantityNeeded - item.quantityConfirmed)
 
   return (
     <div className="space-y-8">
@@ -102,7 +106,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
           {formatPrice(item.priceCents)}
         </div>
         <div className="text-lg text-gray-600">
-          {remaining} of {item.quantityNeeded} still needed
+          {remainingQuantity} of {item.quantityNeeded} still needed
         </div>
       </div>
 
@@ -144,22 +148,23 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                   <span className="font-medium">{item.quantityConfirmed}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Still needed:</span>
-                  <span className="font-medium">{remaining}</span>
+                  <span>Funding progress:</span>
+                  <span className="font-medium">
+                    {formatPrice(item.confirmedValueCents)} / {formatPrice(item.goalCents)}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-600 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${Math.min(100, (item.quantityConfirmed / item.quantityNeeded) * 100)}%`
+                      width: `${progressPercent}%`
                     }}
                   />
                 </div>
                 <p className="text-xs text-gray-600">
-                  {item.quantityConfirmed === 0
-                    ? "Be the first to donate this item!"
-                    : `${item.quantityConfirmed} generous donation${item.quantityConfirmed > 1 ? 's' : ''} so far!`
-                  }
+                  {item.confirmedValueCents === 0
+                    ? "Be the first to fund this item!"
+                    : `${formatPrice(item.confirmedValueCents)} raised so far from generous donors.`}
                 </p>
               </div>
             </CardContent>
@@ -185,7 +190,9 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
             <CardHeader>
               <CardTitle>How to Help</CardTitle>
               <CardDescription>
-                Follow these simple steps to donate this item
+                {item.allowContributions
+                  ? 'Give any dollar amount toward this goal'
+                  : 'Confirm your gift so we can track progress'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -226,37 +233,52 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
               </div>
 
               <div className="pt-4 space-y-3">
-                <Button
-                  asChild
-                  size="lg"
-                  className="w-full"
-                  disabled={!isAvailable}
-                  onClick={handlePurchaseLinkClick}
-                >
-                  <a
-                    href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2"
+                  <Button
+                    asChild
+                    size="lg"
+                    className="w-full"
+                    disabled={!isAvailable}
+                    onClick={handlePurchaseLinkClick}
                   >
-                    <DollarSign className="h-5 w-5" />
-                    Give via Tithely
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
+                    <a
+                      href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2"
+                    >
+                      <DollarSign className="h-5 w-5" />
+                      Give via Tithely
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
 
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="w-full"
-                  disabled={!isAvailable}
-                >
-                  <Link href={`/dmv/${item.id}/confirm`}>
-                    <Heart className="h-5 w-5 mr-2" />
-                    I Gave This
-                  </Link>
-                </Button>
+                  {item.allowContributions ? (
+                    <Button
+                      asChild
+                      variant="secondary"
+                      size="lg"
+                      className="w-full"
+                      disabled={!isAvailable}
+                    >
+                      <Link href={`/dmv/${item.id}/contribute`}>
+                        <Heart className="h-5 w-5 mr-2" />
+                        Contribute toward this goal
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      disabled={!isAvailable}
+                    >
+                      <Link href={`/dmv/${item.id}/confirm`}>
+                        <Heart className="h-5 w-5 mr-2" />
+                        I Gave This
+                      </Link>
+                    </Button>
+                  )}
 
                 {!isAvailable && (
                   <div className="flex items-center justify-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">

@@ -13,26 +13,39 @@ async function getWishlistItem(id: string) {
   try {
     const item = await db.wishlistItem.findUnique({
       where: { id },
-      include: {
-        _count: {
-          select: {
-            confirmations: true
-          }
-        }
-      }
     })
 
     if (!item || !item.isActive) {
       return null
     }
 
-    const { _count, ...rest } = item
+    const [confirmationSum, contributionSum] = await Promise.all([
+      db.wishlistConfirmation.aggregate({
+        where: { itemId: id },
+        _sum: { quantity: true },
+      }),
+      db.wishlistContribution.aggregate({
+        where: { itemId: id },
+        _sum: { amountCents: true },
+      }),
+    ])
+
+    const confirmedQuantity = confirmationSum._sum.quantity ?? 0
+    const contributedCents = contributionSum._sum.amountCents ?? 0
+
+    const goalCents = item.priceCents * item.quantityNeeded
+    const confirmedValueCents = confirmedQuantity * item.priceCents + contributedCents
+    const remainingValueCents = Math.max(0, goalCents - confirmedValueCents)
 
     return {
-      ...rest,
-      createdAt: rest.createdAt.toISOString(),
-      updatedAt: rest.updatedAt.toISOString(),
-      quantityConfirmed: _count.confirmations
+      ...item,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      quantityConfirmed: confirmedQuantity,
+      contributedCents,
+      goalCents,
+      confirmedValueCents,
+      remainingValueCents,
     }
   } catch (error) {
     console.error('Error fetching wishlist item:', error)

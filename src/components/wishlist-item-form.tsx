@@ -23,6 +23,7 @@ interface WishlistItem {
   imageUrl: string | null
   priority: number
   isActive: boolean
+  allowContributions: boolean
   createdAt: string
   updatedAt: string
 }
@@ -60,7 +61,8 @@ export function WishlistItemForm({ item, onSuccess, onCancel }: WishlistItemForm
     purchaseUrl: '',
     imageUrl: '',
     priority: 1,
-    isActive: true
+    isActive: true,
+    allowContributions: false
   })
 
   useEffect(() => {
@@ -75,7 +77,8 @@ export function WishlistItemForm({ item, onSuccess, onCancel }: WishlistItemForm
         purchaseUrl: item.purchaseUrl,
         imageUrl: item.imageUrl || '',
         priority: item.priority,
-        isActive: item.isActive
+        isActive: item.isActive,
+        allowContributions: item.allowContributions
       })
     }
   }, [item])
@@ -114,6 +117,7 @@ export function WishlistItemForm({ item, onSuccess, onCancel }: WishlistItemForm
           description: formData.description || null,
           category: formData.category || null,
           imageUrl: formData.imageUrl || null,
+          allowContributions: formData.allowContributions,
         }),
       })
 
@@ -267,6 +271,20 @@ export function WishlistItemForm({ item, onSuccess, onCancel }: WishlistItemForm
           />
           <Label htmlFor="isActive" className="text-sm font-medium">
             Item is active (visible on wish list)
+          </Label>
+        </div>
+
+        {/* Allow contributions */}
+        <div className="md:col-span-2 flex items-center space-x-2">
+          <Checkbox
+            id="allowContributions"
+            checked={formData.allowContributions}
+            onCheckedChange={(checked: CheckedState) =>
+              setFormData(prev => ({ ...prev, allowContributions: checked === true }))
+            }
+          />
+          <Label htmlFor="allowContributions" className="text-sm font-medium">
+            Allow monetary contributions toward this item
           </Label>
         </div>
       </div>

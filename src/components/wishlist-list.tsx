@@ -20,6 +20,11 @@ interface WishlistItem {
   currency: string
   quantityNeeded: number
   quantityConfirmed: number
+  contributedCents: number
+  goalCents: number
+  confirmedValueCents: number
+  remainingValueCents: number
+  allowContributions: boolean
   purchaseUrl: string
   imageUrl: string | null
   priority: number
@@ -60,32 +65,8 @@ export function WishlistList() {
     return `$${(priceCents / 100).toFixed(2)}`
   }
 
-  const getPriorityBadge = (priority: number) => {
-    const variants = {
-      3: 'destructive',
-      2: 'default',
-      1: 'secondary'
-    } as const
-
-    const labels = {
-      3: 'High Priority',
-      2: 'Medium Priority',
-      1: 'Low Priority'
-    }
-
-    return (
-      <Badge variant={variants[priority as keyof typeof variants] || 'secondary'}>
-        {labels[priority as keyof typeof labels] || 'Low Priority'}
-      </Badge>
-    )
-  }
-
-  const getRemainingQuantity = (item: WishlistItem) => {
-    return Math.max(0, item.quantityNeeded - item.quantityConfirmed)
-  }
-
   const isItemAvailable = (item: WishlistItem) => {
-    return item.isActive && getRemainingQuantity(item) > 0
+    return item.isActive && item.remainingValueCents > 0
   }
 
   // Get unique categories for filter
@@ -206,8 +187,11 @@ export function WishlistList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => {
-            const remaining = getRemainingQuantity(item)
+            const remainingQuantity = Math.max(0, item.quantityNeeded - item.quantityConfirmed)
             const isAvailable = isItemAvailable(item)
+            const progressPercent = item.goalCents === 0
+              ? 0
+              : Math.min(100, Math.round((item.confirmedValueCents / item.goalCents) * 100))
 
             return (
               <Card
@@ -243,8 +227,26 @@ export function WishlistList() {
                       {formatPrice(item.priceCents)}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {remaining} of {item.quantityNeeded} needed
+                      {remainingQuantity} of {item.quantityNeeded} needed
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-gray-700">
+                      <span>{formatPrice(item.confirmedValueCents)} raised</span>
+                      <span>of {formatPrice(item.goalCents)} goal</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {item.remainingValueCents > 0
+                        ? `${formatPrice(item.remainingValueCents)} still needed`
+                        : 'Fully funded'}
+                    </p>
                   </div>
 
                   {item.category && (
@@ -261,7 +263,7 @@ export function WishlistList() {
                     >
                       <Link href={`/dmv/${item.id}`}>
                         <Heart className="h-4 w-4 mr-2" />
-                        {isAvailable ? 'Give This' : 'Fulfilled'}
+                        {isAvailable ? 'Give To This' : 'Fulfilled'}
                       </Link>
                     </Button>
 

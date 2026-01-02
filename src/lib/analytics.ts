@@ -6,6 +6,7 @@ export interface AnalyticsEvent {
   itemId?: string
   itemTitle?: string
   quantity?: number
+  amountCents?: number
   donorName?: string
   donorEmail?: string
   timestamp: string
@@ -73,6 +74,23 @@ export function trackSubmitConfirmation(
     itemId,
     itemTitle,
     quantity,
+    donorName,
+    donorEmail
+  })
+}
+
+export function trackSubmitContribution(
+  itemId: string,
+  itemTitle: string,
+  amountCents: number,
+  donorName?: string,
+  donorEmail?: string
+) {
+  trackEvent({
+    event: 'submit_contribution',
+    itemId,
+    itemTitle,
+    amountCents,
     donorName,
     donorEmail
   })

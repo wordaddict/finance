@@ -13,6 +13,7 @@ interface UpdateWishlistItemRequest {
   imageUrl?: string | null
   priority?: number
   isActive?: boolean
+  allowContributions?: boolean
 }
 
 // PUT /api/admin/wishlist/[id] - Update wishlist item (admin only)
@@ -104,6 +105,7 @@ export async function PUT(
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl?.trim() || null }),
         ...(body.priority !== undefined && { priority: body.priority }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),
+        ...(body.allowContributions !== undefined && { allowContributions: body.allowContributions }),
         updatedAt: new Date(),
       },
     })

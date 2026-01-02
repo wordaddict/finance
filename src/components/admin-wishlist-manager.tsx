@@ -21,6 +21,11 @@ interface WishlistItem {
   currency: string
   quantityNeeded: number
   quantityConfirmed: number
+  contributedCents: number
+  goalCents: number
+  confirmedValueCents: number
+  remainingValueCents: number
+  allowContributions: boolean
   purchaseUrl: string
   imageUrl: string | null
   priority: number
@@ -83,14 +88,12 @@ export function AdminWishlistManager() {
   }
 
   const getStatusBadge = (item: WishlistItem) => {
-    const remaining = Math.max(0, item.quantityNeeded - item.quantityConfirmed)
-
     if (!item.isActive) {
       return <Badge variant="outline">Inactive</Badge>
     }
 
-    if (remaining <= 0) {
-      return <Badge variant="secondary">Fulfilled</Badge>
+    if (item.remainingValueCents <= 0) {
+      return <Badge variant="secondary">Funded</Badge>
     }
 
     return <Badge variant="default">Active</Badge>
@@ -138,10 +141,10 @@ export function AdminWishlistManager() {
   }
 
   const totalItems = items.length
-  const activeItems = items.filter(item => item.isActive && (item.quantityNeeded - item.quantityConfirmed) > 0).length
-  const fulfilledItems = items.filter(item => item.quantityConfirmed >= item.quantityNeeded).length
-  const totalValueCents = items.reduce((sum, item) => sum + (item.priceCents * item.quantityNeeded), 0)
-  const totalGivenCents = items.reduce((sum, item) => sum + (item.priceCents * item.quantityConfirmed), 0)
+  const activeItems = items.filter(item => item.isActive && item.remainingValueCents > 0).length
+  const fulfilledItems = items.filter(item => item.remainingValueCents <= 0).length
+  const totalValueCents = items.reduce((sum, item) => sum + item.goalCents, 0)
+  const totalGivenCents = items.reduce((sum, item) => sum + item.confirmedValueCents, 0)
   const progressPercent = totalValueCents === 0 ? 0 : Math.min(100, Math.round((totalGivenCents / totalValueCents) * 100))
   const remainingCents = Math.max(0, totalValueCents - totalGivenCents)
 
@@ -267,7 +270,10 @@ export function AdminWishlistManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map((item) => {
-            const remaining = Math.max(0, item.quantityNeeded - item.quantityConfirmed)
+            const remainingQuantity = Math.max(0, item.quantityNeeded - item.quantityConfirmed)
+            const progressPercent = item.goalCents === 0
+              ? 0
+              : Math.min(100, Math.round((item.confirmedValueCents / item.goalCents) * 100))
 
             return (
               <Card key={item.id} className={`overflow-hidden ${!item.isActive ? 'opacity-60' : ''}`}>
@@ -302,8 +308,26 @@ export function AdminWishlistManager() {
                       {formatPrice(item.priceCents)}
                     </span>
                     <span className="text-gray-600">
-                      {remaining} of {item.quantityNeeded} needed
+                      {remainingQuantity} of {item.quantityNeeded} needed
                     </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-gray-700">
+                      <span>{formatCurrency(item.confirmedValueCents)} raised</span>
+                      <span>of {formatCurrency(item.goalCents)} goal</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {item.remainingValueCents > 0
+                        ? `${formatCurrency(item.remainingValueCents)} remaining`
+                        : 'Fully funded'}
+                    </p>
                   </div>
 
                   <div className="flex gap-1">
@@ -330,23 +354,6 @@ export function AdminWishlistManager() {
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Link>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditItem(item)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteItem(item)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>

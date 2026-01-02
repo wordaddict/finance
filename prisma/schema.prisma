@@ -350,10 +350,12 @@ model WishlistItem {
   imageUrl      String?
   priority      Int                  @default(1) // 1=low, 2=medium, 3=high
   isActive      Boolean              @default(true)
+  allowContributions Boolean         @default(false)
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
   confirmations WishlistConfirmation[]
+  contributions WishlistContribution[]
 
   @@index([isActive])
   @@index([category])
@@ -372,6 +374,24 @@ model WishlistConfirmation {
   createdAt   DateTime      @default(now())
 
   item        WishlistItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([createdAt])
+  @@index([ipHash])
+}
+
+model WishlistContribution {
+  id          String       @id @default(uuid())
+  itemId      String
+  amountCents Int
+  donorName   String?
+  donorEmail  String?
+  note        String?
+  ipHash      String?
+  userAgent   String?
+  createdAt   DateTime     @default(now())
+
+  item        WishlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
   @@index([createdAt])

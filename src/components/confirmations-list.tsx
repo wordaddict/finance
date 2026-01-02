@@ -15,12 +15,23 @@ interface WishlistConfirmation {
   createdAt: string
 }
 
+interface WishlistContribution {
+  id: string
+  itemId: string
+  amountCents: number
+  donorName: string | null
+  donorEmail: string | null
+  note: string | null
+  createdAt: string
+}
+
 interface ConfirmationsListProps {
   itemId: string
 }
 
 export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
   const [confirmations, setConfirmations] = useState<WishlistConfirmation[]>([])
+  const [contributions, setContributions] = useState<WishlistContribution[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -29,10 +40,19 @@ export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
 
   const fetchConfirmations = async () => {
     try {
-      const response = await fetch(`/api/admin/wishlist/${itemId}/confirmations`)
-      if (response.ok) {
-        const data = await response.json()
+      const [confirmationsRes, contributionsRes] = await Promise.all([
+        fetch(`/api/admin/wishlist/${itemId}/confirmations`),
+        fetch(`/api/admin/wishlist/${itemId}/contributions`)
+      ])
+
+      if (confirmationsRes.ok) {
+        const data = await confirmationsRes.json()
         setConfirmations(data.confirmations)
+      }
+
+      if (contributionsRes.ok) {
+        const data = await contributionsRes.json()
+        setContributions(data.contributions)
       }
     } catch (error) {
       console.error('Failed to fetch confirmations:', error)
@@ -52,6 +72,8 @@ export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
   }
 
   const totalQuantity = confirmations.reduce((sum, conf) => sum + conf.quantity, 0)
+  const totalContributionCents = contributions.reduce((sum, contribution) => sum + contribution.amountCents, 0)
+  const formatCurrency = (value: number) => `$${(value / 100).toFixed(2)}`
 
   if (loading) {
     return (
@@ -81,6 +103,10 @@ export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
             <div>
               <p className="text-sm text-gray-600">Total Quantity</p>
               <p className="text-2xl font-bold text-green-600">{totalQuantity}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Total Contributions</p>
+              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalContributionCents)}</p>
             </div>
           </div>
         </CardContent>
@@ -160,6 +186,45 @@ export function ConfirmationsList({ itemId }: ConfirmationsListProps) {
           ))}
         </div>
       )}
+
+      {/* Contributions List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Monetary Contributions
+          </CardTitle>
+          <CardDescription>
+            Recorded gifts toward the item&apos;s price goal
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {contributions.length === 0 ? (
+            <div className="text-sm text-gray-600">No contributions recorded yet.</div>
+          ) : (
+            <div className="space-y-3">
+              {contributions.map((contribution) => (
+                <div key={contribution.id} className="flex items-start justify-between border border-gray-100 rounded-lg p-3">
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      {contribution.donorName || 'Anonymous Donor'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {formatDate(contribution.createdAt)}
+                    </div>
+                    {contribution.note && (
+                      <p className="text-sm text-gray-700">{contribution.note}</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary">
+                    {formatCurrency(contribution.amountCents)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

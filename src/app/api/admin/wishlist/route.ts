@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import type { Prisma, WishlistItem as WishlistItemModel } from '@prisma/client'
 import { requireWishlistAdmin } from '@/lib/auth'
 
 interface CreateWishlistItemRequest {
@@ -13,6 +14,7 @@ interface CreateWishlistItemRequest {
   imageUrl?: string | null
   priority?: number
   isActive?: boolean
+  allowContributions?: boolean
 }
 
 // GET /api/admin/wishlist - List all wishlist items (admin only)
@@ -20,29 +22,56 @@ export async function GET(request: NextRequest) {
   try {
     // Restrict to specific wishlist admin user
     await requireWishlistAdmin()
-    const items = await db.wishlistItem.findMany({
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'desc' }
-      ],
-      include: {
-        _count: {
-          select: {
-            confirmations: true
-          }
-        }
+    const [items, confirmationSums, contributionSums] = await Promise.all([
+      db.wishlistItem.findMany({
+        orderBy: [
+          { priority: 'desc' },
+          { createdAt: 'desc' }
+        ],
+      }),
+      db.wishlistConfirmation.groupBy({
+        by: ['itemId'],
+        _sum: { quantity: true },
+      }),
+      db.wishlistContribution.groupBy({
+        by: ['itemId'],
+        _sum: { amountCents: true },
+      }),
+    ])
+
+    const quantityMap = new Map<string, number>(
+      confirmationSums.map((entry: { itemId: string; _sum: { quantity: number | null } }) => [
+        entry.itemId,
+        entry._sum?.quantity ?? 0
+      ])
+    )
+    const contributionMap = new Map<string, number>(
+      contributionSums.map((entry: { itemId: string; _sum: { amountCents: number | null } }) => [
+        entry.itemId,
+        entry._sum?.amountCents ?? 0
+      ])
+    )
+
+    const itemsWithProgress = items.map((item: WishlistItemModel) => {
+      const quantityConfirmed = quantityMap.get(item.id) ?? 0
+      const contributedCents = contributionMap.get(item.id) ?? 0
+      const goalCents = item.priceCents * item.quantityNeeded
+      const confirmedValueCents = quantityConfirmed * item.priceCents + contributedCents
+      const remainingValueCents = Math.max(0, goalCents - confirmedValueCents)
+
+      return {
+        ...item,
+        quantityConfirmed,
+        contributedCents,
+        goalCents,
+        confirmedValueCents,
+        remainingValueCents,
       }
     })
 
-    // Calculate quantityConfirmed for each item
-    const itemsWithCounts = items.map(item => ({
-      ...item,
-      quantityConfirmed: item._count.confirmations
-    }))
-
     return NextResponse.json({
       success: true,
-      items: itemsWithCounts
+      items: itemsWithProgress
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Insufficient permissions') {
@@ -126,6 +155,7 @@ export async function POST(request: NextRequest) {
         imageUrl: body.imageUrl?.trim() || null,
         priority: body.priority || 1,
         isActive: body.isActive !== false, // Default to true
+        allowContributions: body.allowContributions === true,
       },
     })
 

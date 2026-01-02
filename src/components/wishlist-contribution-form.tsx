@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CheckedState } from '@radix-ui/react-checkbox'
 import { ArrowLeft, Heart, CheckCircle, Loader2 } from 'lucide-react'
-import { trackSubmitConfirmation } from '@/lib/analytics'
+import { trackSubmitContribution } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,68 +16,60 @@ import Link from 'next/link'
 interface WishlistItem {
   id: string
   title: string
-  description: string | null
-  category: string | null
   priceCents: number
-  currency: string
-  quantityNeeded: number
-  quantityConfirmed: number
-  contributedCents: number
   goalCents: number
   confirmedValueCents: number
   remainingValueCents: number
-  allowContributions: boolean
-  purchaseUrl: string
-  imageUrl: string | null
-  priority: number
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
 }
 
-interface WishlistConfirmationFormProps {
+interface WishlistContributionFormProps {
   item: WishlistItem
-  maxQuantity: number
 }
 
-export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirmationFormProps) {
+export function WishlistContributionForm({ item }: WishlistContributionFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    quantity: 1,
+    amountDollars: Math.max(0.01, Math.min(item.remainingValueCents, item.priceCents) / 100),
     donorName: '',
     donorEmail: '',
     note: '',
     purchaseCompleted: false
   })
 
-  const formatPrice = (priceCents: number) => {
-    return `$${(priceCents / 100).toFixed(2)}`
-  }
+  const formatPrice = (priceCents: number) => `$${(priceCents / 100).toFixed(2)}`
+  const formatDollars = (value: number) => `$${value.toFixed(2)}`
+  const amountCents = Math.round((formData.amountDollars || 0) * 100)
+  const remainingAfterGiftCents = Math.max(0, item.remainingValueCents - amountCents)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!formData.purchaseCompleted) {
-      alert('Please confirm that you have completed your purchase.')
+      alert('Please confirm that you have completed your contribution.')
       return
     }
 
-    if (formData.quantity < 1 || formData.quantity > maxQuantity) {
-      alert(`Please enter a quantity between 1 and ${maxQuantity}.`)
+    if (amountCents < 1) {
+      alert('Please enter at least $0.01.')
+      return
+    }
+
+    if (amountCents > item.remainingValueCents) {
+      alert(`Please enter ${formatPrice(item.remainingValueCents)} or less for this item.`)
       return
     }
 
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/dmv/wishlist/${item.id}/confirm`, {
+      const response = await fetch(`/api/dmv/wishlist/${item.id}/contribute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          quantity: formData.quantity,
+          amountCents,
           donorName: formData.donorName || null,
           donorEmail: formData.donorEmail || null,
           note: formData.note || null,
@@ -85,24 +77,22 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
       })
 
       if (response.ok) {
-        // Track confirmation submission
-        trackSubmitConfirmation(
+        trackSubmitContribution(
           item.id,
           item.title,
-          formData.quantity,
+          amountCents,
           formData.donorName,
           formData.donorEmail
         )
 
-        // Redirect to thank you page
         router.push(`/dmv/${item.id}/thank-you`)
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to submit confirmation. Please try again.')
+        alert(error.error || 'Failed to submit contribution. Please try again.')
       }
     } catch (error) {
-      console.error('Error submitting confirmation:', error)
-      alert('Failed to submit confirmation. Please try again.')
+      console.error('Error submitting contribution:', error)
+      alert('Failed to submit contribution. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -110,7 +100,6 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
 
   return (
     <div className="space-y-8">
-      {/* Back button */}
       <Button variant="ghost" asChild>
         <Link href={`/dmv/${item.id}`}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -118,51 +107,51 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
         </Link>
       </Button>
 
-      {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Confirm Your Donation</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Contribute toward this goal</h1>
         <p className="text-lg text-gray-600">
-          Thank you for helping CCI DMV with <strong>{item.title}</strong>
+          Help fund <strong>{item.title}</strong>
         </p>
         <div className="text-xl font-semibold text-green-600 mt-2">
-          {formatPrice(item.priceCents)} × {formData.quantity} = {formatPrice(item.priceCents * formData.quantity)}
+          Remaining need: {formatPrice(item.remainingValueCents)} of {formatPrice(item.goalCents)}
         </div>
       </div>
 
-      {/* Form */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Heart className="h-5 w-5 text-red-500" />
-            Donation Details
+            Contribution Details
           </CardTitle>
           <CardDescription>
-            Please provide details about your generous donation
+            Record your gift so we can track progress toward this item.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Quantity pledged */}
             <div className="space-y-2">
-              <Label htmlFor="quantity">How many are you covering with your gift? *</Label>
+              <Label htmlFor="amountDollars">Contribution amount (in dollars) *</Label>
               <Input
-                id="quantity"
+                id="amountDollars"
                 type="number"
-                min="1"
-                max={maxQuantity}
-                value={formData.quantity}
+                min={0.01}
+                step="0.01"
+                max={item.remainingValueCents / 100}
+                value={formData.amountDollars}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
-                  quantity: parseInt(e.target.value) || 1
+                  amountDollars: parseFloat(e.target.value) || 0
                 }))}
                 required
               />
               <p className="text-sm text-gray-600">
-                Maximum available: {maxQuantity}
+                Remaining need: {formatPrice(item.remainingValueCents)}
+              </p>
+              <p className="text-sm text-gray-700">
+                After this gift: {formatPrice(remainingAfterGiftCents)}
               </p>
             </div>
 
-            {/* Donor Name */}
             <div className="space-y-2">
               <Label htmlFor="donorName">Your Name (Optional)</Label>
               <Input
@@ -177,7 +166,6 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
               />
             </div>
 
-            {/* Donor Email */}
             <div className="space-y-2">
               <Label htmlFor="donorEmail">Your Email (Optional)</Label>
               <Input
@@ -192,7 +180,6 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
               />
             </div>
 
-            {/* Note */}
             <div className="space-y-2">
               <Label htmlFor="note">Note (Optional)</Label>
               <Textarea
@@ -202,12 +189,10 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
                   ...prev,
                   note: e.target.value
                 }))}
-                // placeholder="Any special instructions or notes for pickup/delivery..."
                 rows={3}
               />
             </div>
 
-            {/* Gift Confirmation */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="purchaseCompleted"
@@ -220,11 +205,10 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
                 }
               />
               <Label htmlFor="purchaseCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                I confirm that I have completed my gift via Tithely *
+                I confirm that I have completed my contribution via Tithely *
               </Label>
             </div>
 
-            {/* Submit */}
             <Button
               type="submit"
               size="lg"
@@ -239,51 +223,14 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
               ) : (
                 <>
                   <CheckCircle className="h-5 w-5 mr-2" />
-                  Confirm My Donation
+                  Record My Contribution
                 </>
               )}
             </Button>
           </form>
         </CardContent>
       </Card>
-
-      {/* Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>What happens next?</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-            </div>
-            <div>
-              <p className="font-medium text-sm">Your confirmation is recorded</p>
-              <p className="text-xs text-gray-600">We&apos;ll mark this item as partially or fully fulfilled</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 font-semibold text-xs">2</span>
-            </div>
-            <div>
-              <p className="font-medium text-sm">We&apos;ll coordinate pickup/delivery</p>
-              <p className="text-xs text-gray-600">Our team will reach out if we need delivery details</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-              <span className="text-purple-600 font-semibold text-xs">3</span>
-            </div>
-            <div>
-              <p className="font-medium text-sm">Thank you for your generosity!</p>
-              <p className="text-xs text-gray-600">Your contribution helps build our community</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
+
