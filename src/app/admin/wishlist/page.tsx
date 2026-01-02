@@ -16,7 +16,7 @@ export default async function AdminWishlistPage() {
 
   // Restrict to the single authorized wishlist admin user
   if (user.id !== WISHLIST_ADMIN_USER_ID) {
-    redirect('/dashboard')
+    redirect('/')
   }
 
   return (
