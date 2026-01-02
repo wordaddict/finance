@@ -38,6 +38,10 @@ export function AdminWishlistManager() {
 
   useEffect(() => {
     fetchItems()
+
+    // Refresh periodically so totals stay current as new confirmations arrive
+    const interval = setInterval(fetchItems, 15000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchItems = async () => {
@@ -138,6 +142,8 @@ export function AdminWishlistManager() {
   const fulfilledItems = items.filter(item => item.quantityConfirmed >= item.quantityNeeded).length
   const totalValueCents = items.reduce((sum, item) => sum + (item.priceCents * item.quantityNeeded), 0)
   const totalGivenCents = items.reduce((sum, item) => sum + (item.priceCents * item.quantityConfirmed), 0)
+  const progressPercent = totalValueCents === 0 ? 0 : Math.min(100, Math.round((totalGivenCents / totalValueCents) * 100))
+  const remainingCents = Math.max(0, totalValueCents - totalGivenCents)
 
   if (loading) {
     return (
@@ -150,6 +156,31 @@ export function AdminWishlistManager() {
 
   return (
     <div className="space-y-8">
+      {/* Progress */}
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Giving Progress</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(totalGivenCents)} raised
+              </p>
+              <p className="text-sm text-gray-600">
+                of {formatCurrency(totalValueCents)} goal • {progressPercent}% funded
+              </p>
+            </div>
+            <div className="text-sm text-gray-600">
+              {remainingCents > 0 ? `${formatCurrency(remainingCents)} remaining` : 'Goal met'}
+            </div>
+          </div>
+          <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>

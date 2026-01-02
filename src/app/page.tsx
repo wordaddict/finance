@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import Image from 'next/image'
 import { WishlistList } from '@/components/wishlist-list'
+import { WishlistProgress } from '@/components/wishlist-progress'
 
 export const metadata = {
   title: 'Building Move Wish List - CCI DMV',
@@ -38,6 +39,10 @@ export default function LandingPage() {
             Browse this CCI DMV wish list, contribute to or purchase items, and confirm your donation.
             Every contribution gets us closer to a great worship experience.
           </p>
+        </div>
+
+        <div className="mb-10">
+          <WishlistProgress />
         </div>
 
         <div className="space-y-10">

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser, WISHLIST_ADMIN_USER_ID } from '@/lib/auth'
+import { getCurrentUser, WISHLIST_ADMIN_USER_IDS } from '@/lib/auth'
 import { AdminWishlistManager } from '@/components/admin-wishlist-manager'
 
 export const metadata = {
@@ -14,8 +14,8 @@ export default async function AdminWishlistPage() {
     redirect('/login')
   }
 
-  // Restrict to the single authorized wishlist admin user
-  if (user.id !== WISHLIST_ADMIN_USER_ID) {
+  // Restrict to whitelisted wishlist admin users
+  if (!WISHLIST_ADMIN_USER_IDS.includes(user.id)) {
     redirect('/')
   }
 

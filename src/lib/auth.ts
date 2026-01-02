@@ -16,7 +16,10 @@ export interface SessionUser {
 }
 
 // Specific access controls
-export const WISHLIST_ADMIN_USER_ID = '0ca7f7ad-c3c7-44f9-ae3e-d63c24ceff2f'
+export const WISHLIST_ADMIN_USER_IDS = [
+  '0ca7f7ad-c3c7-44f9-ae3e-d63c24ceff2f',
+  '5626d1cd-4cd2-4a04-ade0-39e5876b572e',
+]
 
 export async function hashPassword(password: string): Promise<string> {
   return await hash(password)
@@ -116,7 +119,7 @@ export async function requireRole(allowedRoles: string[]): Promise<SessionUser> 
 
 export async function requireWishlistAdmin(): Promise<SessionUser> {
   const user = await requireAuth()
-  if (user.id !== WISHLIST_ADMIN_USER_ID) {
+  if (!WISHLIST_ADMIN_USER_IDS.includes(user.id)) {
     throw new Error('Insufficient permissions')
   }
   return user
