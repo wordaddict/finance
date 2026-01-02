@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireRole } from '@/lib/auth'
+import { requireWishlistAdmin } from '@/lib/auth'
 
 // GET /api/admin/wishlist/[id]/confirmations - Get confirmations for an item (admin only)
 export async function GET(
@@ -8,8 +8,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check role: allow admin and campus pastors
-    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
+    // Restrict to specific wishlist admin user
+    await requireWishlistAdmin()
 
     const itemId = params.id
 
@@ -40,6 +40,9 @@ export async function GET(
       confirmations
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Insufficient permissions') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     console.error('Error fetching confirmations:', error)
     return NextResponse.json(
       { error: 'Failed to fetch confirmations' },

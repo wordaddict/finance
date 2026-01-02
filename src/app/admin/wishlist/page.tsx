@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, WISHLIST_ADMIN_USER_ID } from '@/lib/auth'
 import { AdminWishlistManager } from '@/components/admin-wishlist-manager'
 
 export const metadata = {
@@ -14,8 +14,8 @@ export default async function AdminWishlistPage() {
     redirect('/login')
   }
 
-  // Allow admins and campus pastors
-  if (user.role !== 'ADMIN' && user.role !== 'CAMPUS_PASTOR') {
+  // Restrict to the single authorized wishlist admin user
+  if (user.id !== WISHLIST_ADMIN_USER_ID) {
     redirect('/dashboard')
   }
 

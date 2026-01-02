@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireRole } from '@/lib/auth'
+import { requireWishlistAdmin } from '@/lib/auth'
 
 interface UpdateWishlistItemRequest {
   title?: string
@@ -21,8 +21,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin/campus pastor role
-    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
+    // Restrict to specific wishlist admin user
+    await requireWishlistAdmin()
 
     const itemId = params.id
     const body: UpdateWishlistItemRequest = await request.json()
@@ -113,6 +113,9 @@ export async function PUT(
       item: updatedItem
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Insufficient permissions') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     console.error('Error updating wishlist item:', error)
     return NextResponse.json(
       { error: 'Failed to update wishlist item' },
@@ -127,8 +130,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin/campus pastor role
-    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
+    // Restrict to specific wishlist admin user
+    await requireWishlistAdmin()
 
     const itemId = params.id
 
@@ -154,6 +157,9 @@ export async function DELETE(
       message: 'Item deleted successfully'
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Insufficient permissions') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     console.error('Error deleting wishlist item:', error)
     return NextResponse.json(
       { error: 'Failed to delete wishlist item' },

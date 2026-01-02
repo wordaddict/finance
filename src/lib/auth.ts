@@ -15,6 +15,9 @@ export interface SessionUser {
   zelle?: string | null
 }
 
+// Specific access controls
+export const WISHLIST_ADMIN_USER_ID = '0ca7f7ad-c3c7-44f9-ae3e-d63c24ceff2f'
+
 export async function hashPassword(password: string): Promise<string> {
   return await hash(password)
 }
@@ -106,6 +109,14 @@ export async function requireAuth(): Promise<SessionUser> {
 export async function requireRole(allowedRoles: string[]): Promise<SessionUser> {
   const user = await requireAuth()
   if (!allowedRoles.includes(user.role)) {
+    throw new Error('Insufficient permissions')
+  }
+  return user
+}
+
+export async function requireWishlistAdmin(): Promise<SessionUser> {
+  const user = await requireAuth()
+  if (user.id !== WISHLIST_ADMIN_USER_ID) {
     throw new Error('Insufficient permissions')
   }
   return user

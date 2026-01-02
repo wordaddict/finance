@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { requireRole } from '@/lib/auth'
+import { requireWishlistAdmin } from '@/lib/auth'
 
 interface CreateWishlistItemRequest {
   title: string
@@ -18,9 +18,8 @@ interface CreateWishlistItemRequest {
 // GET /api/admin/wishlist - List all wishlist items (admin only)
 export async function GET(request: NextRequest) {
   try {
-    // Allow admin and campus pastors to view items
-    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
-
+    // Restrict to specific wishlist admin user
+    await requireWishlistAdmin()
     const items = await db.wishlistItem.findMany({
       orderBy: [
         { priority: 'desc' },
@@ -46,6 +45,9 @@ export async function GET(request: NextRequest) {
       items: itemsWithCounts
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Insufficient permissions') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     console.error('Error fetching wishlist items:', error)
     return NextResponse.json(
       { error: 'Failed to fetch wishlist items' },
@@ -57,11 +59,8 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/wishlist - Create new wishlist item (admin only)
 export async function POST(request: NextRequest) {
   try {
-    // Check admin/campus pastor role
-    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
-    // Check admin/campus pastor role
-    await requireRole(['ADMIN', 'CAMPUS_PASTOR'])
-
+    // Restrict to specific wishlist admin user
+    await requireWishlistAdmin()
     const body: CreateWishlistItemRequest = await request.json()
 
     // Validate required fields
@@ -135,6 +134,9 @@ export async function POST(request: NextRequest) {
       item
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Insufficient permissions') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     console.error('Error creating wishlist item:', error)
     return NextResponse.json(
       { error: 'Failed to create wishlist item' },
