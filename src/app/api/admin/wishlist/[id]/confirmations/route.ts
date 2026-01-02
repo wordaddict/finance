@@ -1,52 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { requireWishlistAdmin } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 
-// GET /api/admin/wishlist/[id]/confirmations - Get confirmations for an item (admin only)
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    // Restrict to specific wishlist admin user
-    await requireWishlistAdmin()
-
-    const itemId = params.id
-
-    // Check if item exists
-    const item = await db.wishlistItem.findUnique({
-      where: { id: itemId }
-    })
-
-    if (!item) {
-      return NextResponse.json(
-        { error: 'Item not found' },
-        { status: 404 }
-      )
-    }
-
-    // Get confirmations
-    const confirmations = await db.wishlistConfirmation.findMany({
-      where: { itemId },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    return NextResponse.json({
-      success: true,
-      item: {
-        id: item.id,
-        title: item.title
-      },
-      confirmations
-    })
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Insufficient permissions') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-    console.error('Error fetching confirmations:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch confirmations' },
-      { status: 500 }
-    )
-  }
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Admin wishlist is no longer available' },
+    { status: 410 }
+  )
 }
