@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { LogIn, Sparkles, Church } from 'lucide-react'
+import { Sparkles, Church } from 'lucide-react'
 
 export default function LandingPage() {
 
@@ -17,7 +17,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="relative bg-white/80 backdrop-blur-md shadow-lg border-b border-red-100/20">
         <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="relative">
                 <Image
@@ -29,12 +29,6 @@ export default function LandingPage() {
                 />
               </div>
             </div>
-            <Link href="/login">
-              <Button className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-sm sm:text-base px-3 sm:px-4 py-2">
-                <LogIn className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span>Login</span>
-              </Button>
-            </Link>
           </div>
         </div>
       </header>
