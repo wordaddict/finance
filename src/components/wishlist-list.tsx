@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, Filter, Heart, Package, ExternalLink } from 'lucide-react'
 import { trackViewList } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,7 @@ interface WishlistItem {
 }
 
 export function WishlistList() {
+  const router = useRouter()
   const [items, setItems] = useState<WishlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -196,7 +198,16 @@ export function WishlistList() {
             return (
               <Card
                 key={item.id}
-                className={`overflow-hidden rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow ${!isAvailable ? 'opacity-60' : ''}`}
+                className={`overflow-hidden rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${!isAvailable ? 'opacity-60' : ''}`}
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/dmv/${item.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    router.push(`/dmv/${item.id}`)
+                  }
+                }}
               >
                 <div className="aspect-video relative bg-gray-100">
                   {item.imageUrl ? (
@@ -260,6 +271,7 @@ export function WishlistList() {
                       asChild
                       className="flex-1 rounded-full"
                       disabled={!isAvailable}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Link href={`/dmv/${item.id}`}>
                         <Heart className="h-4 w-4 mr-2" />
@@ -273,6 +285,7 @@ export function WishlistList() {
                         size="sm"
                         asChild
                         className="rounded-full"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <a
                           href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
