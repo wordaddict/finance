@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createHash } from 'crypto'
+import { sendEmail } from '@/lib/email'
 
 interface ConfirmationRequest {
   quantity: number
@@ -107,6 +108,31 @@ export async function POST(
           userAgent,
         },
       })
+    })
+
+    // Notify via email
+    const totalCents = item.priceCents * quantity
+    const formattedAmount = `$${(totalCents / 100).toFixed(2)}`
+    const donorLabel = donorName?.trim() || 'Anonymous donor'
+
+    await sendEmail({
+      to: 'madeyinka6@gmail.com',
+      subject: `New Wish List Gift: ${item.title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>New Giving Confirmation</h2>
+          <p>${donorLabel} just confirmed a gift.</p>
+          <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p><strong>Item:</strong> ${item.title}</p>
+            <p><strong>Quantity:</strong> ${quantity}</p>
+            <p><strong>Amount (est.):</strong> ${formattedAmount}</p>
+            ${donorEmail ? `<p><strong>Donor Email:</strong> ${donorEmail}</p>` : ''}
+            ${note ? `<p><strong>Note:</strong> ${note}</p>` : ''}
+          </div>
+          <p style="color:#555;font-size:14px;">This is an automated notification.</p>
+        </div>
+      `,
+      text: `New giving confirmation\n\nItem: ${item.title}\nQuantity: ${quantity}\nAmount (est.): ${formattedAmount}\nDonor: ${donorLabel}${donorEmail ? `\nEmail: ${donorEmail}` : ''}${note ? `\nNote: ${note}` : ''}`,
     })
 
     return NextResponse.json({
