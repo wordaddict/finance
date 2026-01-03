@@ -288,7 +288,7 @@ export function WishlistList() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <a
-                          href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
+                          href="https://give.tithe.ly/?formId=9cc2d2c8-2923-48ce-b743-b3b1dbd16ad6&locationId=0cc1e1b0-39c8-45b6-b3e0-70567eb2d7f1&fundId=d7d374b5-1fd6-4979-82de-d97c53234e40"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center"

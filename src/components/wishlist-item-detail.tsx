@@ -192,7 +192,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
               <CardDescription>
                 {item.allowContributions
                   ? 'Give any dollar amount toward this goal'
-                  : 'Confirm your gift so we can track progress'}
+                  : 'Confirm your gift so we can track progress'} — give via Tithely or Zelle at <strong>$GIVECCIUSA</strong>.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -203,11 +203,22 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                 <div>
                   <p className="font-medium">Give towards the item</p>
                   <p className="text-sm text-gray-600">
-                    Click on the Givevia Tithely button below
+                    Use Tithely below or send Zelle to <strong>cciusaretreat@gmail.com</strong>
                   </p>
                 </div>
               </div>
 
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 font-semibold text-sm">2</span>
+                </div>
+                <div>
+                  <p className="font-medium">Prefer Zelle?</p>
+                  <p className="text-sm text-gray-600">
+                    Send to <strong>cciusaretreat@gmail.com</strong> and include the item name in the note.
+                  </p>
+                </div>
+              </div>
 
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -230,7 +241,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                     onClick={handlePurchaseLinkClick}
                   >
                     <a
-                      href="https://campaigns.tithely.com/usa/cci-dmv-building-project"
+                      href="https://give.tithe.ly/?formId=9cc2d2c8-2923-48ce-b743-b3b1dbd16ad6&locationId=0cc1e1b0-39c8-45b6-b3e0-70567eb2d7f1&fundId=d7d374b5-1fd6-4979-82de-d97c53234e40"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2"

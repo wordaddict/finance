@@ -128,6 +128,9 @@ export function WishlistContributionForm({ item }: WishlistContributionFormProps
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <p className="text-sm text-gray-700 mb-4">
+            Give via Tithely or Zelle at <strong>$GIVECCIUSA</strong>, then record the gift here.
+          </p>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="amountDollars">Contribution amount (in dollars) *</Label>
@@ -205,7 +208,7 @@ export function WishlistContributionForm({ item }: WishlistContributionFormProps
                 }
               />
               <Label htmlFor="purchaseCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                I confirm that I have completed my contribution via Tithely *
+                I confirm that I have completed my contribution via Tithely or Zelle (cciusaretreat@gmail.com) *
               </Label>
             </div>
 
