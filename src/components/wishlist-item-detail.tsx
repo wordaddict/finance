@@ -280,6 +280,12 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
                     </Button>
                   )}
 
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Disclaimer: While you may give toward a specific item, the church reserves the right
+                to redirect funds based on priority so needs are met. We remain committed to completing
+                the item you selected as resources allow.
+              </p>
+
                 {!isAvailable && (
                   <div className="flex items-center justify-center gap-2 text-green-600 bg-green-50 p-3 rounded-lg">
                     <CheckCircle className="h-5 w-5" />
