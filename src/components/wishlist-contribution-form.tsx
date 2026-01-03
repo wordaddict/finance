@@ -230,6 +230,11 @@ export function WishlistContributionForm({ item }: WishlistContributionFormProps
                 </>
               )}
             </Button>
+            <p className="text-xs text-gray-500 text-center mt-4">
+              Disclaimer: While you may give toward a specific item, the church reserves the right to
+              redirect funds based on priority so needs are met. We remain committed to completing the
+              item you selected as resources allow.
+            </p>
           </form>
         </CardContent>
       </Card>
