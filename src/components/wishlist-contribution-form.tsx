@@ -129,7 +129,7 @@ export function WishlistContributionForm({ item }: WishlistContributionFormProps
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-700 mb-4">
-            Give via Tithely or Zelle at <strong>$GIVECCIUSA</strong>, then record the gift here.
+            Give via Tithely or Zelle at <strong>cciusaretreat@gmail.com</strong>, then record the gift here.
           </p>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">

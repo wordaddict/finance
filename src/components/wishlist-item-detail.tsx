@@ -192,7 +192,7 @@ export function WishlistItemDetail({ item }: WishlistItemDetailProps) {
               <CardDescription>
                 {item.allowContributions
                   ? 'Give any dollar amount toward this goal'
-                  : 'Confirm your gift so we can track progress'} — give via Tithely or Zelle at <strong>$GIVECCIUSA</strong>.
+                  : 'Confirm your gift so we can track progress'} — give via Tithely or Zelle at <strong>cciusaretreat@gmail.com</strong>.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
