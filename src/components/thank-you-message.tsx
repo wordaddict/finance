@@ -130,7 +130,6 @@ export function ThankYouMessage({ itemId }: ThankYouMessageProps) {
               </div>
               <div>
                 <p className="font-medium text-sm">We&apos;ll reach out if needed</p>
-                <p className="text-xs text-gray-600">If you provided contact info, we&apos;ll coordinate pickup/delivery</p>
               </div>
             </div>
           </div>

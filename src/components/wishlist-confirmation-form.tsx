@@ -268,20 +268,11 @@ export function WishlistConfirmationForm({ item, maxQuantity }: WishlistConfirma
               <span className="text-blue-600 font-semibold text-xs">2</span>
             </div>
             <div>
-              <p className="font-medium text-sm">We&apos;ll coordinate pickup/delivery</p>
-              <p className="text-xs text-gray-600">Our team will reach out if we need delivery details</p>
+            <p className="font-medium text-sm">Thank you for your generosity!</p>
+            <p className="text-xs text-gray-600">Your contribution helps build our community</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-              <span className="text-purple-600 font-semibold text-xs">3</span>
-            </div>
-            <div>
-              <p className="font-medium text-sm">Thank you for your generosity!</p>
-              <p className="text-xs text-gray-600">Your contribution helps build our community</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
