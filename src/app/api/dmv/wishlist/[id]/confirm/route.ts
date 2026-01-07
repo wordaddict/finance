@@ -97,7 +97,7 @@ export async function POST(
     })
 
     // Allow max 3 confirmations per IP per 5 minutes to prevent abuse
-    if (recentConfirmations.length >= 3) {
+    if (recentConfirmations.length >= 10) {
       return NextResponse.json(
         { error: 'Too many recent confirmations from this IP. Please try again later.' },
         { status: 429 }

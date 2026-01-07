@@ -7,355 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id              String           @id @default(uuid())
-  email           String           @unique
-  password        String?
-  name            String?
-  role            Role             @default(LEADER)
-  status          UserStatus       @default(ACTIVE)
-  campus          Campus
-  emailVerifiedAt DateTime?
-  zelle           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  approvals       Approval[]
-  requests        ExpenseRequest[] @relation("RequestUser")
-  sessions        Session[]
-  statusEvents    StatusEvent[]
-  itemApprovals   ExpenseItemApproval[] @relation("ItemApprover")
-  pastorRemarks  PastorRemark[]
-  verificationTokens VerificationToken[]
-  expenseNotes   ExpenseNote[]
-  reportNotes    ReportNote[]
-  reportApprovals ReportApproval[]
-}
-
-model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  ip        String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  id        String    @id @default(uuid())
-  email     String
-  token     String    @unique
-  purpose   String
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [email], references: [email], onDelete: Cascade)
-}
-
-model ExpenseRequest {
-  id            String        @id @default(uuid())
-  title         String
-  amountCents   Int
-  team          String
-  requesterId   String
-  description   String?
-  category      String
-  urgency       Int
-  notes         String?
-  status        Status        @default(SUBMITTED)
-  paidAt        DateTime?
-  paymentDate   DateTime?     // Date when payment was actually made (set by admin)
-  paidAmountCents Int?        // Amount that was actually paid (cumulative)
-  paidBy        String?       // Person who made the payment (optional)
-  eventDate     DateTime?
-  eventName     String?       // Name of the event (required if eventDate is set)
-  fullEventBudgetCents Int?   // Full event budget in cents (required if eventDate is set)
-  reportRequired Boolean      @default(true) // Whether an expense report is required for this expense
-  payToExternal Boolean      @default(false) // If true, pay an external payee instead of requester
-  payeeName     String?
-  payeeZelle    String?
-  account       Account?      // Account that the money came from (tagged by admin)
-  expenseType   String?       // Type of expense for reporting (set by admin)
-  destinationAccount Account? // Destination account for internal transfers (set by admin)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  campus        Campus
-  approvals     Approval[]
-  attachments   Attachment[]
-  items         ExpenseItem[]
-  requester     User          @relation("RequestUser", fields: [requesterId], references: [id])
-  statusHistory StatusEvent[]
-  reports       ExpenseReport[]
-  pastorRemarks PastorRemark[]
-  expenseNotes  ExpenseNote[]
-}
-
-model ExpenseItem {
-  id            String        @id @default(uuid())
-  expenseId     String
-  description   String
-  category      String?
-  amountCents   Int
-  quantity      Int           @default(1)
-  unitPriceCents Int
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  approvals     ExpenseItemApproval[]
-  attachments   Attachment[]
-}
-
-model ExpenseItemApproval {
-  id                String      @id @default(uuid())
-  itemId            String
-  approverId        String
-  status            String      // APPROVED, DENIED, PENDING
-  approvedAmountCents Int?      // Amount approved (null for DENIED, full amount for full approval)
-  comment           String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  item              ExpenseItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  approver          User        @relation("ItemApprover", fields: [approverId], references: [id])
-
-  @@unique([itemId, approverId])
-}
-
-model StatusEvent {
-  id        String         @id @default(uuid())
-  expenseId String
-  from      Status?
-  to        Status
-  actorId   String?
-  reason    String?
-  createdAt DateTime       @default(now())
-  actor     User?          @relation(fields: [actorId], references: [id])
-  expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
-}
-
-model Approval {
-  id         String         @id @default(uuid())
-  expenseId  String
-  stage      Int
-  approverId String
-  decision   String?
-  comment    String?
-  decidedAt  DateTime?
-  approver   User           @relation(fields: [approverId], references: [id])
-  expense    ExpenseRequest @relation(fields: [expenseId], references: [id])
-
-  @@unique([expenseId, stage])
-}
-
-model PastorRemark {
-  id        String         @id @default(uuid())
-  expenseId String
-  pastorId  String
-  remark    String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
-  pastor    User           @relation(fields: [pastorId], references: [id])
-
-  @@unique([expenseId, pastorId])
-}
-
-model Attachment {
-  id        String         @id @default(uuid())
-  expenseId String
-  itemId    String?       // Which item this attachment belongs to (null for general attachments)
-  publicId  String
-  secureUrl String
-  mimeType  String
-  createdAt DateTime       @default(now())
-  expense   ExpenseRequest @relation(fields: [expenseId], references: [id])
-  item      ExpenseItem?   @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  
-  @@index([itemId])
-}
-
-model Notification {
-  id        String    @id @default(uuid())
-  expenseId String?
-  userId    String
-  kind      String
-  channel   String
-  payload   Json
-  sentAt    DateTime?
-  status    String
-  error     String?
-  createdAt DateTime  @default(now())
-}
-
-model Setting {
-  id              Int     @id @default(1)
-  requireTwoStage Boolean @default(false)
-  reminderHours   Int     @default(48)
-}
-
-enum Role {
-  ADMIN
-  CAMPUS_PASTOR
-  LEADER
-}
-
-enum UserStatus {
-  ACTIVE
-  PENDING_APPROVAL
-  SUSPENDED
-}
-
-enum Status {
-  SUBMITTED
-  APPROVED
-  DENIED
-  PARTIALLY_APPROVED
-  CHANGE_REQUESTED
-  PAID
-  EXPENSE_REPORT_REQUESTED
-  CLOSED
-}
-
-enum Campus {
-  DMV
-  CCI_VIRTUAL
-  DALLAS
-  BOSTON
-  AUSTIN
-  CCI_USA_NASHVILLE
-  CCI_USA_OKLAHOMA
-  CCI_USA_NEWYORK_NEWJERSEY
-  CCI_USA_KNOXVILLE
-  CCI_USA_NORTH_CAROLINA
-  CCI_USA_ATLANTA
-  CCI_USA_BAY_AREA
-  CCI_USA_CHICAGO
-}
-
-enum Account {
-  CCI_DMV_CHECKINGS
-  CCI_USA_CHECKINGS
-  CCI_DALLAS_CHECKING
-  CCI_BOSTON_CHECKINGS
-  CCI_AUSTIN_CHECKINGS
-  CCI_DMV_SAVINGS
-  CCI_DALLAS_SAVINGS
-  CCI_BOSTON_SAVINGS
-  CCI_AUSTIN_SAVINGS
-  CCI_GLOBAL
-  CCI_SEED_CHURCH_CHECKINGS
-  CCI_SPECIAL_EVENT_CHECKINGS
-}
-
-model ExpenseReport {
-  id            String        @id @default(uuid())
-  expenseId     String
-  title         String
-  content       String
-  notes         String?       // Notes added when creating the report
-  status        ReportStatus  @default(PENDING) // Approval status of the report
-  reportDate    DateTime      @default(now())
-  totalApprovedAmount Int?    // Store the total approved amount for this report
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  
-  expense       ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  attachments   ReportAttachment[]
-  approvedItems ApprovedReportItem[]
-  reportNotes   ReportNote[]
-  approvals     ReportApproval[]
-}
-
-model ReportApproval {
-  id        String        @id @default(uuid())
-  reportId  String
-  approverId String
-  status    String        // APPROVED, DENIED
-  comment   String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  report    ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  approver  User          @relation(fields: [approverId], references: [id])
-  
-  @@unique([reportId, approverId])
-}
-
-enum ReportStatus {
-  PENDING
-  APPROVED
-  DENIED
-  CLOSED
-}
-
-model ReportAttachment {
-  id              String        @id @default(uuid())
-  reportId        String
-  publicId        String
-  secureUrl       String
-  mimeType        String
-  itemId          String?       // Reference to the item this attachment belongs to (null for non-itemized or general attachments)
-  isRefundReceipt Boolean       @default(false) // Whether this is a refund receipt
-  createdAt       DateTime      @default(now())
-
-  report          ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-}
-
-model ApprovedReportItem {
-  id                  String        @id @default(uuid())
-  reportId            String
-  originalItemId      String        // Reference to the original ExpenseItem
-  description         String
-  approvedAmountCents Int
-  actualAmountCents   Int?          // Actual amount spent (can differ from approved)
-  createdAt           DateTime      @default(now())
-
-  report              ExpenseReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-}
-
-model ExpenseNote {
-  id        String         @id @default(uuid())
-  expenseId String
-  authorId  String
-  note      String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  expense   ExpenseRequest @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  author    User           @relation(fields: [authorId], references: [id])
-  
-  @@index([expenseId])
-}
-
-model ReportNote {
-  id        String         @id @default(uuid())
-  reportId  String
-  authorId  String
-  note      String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  report    ExpenseReport  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  author    User           @relation(fields: [authorId], references: [id])
-
-  @@index([reportId])
-}
-
 model WishlistItem {
-  id            String               @id @default(uuid())
-  title         String
-  description   String?
-  category      String?
-  priceCents    Int
-  currency      String               @default("USD")
-  quantityNeeded Int                 @default(1)
-  quantityConfirmed Int              @default(0)
-  purchaseUrl   String
-  imageUrl      String?
-  priority      Int                  @default(1) // 1=low, 2=medium, 3=high
-  isActive      Boolean              @default(true)
-  allowContributions Boolean         @default(false)
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id                   String                  @id @default(uuid())
+  title                String
+  description          String?
+  category             String?
+  priceCents           Int
+  currency             String                  @default("USD")
+  quantityNeeded       Int                     @default(1)
+  quantityConfirmed    Int                     @default(0)
+  purchaseUrl          String
+  imageUrl             String?
+  priority             Int                     @default(1) // 1=low, 2=medium, 3=high
+  isActive             Boolean                 @default(true)
+  allowContributions   Boolean                 @default(false)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 
-  confirmations WishlistConfirmation[]
-  contributions WishlistContribution[]
+  confirmations        WishlistConfirmation[]
+  contributions        WishlistContribution[]
 
   @@index([isActive])
   @@index([category])
@@ -363,17 +33,17 @@ model WishlistItem {
 }
 
 model WishlistConfirmation {
-  id          String        @id @default(uuid())
-  itemId      String
-  quantity    Int           @default(1)
-  donorName   String?
-  donorEmail  String?
-  note        String?
-  ipHash      String?       // For basic rate limiting
-  userAgent   String?
-  createdAt   DateTime      @default(now())
+  id         String       @id @default(uuid())
+  itemId     String
+  quantity   Int          @default(1)
+  donorName  String?
+  donorEmail String?
+  note       String?
+  ipHash     String?      // For basic rate limiting
+  userAgent  String?
+  createdAt  DateTime     @default(now())
 
-  item        WishlistItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item       WishlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
   @@index([createdAt])
@@ -381,17 +51,17 @@ model WishlistConfirmation {
 }
 
 model WishlistContribution {
-  id          String       @id @default(uuid())
-  itemId      String
+  id         String       @id @default(uuid())
+  itemId     String
   amountCents Int
-  donorName   String?
-  donorEmail  String?
-  note        String?
-  ipHash      String?
-  userAgent   String?
-  createdAt   DateTime     @default(now())
+  donorName  String?
+  donorEmail String?
+  note       String?
+  ipHash     String?
+  userAgent  String?
+  createdAt  DateTime     @default(now())
 
-  item        WishlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item       WishlistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([itemId])
   @@index([createdAt])

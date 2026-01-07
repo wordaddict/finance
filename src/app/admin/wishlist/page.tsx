@@ -1,6 +1,6 @@
 import { AdminWishlistManager } from '@/components/admin-wishlist-manager'
 import { WishlistAccessGate } from '@/components/wishlist-access-gate'
-import { getCurrentUser, hasWishlistCookieAccess, WISHLIST_ADMIN_USER_IDS } from '@/lib/auth'
+import { hasWishlistCookieAccess } from '@/lib/auth'
 
 export const metadata = {
   title: 'Manage Wish List - CCI Admin',
@@ -8,11 +8,9 @@ export const metadata = {
 }
 
 export default async function AdminWishlistPage() {
-  const user = await getCurrentUser()
-  const hasSessionAccess = !!user && WISHLIST_ADMIN_USER_IDS.includes(user.id)
   const hasCodeAccess = hasWishlistCookieAccess()
 
-  if (!hasSessionAccess && !hasCodeAccess) {
+  if (!hasCodeAccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center">
         <div className="max-w-md w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
