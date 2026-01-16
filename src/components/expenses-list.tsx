@@ -939,47 +939,42 @@ export function ExpensesList({ user }: ExpensesListProps) {
     if ((expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') || !expense.reports || expense.reports.length === 0) {
       return { needed: false, amount: 0 }
     }
-    
-    const latestReport = expense.reports[0]
-    
-    const donation = latestReport.donationAmountCents || 0
-    // If report has items, calculate difference from item-level actual vs approved amounts
-    if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
-      let totalDifference = 0
-      
-      for (const item of latestReport.approvedItems) {
-        const approvedAmount = item.approvedAmountCents || 0
-        const actualAmount = item.actualAmountCents ?? approvedAmount
-        const difference = actualAmount - approvedAmount
-        
-        // Only count positive differences (spent more than approved)
-        if (difference > 0) {
-          totalDifference += difference
-        }
-      }
+    // Prefer the most recent report (reports list may not be ordered)
+    const latestReport = [...expense.reports].sort((a: any, b: any) => {
+      const aDate = new Date(a.createdAt || a.reportDate || 0).getTime()
+      const bDate = new Date(b.createdAt || b.reportDate || 0).getTime()
+      return bDate - aDate
+    })[0]
 
-      const adjusted = Math.max(0, totalDifference - donation)
-      if (adjusted > 0) {
-        return {
-          needed: true,
-          amount: adjusted
-        }
-      }
-    } else {
-      // For non-itemized expenses, check totalActualAmount vs totalApprovedAmount
-      const totalApproved = latestReport.totalApprovedAmount || 0
-      const totalActual = latestReport.totalActualAmount ?? totalApproved
-      const difference = totalActual - totalApproved
-      const adjusted = Math.max(0, difference - donation)
-      
-      if (adjusted > 0) {
-        return {
-          needed: true,
-          amount: adjusted
-        }
+    if (!latestReport) {
+      return { needed: false, amount: 0 }
+    }
+
+    const donation = latestReport.donationAmountCents || 0
+    const paidSoFar = expense.paidAmountCents || 0
+
+    // Reported total: prefer totalActualAmount, then totalApprovedAmount, then sum of approved items (actual if present)
+    let reportedAmount = latestReport.totalActualAmount
+      ?? latestReport.totalApprovedAmount
+
+    if (reportedAmount === undefined || reportedAmount === null) {
+      if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
+        reportedAmount = latestReport.approvedItems.reduce((sum: number, item: any) => {
+          const actual = item.actualAmountCents ?? item.approvedAmountCents ?? 0
+          return sum + actual
+        }, 0)
+      } else {
+        reportedAmount = expense.amountCents || 0
       }
     }
-    
+
+    const overage = Math.max(0, reportedAmount - paidSoFar)
+    const adjustedOverage = Math.max(0, overage - donation)
+
+    if (adjustedOverage > 0) {
+      return { needed: true, amount: adjustedOverage }
+    }
+
     return { needed: false, amount: 0 }
   }
 

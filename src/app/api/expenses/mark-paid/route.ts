@@ -96,34 +96,37 @@ export async function POST(request: NextRequest) {
     let totalPaidAmountCents: number
     
     if (isRePayment) {
-      // For re-payment, calculate the difference from item-level actual vs approved amounts
+      // For re-payment, calculate overage considering actuals and donation offsets
       const latestReport = expense.reports[0]
-      let totalDifference = 0
-      
-      if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
-        // Calculate sum of positive differences (where actual > approved)
-        for (const item of latestReport.approvedItems) {
-          const approvedAmount = item.approvedAmountCents || 0
-          const actualAmount = item.actualAmountCents ?? approvedAmount
-          const difference = actualAmount - approvedAmount
-          
-          // Only count positive differences (spent more than approved)
-          if (difference > 0) {
-            totalDifference += difference
-          }
-        }
-      } else {
-        // For non-itemized expenses, use totalActualAmount vs totalApprovedAmount
-        const totalApproved = latestReport.totalApprovedAmount || 0
-        const totalActual = latestReport.totalActualAmount ?? totalApproved
-        const difference = totalActual - totalApproved
-        if (difference > 0) {
-          totalDifference = difference
+
+      // Reported total: prefer totalActualAmount, then totalApprovedAmount, then sum of approved items (actual if present)
+      let reportedAmount = (latestReport as any).totalActualAmount
+        ?? (latestReport as any).totalApprovedAmount
+
+      if (reportedAmount === undefined || reportedAmount === null) {
+        if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
+          reportedAmount = latestReport.approvedItems.reduce((sum: number, item: any) => {
+            const actual = item.actualAmountCents ?? item.approvedAmountCents ?? 0
+            return sum + actual
+          }, 0)
+        } else {
+          reportedAmount = expense.amountCents
         }
       }
-      
-      paymentAmountCents = totalDifference
-      totalPaidAmountCents = currentPaidAmount + totalDifference
+
+      const donation = (latestReport as any).donationAmountCents || 0
+      const overage = Math.max(0, reportedAmount - currentPaidAmount)
+      const adjustedOverage = Math.max(0, overage - donation)
+
+      if (adjustedOverage <= 0) {
+        return NextResponse.json(
+          { error: 'No additional payment needed based on the latest report.' },
+          { status: 400 }
+        )
+      }
+
+      paymentAmountCents = adjustedOverage
+      totalPaidAmountCents = currentPaidAmount + adjustedOverage
     } else {
       // Initial payment - calculate approved amount
       paymentAmountCents = expense.amountCents // Default to full amount
@@ -202,3 +205,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

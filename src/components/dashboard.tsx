@@ -26,7 +26,10 @@ interface DashboardStats {
   pendingCount: number
   monthlySpend: number
   totalPaid: number
+  totalReimbursed: number
+  reimbursedCount: number
   totalExpensesCount: number
+  additionalPayeesCount: number
   teamBreakdown: Array<{
     teamName: string
     total: number
@@ -240,7 +243,8 @@ export function Dashboard({ user }: DashboardProps) {
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 >
-                  <option value="">All Active Status</option>
+                  <option value="">All Statuses</option>
+                  <option value="ACTIVE">Active (not closed)</option>
                   {STATUS_VALUES.map(status => (
                     <option key={status} value={status}>
                       {STATUS_DISPLAY_NAMES[status as keyof typeof STATUS_DISPLAY_NAMES]}
@@ -370,7 +374,7 @@ export function Dashboard({ user }: DashboardProps) {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -391,6 +395,23 @@ export function Dashboard({ user }: DashboardProps) {
         <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
+              External Payees
+            </CardTitle>
+            <Users className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold">
+              {stats?.additionalPayeesCount || 0}
+            </div>
+            <p className="text-xs text-gray-500">
+              Requests paying non-requesters
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
               Total Paid
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-gray-500" />
@@ -401,6 +422,40 @@ export function Dashboard({ user }: DashboardProps) {
             </div>
             <p className="text-xs text-gray-500">
               Amount paid out
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Reimbursed
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold">
+              {formatCurrency(stats?.totalReimbursed || 0)}
+            </div>
+            <p className="text-xs text-gray-500">
+              Paid above approvals
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Reimbursement Count
+            </CardTitle>
+            <FileText className="h-4 w-4 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold">
+              {stats?.reimbursedCount || 0}
+            </div>
+            <p className="text-xs text-gray-500">
+              Requests over approved amount
             </p>
           </CardContent>
         </Card>

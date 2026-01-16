@@ -3,6 +3,36 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canViewAllExpenses } from '@/lib/rbac'
 
+type ExpenseWithItems = {
+  amountCents: number
+  paidAmountCents: number | null
+  status: string
+  items: Array<{
+    amountCents: number
+    approvals: Array<{
+      status: string
+      approvedAmountCents: number | null
+    }>
+  }>
+}
+
+const calculateApprovedAmount = (expense: ExpenseWithItems) => {
+  if (!expense.items || expense.items.length === 0) {
+    return expense.amountCents
+  }
+
+  return expense.items.reduce((total, item) => {
+    const itemApproval = item.approvals.find(approval => approval.status === 'APPROVED')
+    if (itemApproval && itemApproval.approvedAmountCents !== null && itemApproval.approvedAmountCents !== undefined) {
+      return total + itemApproval.approvedAmountCents
+    }
+    if (itemApproval) {
+      return total + item.amountCents
+    }
+    return total
+  }, 0)
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
@@ -32,11 +62,11 @@ export async function GET(request: NextRequest) {
     // Build filter where clause
     const filterWhere: any = { ...baseWhere }
 
-    if (status) {
-      filterWhere.status = status
-    } else {
-      // Default to active (non-closed) expenses when no explicit status filter is chosen
+    if (status === 'ACTIVE') {
+      // Explicit active-only filter keeps closed requests out of the result set
       filterWhere.status = { not: 'CLOSED' }
+    } else if (status) {
+      filterWhere.status = status
     }
     if (team) {
       filterWhere.team = team
@@ -70,14 +100,34 @@ export async function GET(request: NextRequest) {
       filterWhere.createdAt = dateFilter
     }
 
-    // Get total approved expenses (with filters)
-    const approvedWhere = { ...filterWhere, status: 'APPROVED' }
-    const totalApproved = await db.expenseRequest.aggregate({
-      where: approvedWhere,
-      _sum: {
-        amountCents: true,
+    // Completed/paid-esque statuses that should still count toward totals even after closure
+    const completedStatuses = ['APPROVED', 'PAID', 'EXPENSE_REPORT_REQUESTED', 'CLOSED'] as const
+    const completedWhere = {
+      ...filterWhere,
+      status: {
+        in: completedStatuses as unknown as string[],
       },
-    })
+    }
+
+    const expensesForTotals = await db.expenseRequest.findMany({
+      where: completedWhere,
+      select: {
+        amountCents: true,
+        paidAmountCents: true,
+        status: true,
+        items: {
+          include: {
+            approvals: {
+              where: { status: 'APPROVED' },
+            },
+          },
+        },
+      },
+    }) as unknown as ExpenseWithItems[]
+
+    const totalApprovedCents = expensesForTotals.reduce<number>((sum, expense: ExpenseWithItems) => {
+      return sum + calculateApprovedAmount(expense)
+    }, 0)
 
     // Get pending count (with filters, but status override)
     const pendingWhere = { ...filterWhere, status: 'SUBMITTED' }
@@ -85,53 +135,50 @@ export async function GET(request: NextRequest) {
       where: pendingWhere,
     })
 
-    // Get monthly/all spend (approved or paid amounts)
-    const monthlySpendWhere = {
-      ...filterWhere,
-      status: {
-        in: ['APPROVED', 'PAID'],
-      },
-    }
-    const monthlySpend = await db.expenseRequest.aggregate({
-      where: monthlySpendWhere,
-      _sum: {
-        amountCents: true,
-      },
-    })
-
-    // Get total paid amount (PAID and EXPENSE_REPORT_REQUESTED) using paidAmountCents fallback to amountCents
-    const paidExpenses = await db.expenseRequest.findMany({
-      where: {
-        ...filterWhere,
-        status: {
-          in: ['PAID', 'EXPENSE_REPORT_REQUESTED'],
-        },
-      },
-      select: {
-        amountCents: true,
-        paidAmountCents: true,
-      },
-    })
-    const totalPaidCents = paidExpenses.reduce((sum, exp) => {
-      const paid = exp.paidAmountCents ?? exp.amountCents ?? 0
+    // Get monthly/all spend (actual paid amounts when present, otherwise approved amounts)
+    const monthlySpendCents = expensesForTotals.reduce<number>((sum, expense: ExpenseWithItems) => {
+      const approvedAmount = calculateApprovedAmount(expense)
+      const paid = expense.paidAmountCents ?? approvedAmount
       return sum + paid
     }, 0)
+
+    // Get total paid amount (PAID, EXPENSE_REPORT_REQUESTED, CLOSED) using paidAmountCents fallback to approved amount
+    const paidStatuses = ['PAID', 'EXPENSE_REPORT_REQUESTED', 'CLOSED'] as const
+    const totalPaidCents = expensesForTotals.reduce<number>((sum, expense: ExpenseWithItems) => {
+      if (!paidStatuses.includes(expense.status as (typeof paidStatuses)[number])) {
+        return sum
+      }
+      const approvedAmount = calculateApprovedAmount(expense)
+      const paid = expense.paidAmountCents ?? approvedAmount
+      return sum + paid
+    }, 0)
+
+    // Calculate reimbursements (amounts paid above approved) and count of such requests
+    const reimbursementTotals = expensesForTotals.reduce<{
+      amount: number
+      count: number
+    }>((totals, expense: ExpenseWithItems) => {
+      const approvedAmount = calculateApprovedAmount(expense)
+      const paid = expense.paidAmountCents ?? approvedAmount
+      const overage = paid - approvedAmount
+      if (overage > 0 && paidStatuses.includes(expense.status as (typeof paidStatuses)[number])) {
+        return {
+          amount: totals.amount + overage,
+          count: totals.count + 1,
+        }
+      }
+      return totals
+    }, { amount: 0, count: 0 })
 
     // Get total expenses count
     const totalExpensesCount = await db.expenseRequest.count({
       where: filterWhere,
     })
 
-    // Get team breakdown (with filters)
-    const teamBreakdownWhere = {
-      ...filterWhere,
-      status: {
-        in: ['APPROVED', 'PAID'],
-      },
-    }
+    // Get team breakdown (with filters) for all completed/paid statuses
     const teamBreakdown = await db.expenseRequest.groupBy({
       by: ['team'],
-      where: teamBreakdownWhere,
+      where: completedWhere,
       _sum: {
         amountCents: true,
       },
@@ -143,7 +190,7 @@ export async function GET(request: NextRequest) {
     // Get campus breakdown
     const campusBreakdown = await db.expenseRequest.groupBy({
       by: ['campus'],
-      where: teamBreakdownWhere,
+      where: completedWhere,
       _sum: {
         amountCents: true,
       },
@@ -165,7 +212,11 @@ export async function GET(request: NextRequest) {
     })
 
     // Get team names
-    const teamBreakdownWithNames = teamBreakdown.map(breakdown => {
+    const teamBreakdownWithNames = teamBreakdown.map((breakdown: {
+      team: string
+      _sum: { amountCents: number | null }
+      _count: { id: number }
+    }) => {
       return {
         teamName: breakdown.team,
         total: breakdown._sum?.amountCents || 0,
@@ -174,7 +225,11 @@ export async function GET(request: NextRequest) {
     })
 
     // Get campus breakdown with names
-    const campusBreakdownWithNames = campusBreakdown.map(breakdown => {
+    const campusBreakdownWithNames = campusBreakdown.map((breakdown: {
+      campus: string
+      _sum: { amountCents: number | null }
+      _count: { id: number }
+    }) => {
       return {
         campusName: breakdown.campus,
         total: breakdown._sum?.amountCents || 0,
@@ -183,12 +238,24 @@ export async function GET(request: NextRequest) {
     })
 
     // Get status breakdown
-    const statusBreakdownWithNames = statusBreakdown.map(breakdown => {
+    const statusBreakdownWithNames = statusBreakdown.map((breakdown: {
+      status: string
+      _sum: { amountCents: number | null }
+      _count: { id: number }
+    }) => {
       return {
         statusName: breakdown.status,
         total: breakdown._sum?.amountCents || 0,
         count: breakdown._count?.id || 0,
       }
+    })
+
+    // Count external payees (requests marked to pay someone other than requester)
+    const additionalPayeesCount = await db.expenseRequest.count({
+      where: {
+        ...completedWhere,
+        payToExternal: true,
+      },
     })
 
     // Get recent expenses (with filters)
@@ -211,35 +278,39 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      totalApproved: totalApproved._sum.amountCents || 0,
+      totalApproved: totalApprovedCents,
       pendingCount,
-      monthlySpend: monthlySpend._sum.amountCents || 0,
+      monthlySpend: monthlySpendCents,
       totalPaid: totalPaidCents,
+      totalReimbursed: reimbursementTotals.amount,
+      reimbursedCount: reimbursementTotals.count,
       totalExpensesCount,
       teamBreakdown: teamBreakdownWithNames,
       campusBreakdown: campusBreakdownWithNames,
       statusBreakdown: statusBreakdownWithNames,
-      recentExpenses: recentExpenses.map(expense => {
-        // Calculate approved amount based on item approvals
-        let approvedAmountCents = expense.amountCents
-
-        if (expense.items && expense.items.length > 0) {
-          approvedAmountCents = expense.items.reduce((total, item) => {
-            // Find approved item approval (use the first one if multiple exist)
-            const itemApproval = item.approvals.find((approval: any) => approval.status === 'APPROVED')
-            if (itemApproval && itemApproval.approvedAmountCents !== null && itemApproval.approvedAmountCents !== undefined) {
-              return total + itemApproval.approvedAmountCents
-            }
-            // If no approval found or amount is null, use full item amount (for non-approved expenses)
-            return total + item.amountCents
-          }, 0)
-        }
+      additionalPayeesCount,
+      recentExpenses: recentExpenses.map((expense: {
+        id: string
+        title: string
+        amountCents: number
+        status: string
+        createdAt: Date
+        team: string
+        campus: string
+        items: ExpenseWithItems['items']
+      }) => {
+        const approvedAmountCents = calculateApprovedAmount({
+          amountCents: expense.amountCents,
+          paidAmountCents: null,
+          status: expense.status,
+          items: expense.items as ExpenseWithItems['items'],
+        })
 
         return {
           id: expense.id,
           title: expense.title,
           amountCents: expense.amountCents, // Total requested
-          approvedAmountCents: approvedAmountCents, // Total approved
+          approvedAmountCents, // Total approved
           status: expense.status,
           createdAt: expense.createdAt.toISOString(),
           teamName: expense.team,
