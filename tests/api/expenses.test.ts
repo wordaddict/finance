@@ -133,13 +133,19 @@ describe('/api/expenses', () => {
       expect(requireAuth).toHaveBeenCalled()
       expect(canViewAllExpenses).toHaveBeenCalledWith(mockUser)
       expect(db.expenseRequest.findMany).toHaveBeenCalledWith({
-        where: {},
+        where: {
+          status: { not: 'CLOSED' },
+        },
         include: expect.any(Object),
         orderBy: { createdAt: 'desc' },
         skip: 0,
         take: 20,
       })
-      expect(db.expenseRequest.count).toHaveBeenCalledWith({ where: {} })
+      expect(db.expenseRequest.count).toHaveBeenCalledWith({
+        where: {
+          status: { not: 'CLOSED' },
+        },
+      })
       expect(response.status).toBe(200)
       expect(data).toEqual({
         expenses: [{
@@ -210,9 +216,19 @@ describe('/api/expenses', () => {
       expect(db.expenseRequest.findMany).toHaveBeenCalledWith({
         where: {
           requesterId: 'user-1',
+          status: { not: 'CLOSED' },
           OR: [
             { title: { contains: 'office', mode: 'insensitive' } },
             { description: { contains: 'office', mode: 'insensitive' } },
+            { team: { contains: 'office', mode: 'insensitive' } },
+            {
+              requester: {
+                OR: [
+                  { name: { contains: 'office', mode: 'insensitive' } },
+                  { email: { contains: 'office', mode: 'insensitive' } },
+                ],
+              },
+            },
           ],
         },
         include: expect.any(Object),
@@ -246,7 +262,10 @@ describe('/api/expenses', () => {
       const data = await response.json()
 
       expect(db.expenseRequest.findMany).toHaveBeenCalledWith({
-        where: { requesterId: 'user-1' },
+        where: {
+          requesterId: 'user-1',
+          status: { not: 'CLOSED' },
+        },
         include: expect.any(Object),
         orderBy: { createdAt: 'desc' },
         skip: 20, // (page-1) * limit = (3-1) * 10 = 20

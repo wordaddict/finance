@@ -108,7 +108,7 @@ export default function FinancePolicyPage() {
               </p>
               <p className="text-base text-gray-700 max-w-4xl mx-auto">
                 CCI USA is a nonprofit organization and a church. We adopt the principle of being
-                good stewards of God's resources: whatever financial decision you would not proceed
+                good stewards of God&apos;s resources: whatever financial decision you would not proceed
                 with in your workplace without authorization, please do not do such in CCI USA. Send
                 questions and inquiries to usa.finance@joincci.org.
               </p>
@@ -149,7 +149,7 @@ export default function FinancePolicyPage() {
               <CardContent className="space-y-3 text-gray-800">
                 <p>
                   Welcome to the CCI USA Expense system. Please read and adhere strictly to this
-                  policy as we steward God's resources responsibly.
+                  policy as we steward God&apos;s resources responsibly.
                 </p>
                 <p>
                   Whatever financial decision you would not proceed with in your workplace without
