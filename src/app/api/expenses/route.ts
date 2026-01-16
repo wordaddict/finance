@@ -89,6 +89,14 @@ export async function GET(request: NextRequest) {
       const searchConditions = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+        {
+          expenseNotes: {
+            some: {
+              note: { contains: search, mode: 'insensitive' },
+            },
+          },
+        },
         { team: { contains: search, mode: 'insensitive' } },
         {
           requester: {

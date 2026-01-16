@@ -220,6 +220,12 @@ describe('/api/expenses', () => {
           OR: [
             { title: { contains: 'office', mode: 'insensitive' } },
             { description: { contains: 'office', mode: 'insensitive' } },
+            { notes: { contains: 'office', mode: 'insensitive' } },
+            {
+              expenseNotes: {
+                some: { note: { contains: 'office', mode: 'insensitive' } },
+              },
+            },
             { team: { contains: 'office', mode: 'insensitive' } },
             {
               requester: {
@@ -269,6 +275,12 @@ describe('/api/expenses', () => {
               { amountCents: 123456 },
               { title: { contains: '$1,234.56', mode: 'insensitive' } },
               { description: { contains: '$1,234.56', mode: 'insensitive' } },
+              { notes: { contains: '$1,234.56', mode: 'insensitive' } },
+              {
+                expenseNotes: {
+                  some: { note: { contains: '$1,234.56', mode: 'insensitive' } },
+                },
+              },
               { team: { contains: '$1,234.56', mode: 'insensitive' } },
               {
                 requester: {
