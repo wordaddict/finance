@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canViewAllExpenses } from '@/lib/rbac'
+import { TEAM_VALUES, STATUS_VALUES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
 type ExpenseWithItems = {
   amountCents: number
@@ -199,6 +200,18 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Get category breakdown
+    const categoryBreakdown = await db.expenseRequest.groupBy({
+      by: ['category'],
+      where: completedWhere,
+      _sum: {
+        amountCents: true,
+      },
+      _count: {
+        id: true,
+      },
+    })
+
     // Get status breakdown
     const statusBreakdown = await db.expenseRequest.groupBy({
       by: ['status'],
@@ -211,18 +224,28 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Get team names
-    const teamBreakdownWithNames = teamBreakdown.map((breakdown: {
+    // Ensure all teams appear in breakdown, even if zero activity
+    const teamTotalsByName = TEAM_VALUES.reduce<Record<string, { total: number; count: number }>>((acc, team) => {
+      acc[team] = { total: 0, count: 0 }
+      return acc
+    }, {})
+
+    teamBreakdown.forEach((breakdown: {
       team: string
       _sum: { amountCents: number | null }
       _count: { id: number }
     }) => {
-      return {
-        teamName: breakdown.team,
+      teamTotalsByName[breakdown.team] = {
         total: breakdown._sum?.amountCents || 0,
         count: breakdown._count?.id || 0,
       }
     })
+
+    const teamBreakdownWithNames = TEAM_VALUES.map(team => ({
+      teamName: team,
+      total: teamTotalsByName[team]?.total || 0,
+      count: teamTotalsByName[team]?.count || 0,
+    }))
 
     // Get campus breakdown with names
     const campusBreakdownWithNames = campusBreakdown.map((breakdown: {
@@ -237,18 +260,51 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Get status breakdown
-    const statusBreakdownWithNames = statusBreakdown.map((breakdown: {
-      status: string
+    // Ensure all categories appear in breakdown, even if zero activity
+    const categoryTotalsByName = EXPENSE_CATEGORY_VALUES.reduce<Record<string, { total: number; count: number }>>((acc, category) => {
+      acc[category] = { total: 0, count: 0 }
+      return acc
+    }, {})
+
+    categoryBreakdown.forEach((breakdown: {
+      category: string
       _sum: { amountCents: number | null }
       _count: { id: number }
     }) => {
-      return {
-        statusName: breakdown.status,
+      categoryTotalsByName[breakdown.category] = {
         total: breakdown._sum?.amountCents || 0,
         count: breakdown._count?.id || 0,
       }
     })
+
+    const categoryBreakdownWithNames = EXPENSE_CATEGORY_VALUES.map(category => ({
+      categoryName: category,
+      total: categoryTotalsByName[category]?.total || 0,
+      count: categoryTotalsByName[category]?.count || 0,
+    }))
+
+    // Ensure all statuses appear in breakdown, even if zero activity
+    const statusTotalsByName = STATUS_VALUES.reduce<Record<string, { total: number; count: number }>>((acc, status) => {
+      acc[status] = { total: 0, count: 0 }
+      return acc
+    }, {})
+
+    statusBreakdown.forEach((breakdown: {
+      status: string
+      _sum: { amountCents: number | null }
+      _count: { id: number }
+    }) => {
+      statusTotalsByName[breakdown.status] = {
+        total: breakdown._sum?.amountCents || 0,
+        count: breakdown._count?.id || 0,
+      }
+    })
+
+    const statusBreakdownWithNames = STATUS_VALUES.map(status => ({
+      statusName: status,
+      total: statusTotalsByName[status]?.total || 0,
+      count: statusTotalsByName[status]?.count || 0,
+    }))
 
     // Count external payees (requests marked to pay someone other than requester)
     const additionalPayeesCount = await db.expenseRequest.count({
@@ -287,6 +343,7 @@ export async function GET(request: NextRequest) {
       totalExpensesCount,
       teamBreakdown: teamBreakdownWithNames,
       campusBreakdown: campusBreakdownWithNames,
+      categoryBreakdown: categoryBreakdownWithNames,
       statusBreakdown: statusBreakdownWithNames,
       additionalPayeesCount,
       recentExpenses: recentExpenses.map((expense: {

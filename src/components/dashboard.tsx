@@ -40,6 +40,11 @@ interface DashboardStats {
     total: number
     count: number
   }>
+  categoryBreakdown: Array<{
+    categoryName: string
+    total: number
+    count: number
+  }>
   statusBreakdown: Array<{
     statusName: string
     total: number
@@ -595,6 +600,36 @@ export function Dashboard({ user }: DashboardProps) {
                   <p className="text-2xl font-bold">{formatCurrency(status.total)}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     {status.count} expense{status.count !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Category Breakdown */}
+      {stats?.categoryBreakdown && stats.categoryBreakdown.length > 0 && (
+        <Card className="rounded-xl shadow-sm">
+          <CardHeader>
+            <div className="flex items-center">
+              <FileText className="w-4 h-4 mr-2" />
+              <CardTitle>Category Breakdown</CardTitle>
+            </div>
+            <CardDescription>
+              Expenses by category (completed)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {stats.categoryBreakdown.map((category) => (
+                <div key={category.categoryName} className="p-4 bg-gray-50 rounded-lg">
+                  <p className="font-medium text-sm mb-1">
+                    {category.categoryName}
+                  </p>
+                  <p className="text-2xl font-bold">{formatCurrency(category.total)}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {category.count} expense{category.count !== 1 ? 's' : ''}
                   </p>
                 </div>
               ))}
