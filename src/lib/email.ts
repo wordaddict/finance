@@ -367,6 +367,84 @@ export function generateExpenseReportCreatedEmail(
   }
 }
 
+export function generateReportApprovedEmail(
+  recipientName: string,
+  reportTitle: string,
+  expenseTitle: string,
+  approverName: string,
+  approvedAmountCents?: number | null,
+): EmailTemplate {
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
+  const reportsUrl = `${EMAIL_BASE_URL}/reports`
+  const amountSection = typeof approvedAmountCents === 'number'
+    ? `<p><strong>Reported / Approved Amount:</strong> $${(approvedAmountCents / 100).toFixed(2)}</p>`
+    : ''
+
+  return {
+    to: '',
+    subject: `Your Expense Report Was Approved: ${reportTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Your expense report was approved</h2>
+        <p>Hello ${recipientName},</p>
+        <p>Your report for "${expenseTitle}" has been approved by ${approverName}.</p>
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3>${reportTitle}</h3>
+          ${amountSection}
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Expense
+          </a>
+          <a href="${reportsUrl}" style="margin-left: 10px; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            View Reports
+          </a>
+        </div>
+        <p>Thank you for submitting your report.</p>
+      </div>
+    `,
+    text: `Your expense report was approved: ${reportTitle}\nExpense: ${expenseTitle}\nApproved by: ${approverName}${typeof approvedAmountCents === 'number' ? `\nAmount: $${(approvedAmountCents / 100).toFixed(2)}` : ''}\n\nView expense: ${expenseUrl}\nView reports: ${reportsUrl}`,
+  }
+}
+
+export function generateReportChangeRequestedEmail(
+  recipientName: string,
+  reportTitle: string,
+  expenseTitle: string,
+  adminName: string,
+  comment: string,
+): EmailTemplate {
+  const expenseUrl = `${EMAIL_BASE_URL}/expense`
+
+  return {
+    to: '',
+    subject: `Changes Requested for Expense Report: ${reportTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Changes Requested for Your Expense Report</h2>
+        <p>Hello ${recipientName},</p>
+        <p>An admin has requested changes to the expense report you submitted for "${expenseTitle}":</p>
+        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <h3>${reportTitle}</h3>
+          <p><strong>Requested by:</strong> ${adminName} (Admin)</p>
+          <div style="background: #fff; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+            <p><strong>Change Request:</strong></p>
+            <p style="margin: 10px 0; font-style: italic;">"${comment}"</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${expenseUrl}" style="background: #ffc107; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            Edit Your Expense Report
+          </a>
+        </div>
+        <p>The report status has been changed to "Change Requested". Please edit the report and resubmit for approval.</p>
+        <p>Best regards,<br>Church Expense System</p>
+      </div>
+    `,
+    text: `Changes Requested for Expense Report: ${reportTitle}\n\nRequested by: ${adminName} (Admin)\n\nChange Request: "${comment}"\n\nThe report status has been changed to "Change Requested". Please edit the report and resubmit for approval.\n\nEdit at: ${expenseUrl}`,
+  }
+}
+
 export function generateExpenseChangeRequestedEmail(
   recipientName: string,
   expenseTitle: string,

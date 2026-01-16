@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button'
 import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES } from '@/lib/constants'
 import { X, Upload, FileText } from 'lucide-react'
 
+interface ReportAttachment {
+  id?: string
+  publicId: string
+  secureUrl: string
+  mimeType: string
+  itemId?: string | null
+  isRefundReceipt?: boolean
+}
+
 interface ReportFormProps {
   expense: {
     id: string
@@ -42,6 +51,24 @@ interface ReportFormProps {
       }[]
     }[]
   }
+  report?: {
+    id: string
+    title: string
+    content: string
+    notes?: string | null
+    reportDate?: string
+    attachments: ReportAttachment[]
+    approvedItems?: {
+      id: string
+      originalItemId: string
+      description: string
+      approvedAmountCents: number
+      actualAmountCents?: number | null
+    }[]
+    totalApprovedAmount?: number | null
+    donationAmountCents?: number | null
+  }
+  mode?: 'create' | 'edit'
   onClose: () => void
 }
 
@@ -52,21 +79,29 @@ interface ReportItem {
   actualAmountCents: number
 }
 
-export function ReportForm({ expense, onClose }: ReportFormProps) {
-  const [title, setTitle] = useState(`Report for ${expense.title}`)
-  const [content, setContent] = useState('')
-  const [notes, setNotes] = useState('')
-  const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0])
+export function ReportForm({ expense, report, mode = 'create', onClose }: ReportFormProps) {
+  const isEditMode = mode === 'edit' && !!report
+  const [title, setTitle] = useState(report ? report.title : `Report for ${expense.title}`)
+  const [content, setContent] = useState(report?.content || '')
+  const [notes, setNotes] = useState(report?.notes || '')
+  const [reportDate, setReportDate] = useState(
+    report?.reportDate
+      ? new Date(report.reportDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]
+  )
   const [itemAttachments, setItemAttachments] = useState<Record<string, File[]>>({}) // Attachments per item
   const [itemRefundReceipts, setItemRefundReceipts] = useState<Record<string, File[]>>({}) // Refund receipts per item
   const [nonItemizedAttachments, setNonItemizedAttachments] = useState<File[]>([]) // For non-itemized expenses
   const [nonItemizedRefundReceipts, setNonItemizedRefundReceipts] = useState<File[]>([]) // Refund receipts for non-itemized expenses
+  const [existingAttachments, setExistingAttachments] = useState<ReportAttachment[]>(report?.attachments || [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [reportItems, setReportItems] = useState<ReportItem[]>([])
   const [nonItemizedActualAmount, setNonItemizedActualAmount] = useState(0) // For non-itemized expenses
   const [nonItemizedInputValue, setNonItemizedInputValue] = useState('') // For non-itemized input display
   const [itemInputValues, setItemInputValues] = useState<Record<string, string>>({}) // For item input display
+  const [donationInput, setDonationInput] = useState(report?.donationAmountCents ? (report.donationAmountCents / 100).toFixed(2) : '')
+  const [donationAmountCents, setDonationAmountCents] = useState(report?.donationAmountCents || 0)
 
   // Calculate approved expenses and required attachments
   const calculateApprovedExpenses = () => {
@@ -107,6 +142,30 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
 
   // Initialize report items with approved amounts
   useEffect(() => {
+    // Populate with existing report data when editing
+    if (isEditMode && report) {
+      if (report.approvedItems && report.approvedItems.length > 0) {
+        const items = report.approvedItems.map(item => ({
+          id: item.originalItemId || item.id,
+          description: item.description,
+          approvedAmountCents: item.approvedAmountCents,
+          actualAmountCents: item.actualAmountCents ?? item.approvedAmountCents,
+        }))
+        setReportItems(items)
+        const inputValues: Record<string, string> = {}
+        items.forEach(item => {
+          inputValues[item.id] = (item.actualAmountCents / 100).toFixed(2)
+        })
+        setItemInputValues(inputValues)
+      } else {
+        const actualAmount = report.totalApprovedAmount ?? totalApprovedAmount
+        setNonItemizedActualAmount(actualAmount)
+        setNonItemizedInputValue((actualAmount / 100).toFixed(2))
+      }
+      return
+    }
+
+    // Default initialization for create flow
     if (approvedItems.length > 0) {
       const items = approvedItems.map(item => ({
         id: item.id,
@@ -126,7 +185,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       setNonItemizedActualAmount(totalApprovedAmount)
       setNonItemizedInputValue((totalApprovedAmount / 100).toFixed(2))
     }
-  }, [approvedItems.length, totalApprovedAmount])
+  }, [approvedItems.length, isEditMode, report, totalApprovedAmount])
 
   // Calculate totals and differences
   const calculateTotals = () => {
@@ -146,7 +205,19 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
 
   const { totalApproved, totalActual, difference } = calculateTotals()
   const hasRefund = difference < 0 // Spent less than approved
-  const needsAdditionalPayment = difference > 0 // Spent more than approved
+  const rawOverage = difference > 0 ? difference : 0
+  const cappedDonation = Math.min(donationAmountCents, rawOverage)
+  const adjustedOverage = Math.max(0, rawOverage - cappedDonation)
+  const needsAdditionalPayment = adjustedOverage > 0 // Spent more than approved after donation
+  const showDonation = rawOverage > 0
+  const hasExistingGeneralAttachments = existingAttachments.filter(att => !att.itemId && !att.isRefundReceipt).length > 0
+  const missingAttachmentsForSubmit = reportItems.length > 0
+    ? reportItems.some(item => {
+        const existingCount = existingAttachments.filter(att => att.itemId === item.id && !att.isRefundReceipt).length
+        const newCount = itemAttachments[item.id]?.length || 0
+        return existingCount + newCount === 0
+      })
+    : !hasExistingGeneralAttachments && nonItemizedAttachments.length === 0
 
   // Update item actual amount
   const updateItemAmount = (itemId: string, value: string) => {
@@ -160,6 +231,11 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         ? { ...item, actualAmountCents: Math.round(numValue * 100) }
         : item
     ))
+  }
+
+  const removeExistingAttachment = (attachmentId?: string) => {
+    if (!attachmentId) return
+    setExistingAttachments(prev => prev.filter(att => att.id !== attachmentId))
   }
 
   const handleFileUpload = async (file: File) => {
@@ -283,12 +359,13 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         }
       }
 
-      // Validate attachment requirements
+      // Validate attachment requirements (include kept existing attachments)
       if (reportItems.length > 0) {
-        // Check that each item has at least one attachment
-        const itemsWithoutAttachments = reportItems.filter(item => 
-          !itemAttachments[item.id] || itemAttachments[item.id].length === 0
-        )
+        const itemsWithoutAttachments = reportItems.filter(item => {
+          const existingForItem = existingAttachments.filter(att => att.itemId === item.id && !att.isRefundReceipt)
+          const newFiles = itemAttachments[item.id] || []
+          return existingForItem.length + newFiles.length === 0
+        })
         if (itemsWithoutAttachments.length > 0) {
           setError(`Please upload at least one attachment for each item. Missing attachments for: ${itemsWithoutAttachments.map(i => i.description).join(', ')}`)
           setLoading(false)
@@ -299,8 +376,10 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         const itemsNeedingRefundReceipts = reportItems.filter(item => {
           const itemDifference = item.actualAmountCents - item.approvedAmountCents
           const needsRefund = itemDifference < 0
-          const hasRefundReceipt = itemRefundReceipts[item.id] && itemRefundReceipts[item.id].length > 0
-          return needsRefund && !hasRefundReceipt
+          if (!needsRefund) return false
+          const existingRefunds = existingAttachments.filter(att => att.itemId === item.id && att.isRefundReceipt)
+          const newRefundFiles = itemRefundReceipts[item.id] || []
+          return existingRefunds.length + newRefundFiles.length === 0
         })
         if (itemsNeedingRefundReceipts.length > 0) {
           setError(`Please upload refund receipts for items where you spent less than approved: ${itemsNeedingRefundReceipts.map(i => i.description).join(', ')}`)
@@ -309,14 +388,16 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         }
       } else {
         // Non-itemized expense - check for attachment
-        if (nonItemizedAttachments.length === 0) {
+        const existingGeneral = existingAttachments.filter(att => !att.itemId && !att.isRefundReceipt)
+        if (existingGeneral.length + nonItemizedAttachments.length === 0) {
           setError('Please upload at least one attachment for this expense report.')
           setLoading(false)
           return
         }
         
         // Check for refund receipt if needed
-        if (hasRefund && nonItemizedRefundReceipts.length === 0) {
+        const existingRefunds = existingAttachments.filter(att => !att.itemId && att.isRefundReceipt)
+        if (hasRefund && (existingRefunds.length + nonItemizedRefundReceipts.length === 0)) {
           setError('You must upload a receipt or invoice showing the refund/return of money when spending less than approved.')
           setLoading(false)
           return
@@ -324,7 +405,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
       }
 
       // Upload attachments and refund receipts per item
-      const uploadedAttachments = []
+      const uploadedAttachments: any[] = []
       if (reportItems.length > 0) {
         for (const item of reportItems) {
           // Upload regular attachments
@@ -371,34 +452,48 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         }
       }
 
-      // Create report with adjusted amounts
-      const response = await fetch('/api/reports/create', {
-        method: 'POST',
+      // Combine existing attachments that were kept with newly uploaded ones
+      const attachmentsPayload = [
+        ...existingAttachments.map(att => ({
+          publicId: att.publicId,
+          secureUrl: att.secureUrl,
+          mimeType: att.mimeType,
+          itemId: att.itemId || undefined,
+          isRefundReceipt: att.isRefundReceipt || false,
+        })),
+        ...uploadedAttachments,
+      ]
+
+      const payload = {
+        expenseId: expense.id,
+        title,
+        content,
+        notes: notes || null,
+        reportDate,
+        donationAmountCents: cappedDonation,
+        attachments: attachmentsPayload,
+        approvedExpenses: reportItems.length > 0 ? {
+          totalApprovedAmount: totalApproved,
+          totalActualAmount: totalActual,
+          approvedItems: reportItems.map(item => ({
+            id: item.id,
+            description: item.description,
+            approvedAmountCents: item.approvedAmountCents,
+            actualAmountCents: item.actualAmountCents
+          }))
+        } : {
+          totalApprovedAmount: totalApprovedAmount,
+          totalActualAmount: nonItemizedActualAmount,
+          approvedItems: []
+        }
+      }
+
+      const response = await fetch(isEditMode ? '/api/reports/update' : '/api/reports/create', {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          expenseId: expense.id,
-          title,
-          content,
-          notes: notes || null,
-          reportDate,
-          attachments: uploadedAttachments,
-          approvedExpenses: reportItems.length > 0 ? {
-            totalApprovedAmount: totalApproved,
-            totalActualAmount: totalActual,
-            approvedItems: reportItems.map(item => ({
-              id: item.id,
-              description: item.description,
-              approvedAmountCents: item.approvedAmountCents,
-              actualAmountCents: item.actualAmountCents
-            }))
-          } : {
-            totalApprovedAmount: totalApprovedAmount,
-            totalActualAmount: nonItemizedActualAmount,
-            approvedItems: []
-          }
-        }),
+        body: JSON.stringify(isEditMode ? { reportId: report?.id, ...payload } : payload),
       })
 
       const data = await response.json()
@@ -408,7 +503,7 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         // Refresh the page to show the new report
         window.location.reload()
       } else {
-        setError(data.error || 'Failed to create report')
+        setError(data.error || (isEditMode ? 'Failed to update report' : 'Failed to create report'))
       }
     } catch (error) {
       setError('Failed to create report')
@@ -632,9 +727,9 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
         <CardHeader className="p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg sm:text-xl">Create Expense Report</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">{isEditMode ? 'Edit Expense Report' : 'Create Expense Report'}</CardTitle>
               <CardDescription className="text-sm">
-                Create a report for the paid expense: {expense.title}
+                  {isEditMode ? 'Update your submitted report.' : `Create a report for the paid expense: ${expense.title}`}
               </CardDescription>
             </div>
             <Button
@@ -817,14 +912,22 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                     <span className="text-sm font-medium text-gray-700">Total Actual:</span>
                     <span className="text-sm font-semibold text-gray-900">${(totalActual / 100).toFixed(2)}</span>
                   </div>
+                  {showDonation && (
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm font-medium text-gray-700">Donation:</span>
+                      <span className="text-sm font-semibold text-amber-700">
+                        ${((cappedDonation) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center mt-2 pt-2 border-t border-green-200">
-                    <span className="text-sm font-medium text-gray-700">Difference:</span>
+                    <span className="text-sm font-medium text-gray-700">Difference{showDonation ? ' (after donation)' : ''}:</span>
                     <span className={`text-sm font-bold ${
                       needsAdditionalPayment ? 'text-red-600' : 
                       hasRefund ? 'text-blue-600' : 
                       'text-gray-600'
                     }`}>
-                      {needsAdditionalPayment && '+'}${(difference / 100).toFixed(2)}
+                      {needsAdditionalPayment && '+'}${(adjustedOverage / 100).toFixed(2)}
                       {needsAdditionalPayment && ' (Admin will make additional payment if Approved)'}
                       {hasRefund && ' (Refund required)'}
                     </span>
@@ -835,6 +938,27 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Attachments <span className="text-red-500">*</span>
                   </label>
+                  {existingAttachments.filter(att => !att.itemId && !att.isRefundReceipt).length > 0 && (
+                    <div className="mb-2 space-y-2">
+                      {existingAttachments.filter(att => !att.itemId && !att.isRefundReceipt).map((att) => (
+                        <div key={att.id} className="flex items-center justify-between bg-white p-2 rounded border border-green-100">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm">{att.mimeType}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeExistingAttachment(att.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <input
                     type="file"
                     multiple
@@ -880,6 +1004,27 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                     <p className="text-sm text-blue-700 mb-2">
                       You spent ${Math.abs(difference / 100).toFixed(2)} less than approved. Please upload a receipt or invoice showing the refund/return of money.
                     </p>
+                    {existingAttachments.filter(att => !att.itemId && att.isRefundReceipt).length > 0 && (
+                      <div className="mb-2 space-y-2">
+                        {existingAttachments.filter(att => !att.itemId && att.isRefundReceipt).map((att) => (
+                          <div key={att.id} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+                            <div className="flex items-center space-x-2">
+                              <FileText className="w-4 h-4 text-blue-500" />
+                              <span className="text-sm">{att.mimeType}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeExistingAttachment(att.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <input
                       type="file"
                       multiple
@@ -981,6 +1126,27 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                           <label className="block text-xs font-medium text-gray-700 mb-2">
                             Attachments for this item <span className="text-red-500">*</span>
                           </label>
+                          {existingAttachments.filter(att => att.itemId === item.id && !att.isRefundReceipt).length > 0 && (
+                            <div className="mb-2 space-y-2">
+                              {existingAttachments.filter(att => att.itemId === item.id && !att.isRefundReceipt).map((att) => (
+                                <div key={att.id} className="flex items-center justify-between bg-gray-50 p-2 rounded border border-green-100">
+                                  <div className="flex items-center space-x-2">
+                                    <FileText className="w-4 h-4 text-gray-500" />
+                                    <span className="text-sm">{att.mimeType}</span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeExistingAttachment(att.id)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           <input
                             type="file"
                             multiple
@@ -1026,6 +1192,27 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                             <p className="text-xs text-blue-700 mb-2">
                               You spent ${Math.abs(difference / 100).toFixed(2)} less than approved for this item. Please upload a receipt or invoice showing the refund/return of money.
                             </p>
+                            {existingAttachments.filter(att => att.itemId === item.id && att.isRefundReceipt).length > 0 && (
+                              <div className="mb-2 space-y-2">
+                                {existingAttachments.filter(att => att.itemId === item.id && att.isRefundReceipt).map((att) => (
+                                  <div key={att.id} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+                                    <div className="flex items-center space-x-2">
+                                      <FileText className="w-4 h-4 text-blue-500" />
+                                      <span className="text-sm">{att.mimeType}</span>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => removeExistingAttachment(att.id)}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <input
                               type="file"
                               multiple
@@ -1072,14 +1259,22 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
                     <span className="text-sm font-medium text-gray-700">Total Actual:</span>
                     <span className="text-sm font-semibold text-gray-900">${(totalActual / 100).toFixed(2)}</span>
                   </div>
+                  {showDonation && (
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm font-medium text-gray-700">Donation:</span>
+                      <span className="text-sm font-semibold text-amber-700">
+                        ${((cappedDonation) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center mt-2 pt-2 border-t border-green-200">
-                    <span className="text-sm font-medium text-gray-700">Difference:</span>
+                    <span className="text-sm font-medium text-gray-700">Difference{showDonation ? ' (after donation)' : ''}:</span>
                     <span className={`text-sm font-bold ${
                       needsAdditionalPayment ? 'text-red-600' : 
                       hasRefund ? 'text-blue-600' : 
                       'text-gray-600'
                     }`}>
-                      {needsAdditionalPayment && '+'}${(difference / 100).toFixed(2)}
+                      {needsAdditionalPayment && '+'}${(adjustedOverage / 100).toFixed(2)}
                       {needsAdditionalPayment && ' (Admin will make additional payment if Approved)'}
                       {hasRefund && ' (Refund required)'}
                     </span>
@@ -1088,6 +1283,41 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
               </div>
             )}
 
+
+            {/* Donation input when there is overage */}
+            {showDonation && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-amber-800 mb-2">Donation (optional)</h4>
+                <p className="text-xs text-amber-700 mb-2">
+                  You are over the approved amount by ${(rawOverage / 100).toFixed(2)}. Enter any portion you might want to donate back to the church. This reduces the additional payment.
+                </p>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-700">Donation Amount ($)</label>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={donationInput}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setDonationInput(value)
+                        const numValue = Math.round((parseFloat(value) || 0) * 100)
+                        setDonationAmountCents(numValue)
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const numValue = Math.round((parseFloat(e.target.value) || 0) * 100)
+                      const capped = Math.min(numValue, rawOverage)
+                      setDonationInput((capped / 100).toFixed(2))
+                      setDonationAmountCents(capped)
+                    }}
+                    className="w-32 px-3 py-2 border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
+                    placeholder="0.00"
+                  />
+                  <span className="text-xs text-gray-500">Max ${(rawOverage / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="text-red-600 text-sm">{error}</div>
@@ -1104,13 +1334,14 @@ export function ReportForm({ expense, onClose }: ReportFormProps) {
               </Button>
               <Button
                 type="submit"
-                disabled={loading || (reportItems.length > 0 && reportItems.some(item => !itemAttachments[item.id] || itemAttachments[item.id].length === 0)) || (reportItems.length === 0 && nonItemizedAttachments.length === 0)}
+                disabled={loading || missingAttachmentsForSubmit}
                 className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
               >
-                {loading ? 'Creating Report...' : 
-                 (reportItems.length > 0 && reportItems.some(item => !itemAttachments[item.id] || itemAttachments[item.id].length === 0)) || (reportItems.length === 0 && nonItemizedAttachments.length === 0) ?
-                 'Please upload attachments for all items' : 
-                 'Create Report'}
+                {loading
+                  ? isEditMode ? 'Updating Report...' : 'Creating Report...'
+                  : missingAttachmentsForSubmit
+                    ? 'Please upload required attachments'
+                    : isEditMode ? 'Update Report' : 'Create Report'}
               </Button>
             </div>
           </form>

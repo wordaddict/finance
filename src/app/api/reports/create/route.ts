@@ -11,6 +11,7 @@ const createReportSchema = z.object({
   content: z.string().min(1),
   notes: z.string().optional().nullable(),
   reportDate: z.string().optional(),
+  donationAmountCents: z.number().int().nonnegative().optional(), // optional donation to offset overage
   attachments: z.array(z.object({
     publicId: z.string(),
     secureUrl: z.string(),
@@ -101,10 +102,13 @@ export async function POST(request: NextRequest) {
     // Calculate reported amount (use actual amount if provided, otherwise approved amount)
     const reportedAmountCents = data.approvedExpenses?.totalActualAmount || data.approvedExpenses?.totalApprovedAmount || expense.amountCents
     const currentPaidAmount = (expense as any).paidAmountCents || 0
-    
-    // Check if reported amount exceeds paid amount
-    const additionalPaymentNeeded = reportedAmountCents > currentPaidAmount
-    const additionalPaymentAmount = additionalPaymentNeeded ? reportedAmountCents - currentPaidAmount : 0
+    const donationAmountCents = data.donationAmountCents || 0
+
+    // Check if reported amount exceeds paid amount, reduced by donation
+    const overage = Math.max(0, reportedAmountCents - currentPaidAmount)
+    const adjustedOverage = Math.max(0, overage - donationAmountCents)
+    const additionalPaymentNeeded = adjustedOverage > 0
+    const additionalPaymentAmount = adjustedOverage
     
     // Check if refund is needed (spent less than approved)
     const approvedAmount = data.approvedExpenses?.totalApprovedAmount || expense.amountCents
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest) {
         status: 'PENDING' as any, // Reports start as pending until approved/denied
         reportDate: data.reportDate ? new Date(data.reportDate) : new Date(),
         totalApprovedAmount: reportedAmountCents,
+        donationAmountCents: donationAmountCents > 0 ? donationAmountCents : null,
         attachments: data.attachments ? {
           create: data.attachments.map(attachment => ({
             publicId: attachment.publicId,
@@ -217,6 +222,7 @@ export async function POST(request: NextRequest) {
       additionalPaymentAmount,
       refundAmount,
       currentPaidAmount,
+      donationAmountCents,
     })
   } catch (error) {
     console.error('Create report error:', error)

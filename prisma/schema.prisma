@@ -255,6 +255,7 @@ model ExpenseReport {
   status        ReportStatus  @default(PENDING) // Approval status of the report
   reportDate    DateTime      @default(now())
   totalApprovedAmount Int?    // Store the total approved amount for this report
+  donationAmountCents Int?    // Optional donation when actual spending exceeded approved
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   
@@ -283,6 +284,7 @@ enum ReportStatus {
   PENDING
   APPROVED
   DENIED
+  CHANGE_REQUESTED
   CLOSED
 }
 

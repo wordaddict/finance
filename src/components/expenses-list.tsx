@@ -9,7 +9,6 @@ import { ExpenseForm } from './expense-form'
 import { DenialModal } from './denial-modal'
 import { ReportForm } from './report-form'
 import { ConfirmationModal } from './confirmation-modal'
-import { ReportDenialModal } from './report-denial-modal'
 import { TEAM_DISPLAY_NAMES, CAMPUS_DISPLAY_NAMES, URGENCY_DISPLAY_NAMES, STATUS_DISPLAY_NAMES, STATUS_VALUES, ACCOUNT_DISPLAY_NAMES, EXPENSE_TYPES, EXPENSE_CATEGORIES, EXPENSE_CATEGORY_VALUES } from '@/lib/constants'
 
 // Client-side download URL helper
@@ -103,7 +102,9 @@ interface Expense {
     title: string
     content: string
     reportDate: string
+    status?: string
     totalApprovedAmount?: number
+    donationAmountCents?: number | null
     expense?: {
       id: string
       title: string
@@ -330,16 +331,19 @@ export function ExpensesList({ user }: ExpensesListProps) {
     expenseId: '',
     isLastReport: false,
   })
-  const [reportDenialModal, setReportDenialModal] = useState<{
+  const [processingReportApproval, setProcessingReportApproval] = useState(false)
+  const [processingReportChange, setProcessingReportChange] = useState(false)
+  const [reportChangeModal, setReportChangeModal] = useState<{
     isOpen: boolean
     reportId: string
     reportTitle: string
+    comment: string
   }>({
     isOpen: false,
     reportId: '',
     reportTitle: '',
+    comment: '',
   })
-  const [processingReportApproval, setProcessingReportApproval] = useState(false)
   const [approvalCommentModal, setApprovalCommentModal] = useState<{
     isOpen: boolean
     expenseId: string
@@ -376,9 +380,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
   const [reportForm, setReportForm] = useState<{
     isOpen: boolean
     expense: Expense | null
+    report?: any
+    mode: 'create' | 'edit'
   }>({
     isOpen: false,
     expense: null,
+    report: null,
+    mode: 'create',
   })
   const [editingItemCategory, setEditingItemCategory] = useState<{
     itemId: string
@@ -741,19 +749,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
     })
   }
 
-  const handleViewOrEditClick = (expense: Expense) => {
-    // If it's a change request and the user is the original requester, open edit modal
-    if (expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email) {
-      setEditModal({
-        isOpen: true,
-        expense
-      })
-    } else {
-      // Otherwise, open view modal
-      openViewModal(expense)
-    }
-  }
-
   const openApprovalCommentModal = (expenseId: string, expenseTitle: string) => {
     setApprovalCommentModal({
       isOpen: true,
@@ -901,9 +896,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const openReportForm = (expense: Expense) => {
+  const openReportForm = (expense: Expense, existingReport?: any) => {
     // Check if expense is paid or expense report requested before opening the form
-    if (expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') {
+    if (!existingReport && expense.status !== 'PAID' && expense.status !== 'EXPENSE_REPORT_REQUESTED') {
       setError('This expense must be marked as paid before you can create a report.')
       setTimeout(() => setError(''), 5000) // Clear error after 5 seconds
       return
@@ -911,6 +906,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
     setReportForm({
       isOpen: true,
       expense,
+      report: existingReport || null,
+      mode: existingReport ? 'edit' : 'create',
     })
   }
 
@@ -918,6 +915,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
     setReportForm({
       isOpen: false,
       expense: null,
+      report: null,
+      mode: 'create',
     })
   }
 
@@ -943,6 +942,7 @@ export function ExpensesList({ user }: ExpensesListProps) {
     
     const latestReport = expense.reports[0]
     
+    const donation = latestReport.donationAmountCents || 0
     // If report has items, calculate difference from item-level actual vs approved amounts
     if (latestReport.approvedItems && latestReport.approvedItems.length > 0) {
       let totalDifference = 0
@@ -957,11 +957,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
           totalDifference += difference
         }
       }
-      
-      if (totalDifference > 0) {
+
+      const adjusted = Math.max(0, totalDifference - donation)
+      if (adjusted > 0) {
         return {
           needed: true,
-          amount: totalDifference
+          amount: adjusted
         }
       }
     } else {
@@ -969,11 +970,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
       const totalApproved = latestReport.totalApprovedAmount || 0
       const totalActual = latestReport.totalActualAmount ?? totalApproved
       const difference = totalActual - totalApproved
+      const adjusted = Math.max(0, difference - donation)
       
-      if (difference > 0) {
+      if (adjusted > 0) {
         return {
           needed: true,
-          amount: difference
+          amount: adjusted
         }
       }
     }
@@ -1197,22 +1199,6 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const openReportDenialModal = (reportId: string, reportTitle: string) => {
-    setReportDenialModal({
-      isOpen: true,
-      reportId,
-      reportTitle,
-    })
-  }
-
-  const closeReportDenialModal = () => {
-    setReportDenialModal({
-      isOpen: false,
-      reportId: '',
-      reportTitle: '',
-    })
-  }
-
   const handleApproveReport = async (reportId: string) => {
     try {
       setProcessingReportApproval(true)
@@ -1225,6 +1211,9 @@ export function ExpensesList({ user }: ExpensesListProps) {
       })
 
       if (response.ok) {
+        // Optimistically update status in the modal to hide actions immediately
+        setReportViewModal(prev => prev.report ? { isOpen: true, report: { ...prev.report, status: 'APPROVED' } } : prev)
+
         // Refresh the report to get updated status
         if (reportViewModal.report && reportViewModal.report.expense) {
           try {
@@ -1253,44 +1242,54 @@ export function ExpensesList({ user }: ExpensesListProps) {
     }
   }
 
-  const handleDenyReport = async (comment: string) => {
+  const openReportChangeModal = (reportId: string, reportTitle: string) => {
+    setReportChangeModal({
+      isOpen: true,
+      reportId,
+      reportTitle,
+      comment: '',
+    })
+    // Close the underlying report viewer to avoid stacking overlays
+    closeReportViewModal()
+  }
+
+  const closeReportChangeModal = () => {
+    setReportChangeModal({
+      isOpen: false,
+      reportId: '',
+      reportTitle: '',
+      comment: '',
+    })
+  }
+
+  const handleRequestReportChange = async () => {
+    if (!reportChangeModal.comment.trim()) return
+
     try {
-      setProcessingReportApproval(true)
-      const response = await fetch('/api/reports/deny', {
+      setProcessingReportChange(true)
+      const response = await fetch('/api/reports/request-change', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ reportId: reportDenialModal.reportId, comment }),
+        body: JSON.stringify({ reportId: reportChangeModal.reportId, comment: reportChangeModal.comment.trim() }),
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        // Refresh the report to get updated status
-        if (reportViewModal.report && reportViewModal.report.expense) {
-          try {
-            const reportResponse = await fetch(`/api/reports?expenseId=${reportViewModal.report.expense.id}`)
-            const reportData = await reportResponse.json()
-            if (reportData.reports && reportData.reports.length > 0) {
-              const updatedReport = reportData.reports.find((r: any) => r.id === reportDenialModal.reportId)
-              if (updatedReport) {
-                setReportViewModal({ isOpen: true, report: updatedReport })
-              }
-            }
-          } catch (err) {
-            console.error('Failed to refresh report:', err)
-          }
-        }
-        fetchExpenses() // Refresh the expenses list
-        closeReportDenialModal()
+        setMessage('Change request submitted. The requester can edit the report.')
+        closeReportChangeModal()
+        closeReportViewModal()
+        fetchExpenses()
       } else {
-        const data = await response.json()
-        setError(data.error || 'Failed to deny report')
+        setError(data.error || 'Failed to request changes for this report')
       }
     } catch (error) {
-      console.error('Failed to deny report:', error)
-      setError('Failed to deny report')
+      console.error('Failed to request report changes:', error)
+      setError('Failed to request changes for this report')
     } finally {
-      setProcessingReportApproval(false)
+      setProcessingReportChange(false)
     }
   }
 
@@ -1584,59 +1583,83 @@ export function ExpensesList({ user }: ExpensesListProps) {
 
       {/* Expenses List */}
       <div className="space-y-4">
-        {expenses.map((expense) => (
-          <Card key={expense.id} className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <h3 className="text-base sm:text-lg font-semibold">{expense.title}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(expense.status)}`}>
-                        {STATUS_DISPLAY_NAMES[expense.status as keyof typeof STATUS_DISPLAY_NAMES] || expense.status}
-                      </span>
-                      {expense.eventDate && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          Event
+        {expenses.map((expense) => {
+          const canEditChangeRequest = expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email
+
+          return (
+            <Card key={expense.id} className="rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <h3 className="text-base sm:text-lg font-semibold">{expense.title}</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(expense.status)}`}>
+                          {STATUS_DISPLAY_NAMES[expense.status as keyof typeof STATUS_DISPLAY_NAMES] || expense.status}
                         </span>
-                      )}
-                      {/* <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
-                        {URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${expense.urgency}`}
-                      </span> */}
-                    </div>
-                  </div>
-                  <p className="text-gray-500 mt-1 text-sm">
-                    {TEAM_DISPLAY_NAMES[expense.team as keyof typeof TEAM_DISPLAY_NAMES] || expense.team} • {CAMPUS_DISPLAY_NAMES[expense.campus as keyof typeof CAMPUS_DISPLAY_NAMES] || expense.campus} • {expense.requester.name || expense.requester.email}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    Created: {formatDate(expense.createdAt)}
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                  <div className="text-left sm:text-right">
-                    <div className="space-y-1">
-                      <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Approved:</span>
-                        <span className="text-sm font-semibold text-blue-600">
-                          {formatCurrency(calculateApprovedAmount(expense))}
-                        </span>
+                        {expense.eventDate && (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Event
+                          </span>
+                        )}
+                        {/* <span className={`text-xs sm:text-sm font-medium ${getUrgencyColor(expense.urgency)}`}>
+                          {URGENCY_DISPLAY_NAMES[expense.urgency as keyof typeof URGENCY_DISPLAY_NAMES] || `Urgency: ${expense.urgency}`}
+                        </span> */}
                       </div>
                     </div>
+                    <p className="text-gray-500 mt-1 text-sm">
+                      {TEAM_DISPLAY_NAMES[expense.team as keyof typeof TEAM_DISPLAY_NAMES] || expense.team} • {CAMPUS_DISPLAY_NAMES[expense.campus as keyof typeof CAMPUS_DISPLAY_NAMES] || expense.campus} • {expense.requester.name || expense.requester.email}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                      Created: {formatDate(expense.createdAt)}
+                    </p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewOrEditClick(expense)}
-                      className="flex-1 sm:flex-none"
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">
-                        {expense.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email ? 'Edit' : 'View'}
-                      </span>
-                    </Button>
-                    {(expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && expense.reportRequired && (!expense.reports || expense.reports.length === 0) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <div className="text-left sm:text-right">
+                      <div className="space-y-1">
+                        <p className="text-lg sm:text-xl font-bold">{formatCurrency(expense.amountCents)}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Approved:</span>
+                          <span className="text-sm font-semibold text-blue-600">
+                            {formatCurrency(calculateApprovedAmount(expense))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {canEditChangeRequest ? (
+                        <>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openViewModal(expense)}
+                            className="flex-1 sm:flex-none"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">View</span>
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setEditModal({ isOpen: true, expense })}
+                            className="flex-1 sm:flex-none"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                        </>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => openViewModal(expense)}
+                          className="flex-1 sm:flex-none"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          <span className="hidden sm:inline">View</span>
+                        </Button>
+                      )}
+                    {(expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && expense.reportRequired && (!expense.reports || expense.reports.length === 0) && expense.requester.email === user.email && (
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -1717,10 +1740,21 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         </Button>
                       </>
                     )}
-                    {(expense.status === 'PAID' || expense.status === 'EXPENSE_REPORT_REQUESTED') && (
+                    {['PAID','EXPENSE_REPORT_REQUESTED','APPROVED'].includes(expense.status) && (
                       <>
-                        {expense.reportRequired && expense.reports && expense.reports.length > 0 && (
+                        {expense.reports && expense.reports.length > 0 && (
                           <>
+                            {expense.reports[0]?.status === 'CHANGE_REQUESTED' && expense.requester.email === user.email && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => expense.reports && openReportForm(expense, expense.reports[0])}
+                                className="flex-1 sm:flex-none bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 rounded-xl"
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                <span className="hidden sm:inline">Edit Report</span>
+                              </Button>
+                            )}
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -1767,7 +1801,8 @@ export function ExpensesList({ user }: ExpensesListProps) {
               </div>
             </CardContent>
           </Card>
-        ))}
+        )
+      })}
       </div>
 
       {expenses.length === 0 && (
@@ -1810,18 +1845,79 @@ export function ExpensesList({ user }: ExpensesListProps) {
         onConfirm={handleDeny}
       />
 
-      {/* Report Denial Modal */}
-      <ReportDenialModal
-        isOpen={reportDenialModal.isOpen}
-        reportTitle={reportDenialModal.reportTitle}
-        onClose={closeReportDenialModal}
-        onConfirm={handleDenyReport}
-      />
+      {/* Report Change Request Modal */}
+      {reportChangeModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Request Report Changes
+              </h2>
+              <button
+                onClick={closeReportChangeModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  You are about to request changes for the expense report:
+                </p>
+                <p className="font-medium text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  {reportChangeModal.reportTitle}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="changeComment" className="block text-sm font-medium text-gray-700 mb-2">
+                  What needs to change? *
+                </label>
+                <textarea
+                  id="changeComment"
+                  value={reportChangeModal.comment}
+                  onChange={(e) => setReportChangeModal(prev => ({ ...prev, comment: e.target.value }))}
+                  placeholder="Describe what needs to be updated in this report..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
+                  rows={4}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  The requester will see this and be able to edit their report.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeReportChangeModal}
+                  disabled={processingReportChange}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleRequestReportChange}
+                  disabled={processingReportChange || !reportChangeModal.comment.trim()}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                >
+                  {processingReportChange ? 'Submitting...' : 'Request Changes'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Report Form */}
       {reportForm.isOpen && reportForm.expense && (
         <ReportForm
           expense={reportForm.expense}
+          report={reportForm.report || undefined}
+          mode={reportForm.mode}
           onClose={closeReportForm}
         />
       )}
@@ -2957,6 +3053,25 @@ export function ExpensesList({ user }: ExpensesListProps) {
             </div>
             
             <div className="space-y-4">
+              {reportViewModal.report.status === 'CHANGE_REQUESTED' && reportViewModal.report.expense && reportViewModal.report.expense.requester?.email === user.email && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <p className="text-sm text-yellow-800 font-semibold">Changes requested</p>
+                    <p className="text-xs text-yellow-700">An admin requested updates to this report. Edit and resubmit to continue.</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-yellow-100 border-yellow-300 text-yellow-800"
+                    onClick={() => {
+                      openReportForm(reportViewModal.report.expense as Expense, reportViewModal.report)
+                      closeReportViewModal()
+                    }}
+                  >
+                    Edit Report
+                  </Button>
+                </div>
+              )}
               <div>
                 <h3 className="font-semibold text-base sm:text-lg">{reportViewModal.report.title}</h3>
                 <p className="text-sm text-gray-500">
@@ -2989,21 +3104,33 @@ export function ExpensesList({ user }: ExpensesListProps) {
                         {formatCurrency(reportViewModal.report.totalActualAmount || reportViewModal.report.totalApprovedAmount || 0)}
                       </p>
                     </div>
+                    {reportViewModal.report.donationAmountCents ? (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Donation</p>
+                        <p className="text-sm font-semibold text-amber-700">
+                          {formatCurrency(reportViewModal.report.donationAmountCents)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div />
+                    )}
                     <div className="col-span-2 pt-2 border-t border-gray-200">
                       <p className="text-xs text-gray-500 mb-1">Difference</p>
                       {(() => {
                         const totalApproved = reportViewModal.report.totalApprovedAmount || 0
                         const totalActual = reportViewModal.report.totalActualAmount || totalApproved
+                        const donation = reportViewModal.report.donationAmountCents || 0
                         const difference = totalActual - totalApproved
+                        const adjusted = difference > 0 ? Math.max(0, difference - donation) : difference
                         return (
                           <p className={`text-sm font-bold ${
-                            difference > 0 ? 'text-red-600' : 
-                            difference < 0 ? 'text-blue-600' : 
+                            adjusted > 0 ? 'text-red-600' : 
+                            adjusted < 0 ? 'text-blue-600' : 
                             'text-gray-600'
                           }`}>
-                            {difference > 0 ? '+' : ''}{formatCurrency(difference)}
-                            {difference > 0 && ' (Additional payment needed)'}
-                            {difference < 0 && ' (Refund required)'}
+                            {adjusted > 0 ? '+' : ''}{formatCurrency(adjusted)}
+                            {adjusted > 0 && ' (Additional payment needed)'}
+                            {adjusted < 0 && ' (Refund required)'}
                           </p>
                         )
                       })()}
@@ -3016,10 +3143,18 @@ export function ExpensesList({ user }: ExpensesListProps) {
               {reportViewModal.report.approvedItems && reportViewModal.report.approvedItems.length > 0 && (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <h4 className="font-semibold text-sm text-green-800 mb-3">Report Items</h4>
+                  {/* Donation info for itemized reports */}
+                  {reportViewModal.report.donationAmountCents ? (
+                    <div className="mb-3 text-xs text-amber-700 font-medium bg-amber-50 border border-amber-200 rounded p-3">
+                      Donation applied: {formatCurrency(reportViewModal.report.donationAmountCents)}
+                    </div>
+                  ) : null}
                   <div className="space-y-3">
                     {reportViewModal.report.approvedItems.map((item: any, index: number) => {
                       const actualAmount = item.actualAmountCents ?? item.approvedAmountCents
                       const difference = actualAmount - item.approvedAmountCents
+                      const donation = reportViewModal.report.donationAmountCents || 0
+                      // We only adjust on the total summary; per-item display remains unchanged
                       // Match attachments using originalItemId (the itemId stored in attachments matches the originalItemId)
                       // Ensure we only match attachments that have an itemId set (not null/undefined)
                       const itemAttachments = reportViewModal.report.attachments?.filter((att: any) => 
@@ -3052,15 +3187,31 @@ export function ExpensesList({ user }: ExpensesListProps) {
                             </div>
                             <div className="col-span-2">
                               <p className="text-xs text-gray-500 mb-1">Difference</p>
-                              <p className={`text-sm font-bold ${
-                                difference > 0 ? 'text-red-600' : 
-                                difference < 0 ? 'text-blue-600' : 
-                                'text-gray-600'
-                              }`}>
-                                {difference > 0 ? '+' : ''}{formatCurrency(difference)}
-                                {difference > 0 && ' (Additional payment needed)'}
-                                {difference < 0 && ' (Refund required)'}
-                              </p>
+                              {(() => {
+                                const donation = reportViewModal.report.donationAmountCents || 0
+                                const totalApproved = reportViewModal.report.totalApprovedAmount || 0
+                                const totalActual = reportViewModal.report.totalActualAmount ?? totalApproved
+                                const totalOverage = Math.max(0, totalActual - totalApproved)
+                                const remainingOverage = Math.max(0, totalOverage - donation)
+                                const coveredByDonation = donation > 0 && remainingOverage === 0 && difference > 0
+                                return (
+                                  <p className={`text-sm font-bold ${
+                                    coveredByDonation ? 'text-amber-700' :
+                                    difference > 0 ? 'text-red-600' : 
+                                    difference < 0 ? 'text-blue-600' : 
+                                    'text-gray-600'
+                                  }`}>
+                                    {difference > 0 ? '+' : ''}{formatCurrency(difference)}
+                                    {coveredByDonation
+                                      ? ' (Covered by donation)'
+                                      : difference > 0
+                                        ? ' (Additional payment needed)'
+                                        : difference < 0
+                                          ? ' (Refund required)'
+                                          : ''}
+                                  </p>
+                                )
+                              })()}
                             </div>
                           </div>
 
@@ -3219,21 +3370,35 @@ export function ExpensesList({ user }: ExpensesListProps) {
                           {formatCurrency(reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0))}
                         </p>
                       </div>
+                    {reportViewModal.report.donationAmountCents ? (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Donation</p>
+                        <p className="text-sm font-semibold text-amber-700">
+                          {formatCurrency(reportViewModal.report.donationAmountCents)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div />
+                    )}
                       <div className="col-span-2 pt-2 border-t border-gray-200">
                         <p className="text-xs text-gray-500 mb-1">Total Difference</p>
                         {(() => {
                           const totalApproved = reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + item.approvedAmountCents, 0)
                           const totalActual = reportViewModal.report.approvedItems.reduce((sum: number, item: any) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0)
-                          const totalDifference = totalActual - totalApproved
+                        const donation = reportViewModal.report.donationAmountCents || 0
+                        const totalOverage = Math.max(0, totalActual - totalApproved)
+                        const remainingOverage = Math.max(0, totalOverage - donation)
+                        const totalDifference = totalActual - totalApproved
+                        const adjusted = totalDifference > 0 ? remainingOverage : totalDifference
                           return (
                             <p className={`text-sm font-bold ${
-                              totalDifference > 0 ? 'text-red-600' : 
-                              totalDifference < 0 ? 'text-blue-600' : 
+                            adjusted > 0 ? 'text-red-600' : 
+                            adjusted < 0 ? 'text-blue-600' : 
                               'text-gray-600'
                             }`}>
-                              {totalDifference > 0 ? '+' : ''}{formatCurrency(totalDifference)}
-                              {totalDifference > 0 && ' (Additional payment needed)'}
-                              {totalDifference < 0 && ' (Refund required)'}
+                            {adjusted > 0 ? '+' : ''}{formatCurrency(adjusted)}
+                            {adjusted > 0 && ' (Additional payment needed)'}
+                            {adjusted < 0 && ' (Refund required)'}
                             </p>
                           )
                         })()}
@@ -3468,11 +3633,12 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <div className="flex justify-end space-x-3">
                     <Button
                       variant="outline"
-                      onClick={() => openReportDenialModal(reportViewModal.report.id, reportViewModal.report.title)}
-                      className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                      onClick={() => openReportChangeModal(reportViewModal.report.id, reportViewModal.report.title)}
+                      className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                      disabled={processingReportChange}
                     >
-                      <X className="w-4 h-4 mr-1" />
-                      Deny Report
+                      <FileText className="w-4 h-4 mr-1" />
+                      {processingReportChange ? 'Requesting...' : 'Request Changes'}
                     </Button>
                     <Button
                       onClick={() => handleApproveReport(reportViewModal.report.id)}
@@ -3494,11 +3660,13 @@ export function ExpensesList({ user }: ExpensesListProps) {
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     (reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'text-green-600 bg-green-50' :
                     (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'text-red-600 bg-red-50' :
+                      (reportViewModal.report.status || 'PENDING') === 'CHANGE_REQUESTED' ? 'text-yellow-700 bg-yellow-50' :
                       (reportViewModal.report.status || 'PENDING') === 'CLOSED' ? 'text-gray-600 bg-gray-50' :
                     'text-yellow-600 bg-yellow-50'
                   }`}>
                     {(reportViewModal.report.status || 'PENDING') === 'APPROVED' ? 'Approved' :
                      (reportViewModal.report.status || 'PENDING') === 'DENIED' ? 'Denied' :
+                       (reportViewModal.report.status || 'PENDING') === 'CHANGE_REQUESTED' ? 'Change Requested' :
                        (reportViewModal.report.status || 'PENDING') === 'CLOSED' ? 'Closed' :
                      'Pending'}
                   </span>

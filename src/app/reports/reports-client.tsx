@@ -26,8 +26,9 @@ interface Report {
   content: string
   reportDate: string
   createdAt: string
-  status: 'PENDING' | 'APPROVED' | 'DENIED' | 'CLOSED'
+  status: 'PENDING' | 'APPROVED' | 'DENIED' | 'CLOSED' | 'CHANGE_REQUESTED'
   totalApprovedAmount?: number
+  donationAmountCents?: number | null
   expense: {
     id: string
     title: string
@@ -109,6 +110,19 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
     isOpen: false,
     report: null,
   })
+  const [processingApprove, setProcessingApprove] = useState(false)
+  const [processingChange, setProcessingChange] = useState(false)
+  const [changeModal, setChangeModal] = useState<{
+    isOpen: boolean
+    reportId: string
+    reportTitle: string
+    comment: string
+  }>({
+    isOpen: false,
+    reportId: '',
+    reportTitle: '',
+    comment: '',
+  })
   const [closeConfirmModal, setCloseConfirmModal] = useState<{
     isOpen: boolean
     reportId: string
@@ -165,6 +179,80 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
       isOpen: false,
       report: null,
     })
+  }
+
+  const openChangeModal = (reportId: string, reportTitle: string) => {
+    setChangeModal({
+      isOpen: true,
+      reportId,
+      reportTitle,
+      comment: '',
+    })
+  }
+
+  const closeChangeModal = () => {
+    setChangeModal({
+      isOpen: false,
+      reportId: '',
+      reportTitle: '',
+      comment: '',
+    })
+  }
+
+  const handleApproveReport = async (reportId: string) => {
+    try {
+      setProcessingApprove(true)
+      const response = await fetch('/api/reports/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId }),
+      })
+
+      if (response.ok) {
+        setMessage('Report approved successfully')
+        closeViewModal()
+        fetchReports()
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to approve report')
+      }
+    } catch (err) {
+      console.error('Failed to approve report:', err)
+      setError('Failed to approve report')
+    } finally {
+      setProcessingApprove(false)
+    }
+  }
+
+  const handleSubmitChangeRequest = async () => {
+    if (!changeModal.comment.trim()) return
+    try {
+      setProcessingChange(true)
+      const response = await fetch('/api/reports/request-change', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId: changeModal.reportId, comment: changeModal.comment.trim() }),
+      })
+
+      const data = await response.json()
+      if (response.ok) {
+        setMessage('Change request submitted. The requester can edit the report.')
+        closeChangeModal()
+        closeViewModal()
+        fetchReports()
+      } else {
+        setError(data.error || 'Failed to request changes')
+      }
+    } catch (err) {
+      console.error('Failed to request changes:', err)
+      setError('Failed to request changes')
+    } finally {
+      setProcessingChange(false)
+    }
   }
 
   const openCloseConfirmModal = (reportId: string, reportTitle: string, expenseId: string) => {
@@ -234,6 +322,8 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
         return 'text-green-600 bg-green-50'
       case 'DENIED':
         return 'text-red-600 bg-red-50'
+      case 'CHANGE_REQUESTED':
+        return 'text-yellow-700 bg-yellow-50'
       case 'PENDING':
         return 'text-yellow-600 bg-yellow-50'
       case 'CLOSED':
@@ -249,6 +339,8 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
         return <CheckCircle className="w-4 h-4" />
       case 'DENIED':
         return <XCircle className="w-4 h-4" />
+      case 'CHANGE_REQUESTED':
+        return <Filter className="w-4 h-4" />
       case 'PENDING':
         return <Clock className="w-4 h-4" />
       case 'CLOSED':
@@ -450,6 +542,27 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                 </p>
               </div>
 
+              {/* Admin actions for pending reports */}
+              {selectedReport.status === 'PENDING' && (
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => openChangeModal(selectedReport.id, selectedReport.title)}
+                    className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                    disabled={processingApprove || processingChange}
+                  >
+                    {processingChange ? 'Requesting...' : 'Request Changes'}
+                  </Button>
+                  <Button
+                    onClick={() => handleApproveReport(selectedReport.id)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    disabled={processingApprove || processingChange}
+                  >
+                    {processingApprove ? 'Approving...' : 'Approve Report'}
+                  </Button>
+                </div>
+              )}
+
               {/* Expense Details */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-sm text-gray-700 mb-2">Related Expense</h4>
@@ -484,6 +597,11 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
               {selectedReport.approvedItems && selectedReport.approvedItems.length > 0 && (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <h4 className="font-semibold text-sm text-green-800 mb-3">Report Items</h4>
+                  {selectedReport.donationAmountCents ? (
+                    <div className="mb-3 text-xs text-amber-700 font-medium bg-amber-50 border border-amber-200 rounded p-3">
+                      Donation applied: {formatCurrency(selectedReport.donationAmountCents)}
+                    </div>
+                  ) : null}
                   <div className="space-y-3">
                     {selectedReport.approvedItems.map((item, index) => {
                       const actualAmount = item.actualAmountCents ?? item.approvedAmountCents
@@ -519,15 +637,31 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                             </div>
                             <div className="col-span-2">
                               <p className="text-xs text-gray-500 mb-1">Difference</p>
-                              <p className={`text-sm font-bold ${
-                                difference > 0 ? 'text-red-600' : 
-                                difference < 0 ? 'text-blue-600' : 
-                                'text-gray-600'
-                              }`}>
-                                {difference > 0 ? '+' : ''}{formatCurrency(difference)}
-                                {difference > 0 && ' (Additional payment needed)'}
-                                {difference < 0 && ' (Refund required)'}
-                              </p>
+                              {(() => {
+                                const donation = selectedReport.donationAmountCents || 0
+                                const totalApproved = selectedReport.totalApprovedAmount || 0
+                                const totalActual = selectedReport.totalActualAmount ?? totalApproved
+                                const totalOverage = Math.max(0, totalActual - totalApproved)
+                                const remainingOverage = Math.max(0, totalOverage - donation)
+                                const coveredByDonation = donation > 0 && remainingOverage === 0 && difference > 0
+                                return (
+                                  <p className={`text-sm font-bold ${
+                                    coveredByDonation ? 'text-amber-700' :
+                                    difference > 0 ? 'text-red-600' : 
+                                    difference < 0 ? 'text-blue-600' : 
+                                    'text-gray-600'
+                                  }`}>
+                                    {difference > 0 ? '+' : ''}{formatCurrency(difference)}
+                                    {coveredByDonation
+                                      ? ' (Covered by donation)'
+                                      : difference > 0
+                                        ? ' (Additional payment needed)'
+                                        : difference < 0
+                                          ? ' (Refund required)'
+                                          : ''}
+                                  </p>
+                                )
+                              })()}
                             </div>
                           </div>
 
@@ -630,21 +764,35 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
                           {formatCurrency(selectedReport.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0))}
                         </p>
                       </div>
+                  {selectedReport.donationAmountCents ? (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Donation</p>
+                      <p className="text-sm font-semibold text-amber-700">
+                        {formatCurrency(selectedReport.donationAmountCents)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div />
+                  )}
                       <div className="col-span-2 pt-2 border-t border-gray-200">
                         <p className="text-xs text-gray-500 mb-1">Total Difference</p>
                         {(() => {
                           const totalApproved = selectedReport.approvedItems.reduce((sum, item) => sum + item.approvedAmountCents, 0)
                           const totalActual = selectedReport.approvedItems.reduce((sum, item) => sum + (item.actualAmountCents ?? item.approvedAmountCents), 0)
-                          const totalDifference = totalActual - totalApproved
+                      const donation = selectedReport.donationAmountCents || 0
+                      const totalOverage = Math.max(0, totalActual - totalApproved)
+                      const remainingOverage = Math.max(0, totalOverage - donation)
+                      const totalDifference = totalActual - totalApproved
+                      const adjusted = totalDifference > 0 ? remainingOverage : totalDifference
                           return (
                             <p className={`text-sm font-bold ${
-                              totalDifference > 0 ? 'text-red-600' : 
-                              totalDifference < 0 ? 'text-blue-600' : 
+                          adjusted > 0 ? 'text-red-600' : 
+                          adjusted < 0 ? 'text-blue-600' : 
                               'text-gray-600'
                             }`}>
-                              {totalDifference > 0 ? '+' : ''}{formatCurrency(totalDifference)}
-                              {totalDifference > 0 && ' (Additional payment needed)'}
-                              {totalDifference < 0 && ' (Refund required)'}
+                          {adjusted > 0 ? '+' : ''}{formatCurrency(adjusted)}
+                          {adjusted > 0 && ' (Additional payment needed)'}
+                          {adjusted < 0 && ' (Refund required)'}
                             </p>
                           )
                         })()}
@@ -734,6 +882,73 @@ export default function ReportsPageClient({ user }: ReportsPageClientProps) {
         variant="warning"
         loading={processingClose}
       />
+
+      {/* Change Request Modal */}
+      {changeModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Request Report Changes
+              </h2>
+              <button
+                onClick={closeChangeModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  You are about to request changes for the expense report:
+                </p>
+                <p className="font-medium text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  {changeModal.reportTitle}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="changeComment" className="block text-sm font-medium text-gray-700 mb-2">
+                  What needs to change? *
+                </label>
+                <textarea
+                  id="changeComment"
+                  value={changeModal.comment}
+                  onChange={(e) => setChangeModal(prev => ({ ...prev, comment: e.target.value }))}
+                  placeholder="Describe what needs to be updated in this report..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
+                  rows={4}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  The requester will see this and be able to edit their report.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeChangeModal}
+                  disabled={processingChange}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSubmitChangeRequest}
+                  disabled={processingChange || !changeModal.comment.trim()}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                >
+                  {processingChange ? 'Submitting...' : 'Request Changes'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

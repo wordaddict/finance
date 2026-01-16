@@ -14,15 +14,26 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const generalGuidelines = [
-  'Never spend a dollar that was not officially approved. Verify approval status in the expense system at https://www.cciamerica.org/login; verbal approvals are not valid.',
-  'Payments are processed between Thursday night and Saturday each week. Submit requests before Thursday 7pm EST. If a request older than two weeks is not processed, check for change requests via email and in the request notes, then reach out to the finance team. Finance may occasionally request earlier submissions and will notify you.',
-  'Expense requests without an official vendor invoice or receipt require an expense report within two weeks of payment receipt. When a report is needed, you will be notified via email and will see a “Create Report” bar on the request.',
-  'For reimbursements, only receipts less than one month old will be honored. Receipts older than one month will not be processed. If you have issues providing receipts, email usa.finance@joincci.org.',
-  'Never spend above the approved amount. In emergencies, email usa.finance@joincci.org and copy your resident pastor.',
+  'Never spend a dollar that was not officially approved. Check the expense system at https://www.cciamerica.org/login; verbal approvals are not valid.',
+  'If any payment or purchase is made without approval, it will be denied even if later submitted as an expense request.',
+  'Payments are processed between Thursday night and Saturday each week. Submit requests before Thursday 7pm EST and watch for finance notices when earlier submissions are needed.',
+  'If you make a request before 7pm Thursday and it is not processed within two weeks, check email for change requests, review notes on the request, then reach out to the finance team for help.',
+  'Schedule a budget review as needed at https://calendly.com/annabelobadan/30min and allow at least a week after submitting an expense request before the meeting.',
+  'All approved expense requests submitted without an official vendor invoice or receipt must include an expense report within two weeks of payment receipt. You will be notified via email and will see a “Create Report” bar when a report is required.',
+  'Spending above an approved and paid amount: for approvals under $1,000, you may use up to 10% as contingency. For approvals above $1,000, add a note in the system explaining the need and wait for approval before spending.',
+  'For reimbursements, only receipts less than one month old will be honored. Receipts older than one month will not be processed; email usa.finance@joincci.org if you have issues providing receipts.',
+  'Never spend above the amount approved for an expense. In emergencies, email usa.finance@joincci.org and copy your resident pastor.',
   'Expense requests should only come from team/unit leads and assistants (when the team lead is unavailable).',
-  'Tax Payment Policy: CCI USA is exempt from state tax in Texas and Maryland. Ensure no state tax is included; state taxes will not be paid even if included on the receipt. Contact your campus admin with questions about waiving state taxes.',
+  'Tax Payment Policy: CCI USA is exempt from state tax in Texas and Maryland. Ensure no state tax is included; state taxes will not be paid even if they appear on receipts. Contact your campus admin with questions about waiving state taxes.',
   'Approved tax-exempt vendors in Texas and Maryland include Walmart online, Amazon, and VistaPrint. Contact Deborah Warmate or Oluwatowo Edun for more details.',
-  'Reaffirmation: never spend a dollar that was not officially approved. Always confirm approval status before purchases.',
+  'Reaffirmation: never spend a dollar that was not officially approved. Always confirm approval status before purchases; verbal approval is not an approval.',
+]
+
+const gettingStarted = [
+  'We have officially launched the CCI USA Expense platform: https://www.cciamerica.org/login. Sign up/create an account and, once approved, go ahead and explore the platform.',
+  'You can also watch the training video on the platform.',
+  'Schedule a budget review as needed using https://calendly.com/annabelobadan/30min. Please give at least a week after submitting an expense request before the budget review meeting.',
+  'There are three categories of expenses: Statutory/Regular, Special payments/purchases, and Special events (see details below).',
 ]
 
 const categories = [
@@ -30,8 +41,8 @@ const categories = [
     title: 'Statutory / Regular (Recurring)',
     icon: <Shield className="h-5 w-5 text-red-600" aria-hidden="true" />,
     points: [
-      'Set up recurring/regular payments by emailing usa.finance@joincci.org and copying your resident pastor with the amount range and frequency.',
-      'Finance will confirm an approved range; continue submitting expense requests and receipts within that range.',
+      'Recurring/regular payments can be established by emailing usa.finance@joincci.org and copying your resident pastor with the range (dollar amount) and frequency of expenses.',
+      'Finance will discuss your budget, confirm an approved range, and you must still submit expense requests and upload receipts within that range.',
       'Any expense outside the pre-approved range must be reapproved before spending.',
     ],
   },
@@ -39,7 +50,7 @@ const categories = [
     title: 'Special Payments / Purchases',
     icon: <FileText className="h-5 w-5 text-red-600" aria-hidden="true" />,
     points: [
-      'Use the expense system to submit detailed requests. For events, use the event section.',
+      'For non-recurring/non-regular payments, use the expense system to submit detailed requests. For events, use the event section.',
       'Include clear notes explaining the need. Proceed with purchases only after approval is visible in the system.',
     ],
   },
@@ -49,14 +60,15 @@ const categories = [
     points: [
       'Submit a budget at least two months before the event. Program managers should gather team expenses and submit via the expense system (use the provided budget template).',
       'Budget must be approved before publishing event flyers; any budget changes require finance approval.',
-      'Pastoral/guest welfare is centrally organized—contact Sope to coordinate logistics with finance.',
-      'Schedule a budget review after submitting an expense request: https://calendly.com/annabelobadan/30min.',
+      'For MAPS and Cell Churches events, draft a budget and share with Bukky for a primary review before submitting to finance.',
+      'Pastoral/guest welfare is centrally organized—contact Sope, who will work out logistics with the finance team and liaise with your team.',
+      'Schedule a budget review after submitting an expense request: https://calendly.com/annabelobadan/30min. Allow at least a week after submitting the request before the review.',
     ],
   },
 ]
 
 const reportReminders = [
-  'When a report is required, you will see a “Create Report” bar on the expense request and receive an email.',
+  'When a report is required, you will be notified via email after payment is received and will see a “Create Report” bar on the expense request.',
   'Receipts older than one month will not be accepted for reimbursements.',
 ]
 
@@ -87,12 +99,18 @@ export default function FinancePolicyPage() {
             </div>
             <div className="space-y-3">
               <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900">
-                CCI USA Expense Policy
+                CELEBRATION CHURCH INTERNATIONAL USA (CCI USA) FINANCE PROCESSING AND POLICY
               </h1>
-              <p className="text-lg text-gray-700 max-w-3xl mx-auto">
-                Welcome to the CCI USA expense system. Please read and follow these
-                guidelines before submitting or making any purchases. For questions,
-                email usa.finance@joincci.org.
+              <p className="text-lg text-gray-700 max-w-4xl mx-auto">
+                Dear Family, welcome to the CCI USA Expense system. This document guides you on
+                Celebration Church International USA Finance Policy. Please read in its entirety
+                and adhere strictly to this policy.
+              </p>
+              <p className="text-base text-gray-700 max-w-4xl mx-auto">
+                CCI USA is a nonprofit organization and a church. We adopt the principle of being
+                good stewards of God's resources: whatever financial decision you would not proceed
+                with in your workplace without authorization, please do not do such in CCI USA. Send
+                questions and inquiries to usa.finance@joincci.org.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -116,6 +134,46 @@ export default function FinancePolicyPage() {
             <p className="text-sm text-gray-500">
               Drafted by Ann Obadan and approved by Pastorate — 1/3/2026
             </p>
+          </div>
+        </section>
+
+        <section className="px-4 sm:px-6 lg:px-8 pb-10 sm:pb-12">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-md">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-red-600" aria-hidden="true" />
+                  <CardTitle>Welcome & Stewardship</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-gray-800">
+                <p>
+                  Welcome to the CCI USA Expense system. Please read and adhere strictly to this
+                  policy as we steward God's resources responsibly.
+                </p>
+                <p>
+                  Whatever financial decision you would not proceed with in your workplace without
+                  authorization, please do not do such in CCI USA. For questions and enquiries,
+                  email <span className="font-medium">usa.finance@joincci.org</span>.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-md">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-red-600" aria-hidden="true" />
+                  <CardTitle>Getting Started With the Expense System</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-gray-800">
+                <ul className="list-disc list-inside space-y-2">
+                  {gettingStarted.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         </section>
 

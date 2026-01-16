@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canApproveExpenses } from '@/lib/rbac'
+import { sendEmailsWithRateLimit, generateReportApprovedEmail } from '@/lib/email'
 
 const approveReportSchema = z.object({
   reportId: z.string().uuid(),
@@ -76,6 +77,19 @@ export async function POST(request: NextRequest) {
       where: { id: reportId },
       data: { status: 'APPROVED' },
     })
+
+    // Notify requester
+    if (report.expense?.requester?.email) {
+      const emailTemplate = generateReportApprovedEmail(
+        report.expense.requester.name || report.expense.requester.email,
+        report.title,
+        report.expense.title,
+        user.name || user.email,
+        report.totalApprovedAmount || report.expense.amountCents || 0
+      )
+      emailTemplate.to = report.expense.requester.email
+      await sendEmailsWithRateLimit([emailTemplate], 500)
+    }
 
     return NextResponse.json({
       message: 'Report approved successfully',
