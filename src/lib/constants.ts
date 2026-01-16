@@ -197,6 +197,7 @@ export const EXPENSE_CATEGORIES = {
   PASTORAL_HOTEL_ACCOMMODATION: 'Pastoral Hotel/Accommodation',
   PASTORAL_TRAVEL_EXPENSE: 'Pastoral Travel Expense',
   PASTORAL_HOSPITALITY: 'Pastoral Hospitality',
+  PASTORAL_ALLOWANCE: 'Pastoral Allowance',
   RENT: 'Rent',
   REPAIRS_AND_MAINTENANCE: 'Repairs and Maintenance',
   SALARIES_AND_ALLOWANCES: 'Salaries and Allowances',

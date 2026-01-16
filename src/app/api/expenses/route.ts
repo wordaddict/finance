@@ -3,7 +3,50 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { canViewAllExpenses } from '@/lib/rbac'
 import { handleApiError, getUserIdFromRequest } from '@/lib/error-handler'
-import type { Prisma } from '@prisma/client'
+
+function parseAmountSearch(search: string): { cents: number; isInteger: boolean } | null {
+  const normalized = search.replace(/[$,]/g, '').trim()
+
+  if (!normalized || !/^(\d+)(\.\d{0,2})?$/.test(normalized)) {
+    return null
+  }
+
+  const parsed = Number(normalized)
+
+  if (Number.isNaN(parsed)) {
+    return null
+  }
+
+  return {
+    cents: Math.round(parsed * 100),
+    isInteger: !normalized.includes('.'),
+  }
+}
+
+function buildAmountRangeConditions(amountCents: number, isInteger: boolean) {
+  const conditions: any[] = []
+
+  if (isInteger) {
+    // Allow matching numbers that start with the provided digits (e.g., "2" matches 2, 20, 200, 2000...)
+    const maxMagnitude = 5 // up to hundred-thousands of dollars
+    for (let magnitude = 0; magnitude <= maxMagnitude; magnitude++) {
+      const scale = Math.pow(10, magnitude)
+      const lower = amountCents * scale
+      const upper = (amountCents + 100) * scale - 1 // add $1 (100 cents) then scale, minus 1 to keep inclusive range
+      conditions.push({
+        amountCents: {
+          gte: lower,
+          lte: upper,
+        },
+      })
+    }
+  } else {
+    // For decimals, keep exact cents match
+    conditions.push({ amountCents })
+  }
+
+  return conditions
+}
 
 export async function GET(request: NextRequest) {
   let user: any
@@ -43,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (search) {
-      where.OR = [
+      const searchConditions = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { team: { contains: search, mode: 'insensitive' } },
@@ -56,6 +99,14 @@ export async function GET(request: NextRequest) {
           },
         },
       ]
+
+      const amountSearch = parseAmountSearch(search)
+      if (amountSearch !== null) {
+        const amountConditions = buildAmountRangeConditions(amountSearch.cents, amountSearch.isInteger)
+        where.OR = [...amountConditions, ...searchConditions]
+      } else {
+        where.OR = searchConditions
+      }
     }
 
     // Get expenses with pagination

@@ -239,6 +239,55 @@ describe('/api/expenses', () => {
       expect(response.status).toBe(200)
     })
 
+    it('should filter expenses by amount when search is numeric', async () => {
+      const mockUser = {
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Regular User',
+        role: 'LEADER' as const,
+        status: 'ACTIVE' as const,
+        campus: 'MAIN' as const,
+      }
+
+      const mockExpenses: any[] = []
+      const mockCount = 0
+
+      ;(requireAuth as any).mockResolvedValue(mockUser)
+      ;(canViewAllExpenses as any).mockReturnValue(false)
+      ;(db.expenseRequest.findMany as any).mockResolvedValue(mockExpenses)
+      ;(db.expenseRequest.count as any).mockResolvedValue(mockCount)
+
+      const request = new NextRequest('http://localhost:3000/api/expenses?search=$1,234.56')
+      const response = await GET(request)
+
+      expect(db.expenseRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            requesterId: 'user-1',
+            status: { not: 'CLOSED' },
+            OR: [
+              { amountCents: 123456 },
+              { title: { contains: '$1,234.56', mode: 'insensitive' } },
+              { description: { contains: '$1,234.56', mode: 'insensitive' } },
+              { team: { contains: '$1,234.56', mode: 'insensitive' } },
+              {
+                requester: {
+                  OR: [
+                    { name: { contains: '$1,234.56', mode: 'insensitive' } },
+                    { email: { contains: '$1,234.56', mode: 'insensitive' } },
+                  ],
+                },
+              },
+            ],
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: 0,
+          take: 20,
+        })
+      )
+      expect(response.status).toBe(200)
+    })
+
     it('should handle pagination correctly', async () => {
       const mockUser = {
         id: 'user-1',
